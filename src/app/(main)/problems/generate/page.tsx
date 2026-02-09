@@ -210,7 +210,7 @@ export default function ProblemGeneratorPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        router.push(`/assignments/${data.assignment.id}`);
+        router.push(`/assignments/${data.assignment.id}/edit`);
       }
     } catch (err) {
       console.error(err);

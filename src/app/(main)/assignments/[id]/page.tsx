@@ -10,6 +10,10 @@ import {
   Send,
   CheckCircle,
   Eye,
+  FileText,
+  Download,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +25,7 @@ import { MarkdownContent } from "@/components/ui/markdown-content";
 import MermaidDiagram from "@/components/chat/MermaidDiagram";
 import { formatShortDate } from "@/lib/utils";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface Question {
   id: string;
@@ -42,6 +47,7 @@ interface Assignment {
   type: "QUIZ" | "FILE_UPLOAD";
   totalPoints: number;
   published: boolean;
+  pdfUrl: string | null;
   createdBy: { name: string | null };
   questions: Question[];
   _count: { submissions: number };
@@ -52,12 +58,15 @@ export default function AssignmentDetailPage({
 }: {
   params: { id: string };
 }) {
+  const router = useRouter();
   const { data: session } = useSession();
   const [assignment, setAssignment] = useState<Assignment | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [file, setFile] = useState<File | null>(null);
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [submitted, setSubmitted] = useState(false);
 
   const userRole = (session?.user as { role?: string })?.role || "STUDENT";
@@ -79,9 +88,12 @@ export default function AssignmentDetailPage({
     try {
       let fileUrl: string | undefined;
 
-      if (assignment.type === "FILE_UPLOAD" && file) {
+      const fileToUpload =
+        assignment.type === "FILE_UPLOAD" ? file : attachmentFile;
+
+      if (fileToUpload) {
         const formData = new FormData();
-        formData.append("file", file);
+        formData.append("file", fileToUpload);
         const uploadRes = await fetch("/api/upload", {
           method: "POST",
           body: formData,
@@ -126,6 +138,24 @@ export default function AssignmentDetailPage({
       body: JSON.stringify({ published: !assignment.published }),
     });
     setAssignment({ ...assignment, published: !assignment.published });
+  };
+
+  const handleDelete = async () => {
+    if (!assignment) return;
+    if (!window.confirm("Are you sure you want to delete this assignment? This will also delete all submissions and cannot be undone.")) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/assignments/${assignment.id}`, { method: "DELETE" });
+      if (res.ok) {
+        router.push("/assignments");
+      } else {
+        alert("Failed to delete assignment");
+      }
+    } catch {
+      alert("Failed to delete assignment");
+    } finally {
+      setDeleting(false);
+    }
   };
 
   if (loading) {
@@ -185,15 +215,25 @@ export default function AssignmentDetailPage({
         </div>
         {(userRole === "TA" || userRole === "ADMIN") && (
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handlePublish}>
+            <Link href={`/assignments/${assignment.id}/edit`}>
+              <Button variant="outline" size="sm">
+                <Pencil className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+            </Link>
+            <Button variant="outline" size="sm" onClick={handlePublish}>
               <Eye className="h-4 w-4 mr-2" />
               {assignment.published ? "Unpublish" : "Publish"}
             </Button>
             <Link href={`/grading?assignmentId=${assignment.id}`}>
-              <Button variant="outline">
+              <Button variant="outline" size="sm">
                 Grade ({assignment._count.submissions})
               </Button>
             </Link>
+            <Button variant="outline" size="sm" onClick={handleDelete} disabled={deleting} className="text-red-600 hover:text-red-700 hover:bg-red-50">
+              <Trash2 className="h-4 w-4 mr-2" />
+              {deleting ? "Deleting..." : "Delete"}
+            </Button>
           </div>
         )}
       </div>
@@ -202,6 +242,32 @@ export default function AssignmentDetailPage({
         <Card>
           <CardContent className="p-6">
             <MarkdownContent content={assignment.description} className="text-sm" />
+          </CardContent>
+        </Card>
+      )}
+
+      {assignment.pdfUrl && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Quiz PDF
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <iframe
+              src={assignment.pdfUrl}
+              className="w-full h-[600px] rounded-lg border border-neutral-200"
+              title="Quiz PDF"
+            />
+            <a
+              href={assignment.pdfUrl}
+              download
+              className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800"
+            >
+              <Download className="h-4 w-4" />
+              Download PDF
+            </a>
           </CardContent>
         </Card>
       )}
@@ -301,6 +367,33 @@ export default function AssignmentDetailPage({
             </Card>
           ))}
         </div>
+      )}
+
+      {assignment.type === "QUIZ" && userRole === "STUDENT" && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Attach Your Work (Optional)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="border-2 border-dashed rounded-xl p-6 text-center">
+              <Upload className="h-8 w-8 text-neutral-300 mx-auto mb-2" />
+              <p className="text-sm text-neutral-500 mb-3">
+                Upload a PDF with your handwritten or additional work
+              </p>
+              <input
+                type="file"
+                onChange={(e) => setAttachmentFile(e.target.files?.[0] || null)}
+                className="text-sm"
+                accept=".pdf"
+              />
+              {attachmentFile && (
+                <p className="text-sm text-emerald-600 mt-2">
+                  Selected: {attachmentFile.name}
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {assignment.type === "FILE_UPLOAD" && (
