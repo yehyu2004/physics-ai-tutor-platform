@@ -23,6 +23,7 @@ export const config = {
     "/chat/:path*",
     "/assignments/:path*",
     "/grades/:path*",
+    "/analytics/:path*",
     "/problems/:path*",
     "/grading/:path*",
     "/admin/:path*",
