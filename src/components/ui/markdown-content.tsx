@@ -4,10 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
-import mermaid from "mermaid";
 import "katex/dist/katex.min.css";
-
-mermaid.initialize({ startOnLoad: false, theme: "default" });
 
 function normalizeLatex(content: string): string {
   // Convert \[...\] to $$...$$ and \(...\) to $...$
@@ -30,6 +27,8 @@ export function MermaidDiagram({ content }: { content: string }) {
 
   const renderDiagram = useCallback(async () => {
     try {
+      const mermaid = (await import("mermaid")).default;
+      mermaid.initialize({ startOnLoad: false, theme: "default" });
       const id = `mermaid-${Math.random().toString(36).slice(2, 9)}`;
       const { svg: renderedSvg } = await mermaid.render(id, content);
       setSvg(renderedSvg);
@@ -78,7 +77,6 @@ export function MarkdownContent({ content, className }: MarkdownContentProps) {
               return <MermaidDiagram content={code} />;
             }
             if (className?.includes("language-svg")) {
-              // Sanitize: only allow SVG content starting with <svg
               const trimmed = code.trim();
               if (trimmed.startsWith("<svg")) {
                 return (
