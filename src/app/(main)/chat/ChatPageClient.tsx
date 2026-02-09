@@ -89,14 +89,11 @@ export default function ChatPageClient({
 
   useEffect(() => {
     const container = scrollContainerRef.current;
-    if (!container) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-      return;
-    }
+    if (!container) return;
     // Only auto-scroll if user is near the bottom (within 200px)
     const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 200;
     if (isNearBottom) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      container.scrollTop = container.scrollHeight;
     }
   }, [messages]);
 

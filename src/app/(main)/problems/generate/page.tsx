@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   Sparkles,
@@ -85,7 +85,9 @@ export default function ProblemGeneratorPage() {
   const [questionType, setQuestionType] = useState("MC");
   const [loading, setLoading] = useState(false);
   const [problems, setProblems] = useState<GeneratedProblem[]>([]);
-  const [streamText, setStreamText] = useState("");
+  const [hasStreamText, setHasStreamText] = useState(false);
+  const streamRef = useRef<HTMLPreElement>(null);
+  const streamBufferRef = useRef("");
   const [copied, setCopied] = useState<number | null>(null);
   const [pastSets, setPastSets] = useState<ProblemSet[]>([]);
   const [showPast, setShowPast] = useState(false);
@@ -120,11 +122,19 @@ export default function ProblemGeneratorPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const appendStreamText = useCallback((text: string) => {
+    streamBufferRef.current += text;
+    if (streamRef.current) {
+      streamRef.current.textContent = streamBufferRef.current + "|";
+    }
+  }, []);
+
   const handleGenerate = async () => {
     if (!topic.trim()) return;
     setLoading(true);
     setProblems([]);
-    setStreamText("");
+    streamBufferRef.current = "";
+    setHasStreamText(false);
 
     try {
       const res = await fetch("/api/problems/generate", {
@@ -161,10 +171,14 @@ export default function ProblemGeneratorPage() {
           try {
             const event = JSON.parse(line.slice(6));
             if (event.type === "delta") {
-              setStreamText((prev) => prev + event.content);
+              if (!streamBufferRef.current) {
+                setHasStreamText(true);
+              }
+              appendStreamText(event.content);
             } else if (event.type === "done") {
               setProblems(event.problems || []);
-              setStreamText("");
+              streamBufferRef.current = "";
+              setHasStreamText(false);
               if (pastSets.length > 0) {
                 setPastSets([]);
               }
@@ -366,11 +380,8 @@ export default function ProblemGeneratorPage() {
               Generating {count} {topic} problems...
             </p>
           </div>
-          {streamText ? (
-            <pre className="p-6 text-xs font-mono text-gray-500 whitespace-pre-wrap max-h-80 overflow-y-auto leading-relaxed">
-              {streamText}
-              <span className="animate-pulse">|</span>
-            </pre>
+          {hasStreamText ? (
+            <pre ref={streamRef} className="p-6 text-xs font-mono text-gray-500 whitespace-pre-wrap max-h-80 overflow-y-auto leading-relaxed" />
           ) : (
             <div className="p-10 text-center">
               <Sparkles className="h-7 w-7 text-gray-300 animate-pulse mx-auto mb-2" />
