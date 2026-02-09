@@ -5,6 +5,10 @@
 :root {
   --background: #fafafa;
   --foreground: #171717;
+  --primary: #4f46e5;
+  --primary-light: #eef2ff;
+  --primary-dark: #3730a3;
+  --accent: #8b5cf6;
 }
 
 body {
@@ -17,22 +21,99 @@ body {
   .text-balance {
     text-wrap: balance;
   }
+
+  .glass-card {
+    @apply backdrop-blur-md bg-white/70 border border-white/40 shadow-sm;
+  }
+
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-violet-500;
+  }
 }
 
 @layer base {
   * {
     @apply border-neutral-200;
   }
+
+  /* Smooth focus ring for interactive elements */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-indigo-500/40 ring-offset-2 ring-offset-white transition-shadow duration-150;
+  }
 }
 
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.5s ease-out forwards;
+}
+
+/* Custom Scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #a5b4fc transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: #c7d2fe;
+  border-radius: 9999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: #a5b4fc;
+}
+
+/* KaTeX */
 .katex-display {
   overflow-x: auto;
   overflow-y: hidden;
   padding: 0.5rem 0;
+  max-width: 100%;
 }
 
+.katex-display > .katex {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* Gradient Cards */
 .gradient-card-purple {
-  background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 50%, #e0d4fd 100%);
+  background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 50%, #c7d2fe 100%);
 }
 
 .gradient-card-pink {
@@ -40,9 +121,90 @@ body {
 }
 
 .gradient-card-blue {
-  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 50%, #bfdbfe 100%);
+  background: linear-gradient(135deg, #eef2ff 0%, #dbeafe 50%, #bfdbfe 100%);
 }
 
 .gradient-card-green {
   background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 50%, #bbf7d0 100%);
+}
+
+.gradient-card-indigo {
+  background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 50%, #c7d2fe 100%);
+}
+
+.gradient-card-violet {
+  background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 50%, #ddd6fe 100%);
+}
+
+/* Auth page animations */
+@keyframes auth-float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+}
+
+@keyframes auth-float-delayed {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-15px); }
+}
+
+@keyframes auth-pulse-ring {
+  0% { transform: scale(0.8); opacity: 0.5; }
+  50% { transform: scale(1.2); opacity: 0.2; }
+  100% { transform: scale(0.8); opacity: 0.5; }
+}
+
+@keyframes auth-orbit {
+  0% { transform: rotate(0deg) translateX(60px) rotate(0deg); }
+  100% { transform: rotate(360deg) translateX(60px) rotate(-360deg); }
+}
+
+@keyframes auth-shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+  20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+
+@keyframes auth-wave {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.animate-auth-float {
+  animation: auth-float 6s ease-in-out infinite;
+}
+
+.animate-auth-float-delayed {
+  animation: auth-float-delayed 8s ease-in-out infinite;
+  animation-delay: 2s;
+}
+
+.animate-auth-pulse-ring {
+  animation: auth-pulse-ring 4s ease-in-out infinite;
+}
+
+.animate-auth-orbit {
+  animation: auth-orbit 12s linear infinite;
+}
+
+.animate-auth-shake {
+  animation: auth-shake 0.5s ease-in-out;
+}
+
+/* Auth branding panel decorative grid */
+.auth-grid-pattern {
+  background-image:
+    linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Auth branding wave decoration */
+.auth-wave-pattern {
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 10px,
+    rgba(255,255,255,0.03) 10px,
+    rgba(255,255,255,0.03) 20px
+  );
 }

@@ -25,7 +25,6 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import type { UserRole } from "@/types";
 
 interface NavItem {
@@ -36,9 +35,18 @@ interface NavItem {
   children?: { label: string; href: string }[];
 }
 
-const navItems: NavItem[] = [
+interface NavSection {
+  label: string;
+  items: NavItem[];
+}
+
+const mainItems: NavItem[] = [
   { label: "Home", href: "/dashboard", icon: Home },
   { label: "AI Chat", href: "/chat", icon: MessageSquare },
+  { label: "Grades", href: "/grades", icon: GraduationCap },
+];
+
+const toolItems: NavItem[] = [
   {
     label: "Assignments",
     href: "/assignments",
@@ -48,7 +56,6 @@ const navItems: NavItem[] = [
       { label: "Create New", href: "/assignments/create" },
     ],
   },
-  { label: "Grades", href: "/grades", icon: GraduationCap },
   {
     label: "Problem Generator",
     href: "/problems/generate",
@@ -92,142 +99,185 @@ export default function Sidebar({ userRole, userName }: SidebarProps) {
     return pathname.startsWith(href);
   };
 
-  const filteredNavItems = navItems.filter(
-    (item) => !item.roles || item.roles.includes(userRole)
-  );
+  const filterByRole = (items: NavItem[]) =>
+    items.filter((item) => !item.roles || item.roles.includes(userRole));
+
+  const sections: NavSection[] = [
+    { label: "MAIN", items: filterByRole(mainItems) },
+    { label: "TOOLS", items: filterByRole(toolItems) },
+  ];
+
+  if (userRole === "ADMIN") {
+    sections.push({ label: "ADMIN", items: adminItems });
+  }
+
+  const renderNavItem = (item: NavItem) => {
+    const active = isActive(item.href);
+
+    if (item.children) {
+      const expanded = expandedItems.includes(item.label);
+      return (
+        <div key={item.label}>
+          <button
+            onClick={() => toggleExpand(item.label)}
+            className={cn(
+              "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
+              active
+                ? "bg-indigo-50 text-indigo-700"
+                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+            )}
+          >
+            <div
+              className={cn(
+                "flex h-7 w-7 items-center justify-center rounded-lg transition-all duration-200",
+                active
+                  ? "bg-indigo-100 text-indigo-600"
+                  : "bg-slate-100 text-slate-500 group-hover:bg-slate-200"
+              )}
+            >
+              <item.icon className="h-4 w-4" />
+            </div>
+            <span className="flex-1 text-left">{item.label}</span>
+            <div
+              className={cn(
+                "transition-transform duration-200",
+                expanded ? "rotate-0" : "-rotate-90"
+              )}
+            >
+              <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+            </div>
+          </button>
+          <div
+            className={cn(
+              "overflow-hidden transition-all duration-200",
+              expanded ? "max-h-40 opacity-100" : "max-h-0 opacity-0"
+            )}
+          >
+            <div className="ml-10 mt-1 space-y-0.5 border-l-2 border-slate-100 pl-3">
+              {item.children
+                .filter((child) => {
+                  if (child.href === "/assignments/create") {
+                    return userRole === "TA" || userRole === "ADMIN";
+                  }
+                  return true;
+                })
+                .map((child) => (
+                  <Link
+                    key={child.href}
+                    href={child.href}
+                    className={cn(
+                      "block rounded-lg px-3 py-1.5 text-sm transition-all duration-200",
+                      pathname === child.href
+                        ? "text-indigo-700 font-medium bg-indigo-50/50"
+                        : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                    )}
+                  >
+                    {child.label}
+                  </Link>
+                ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        className={cn(
+          "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
+          active
+            ? "bg-indigo-50 text-indigo-700 shadow-sm shadow-indigo-100"
+            : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+        )}
+      >
+        <div
+          className={cn(
+            "flex h-7 w-7 items-center justify-center rounded-lg transition-all duration-200",
+            active
+              ? "bg-indigo-100 text-indigo-600"
+              : "bg-slate-100 text-slate-500 group-hover:bg-slate-200 group-hover:text-slate-700"
+          )}
+        >
+          <item.icon className="h-4 w-4" />
+        </div>
+        {item.label}
+      </Link>
+    );
+  };
 
   const sidebarContent = (
-    <div className="flex h-full flex-col">
-      <div className="p-4">
-        <Link href="/dashboard" className="flex items-center gap-2 mb-4">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-900">
+    <div className="flex h-full flex-col bg-gradient-to-b from-white via-white to-slate-50/80">
+      {/* Branding */}
+      <div className="px-5 pt-5 pb-4">
+        <Link
+          href="/dashboard"
+          className="group flex items-center gap-3 mb-5"
+        >
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 shadow-lg shadow-indigo-200 transition-all duration-200 group-hover:shadow-indigo-300 group-hover:scale-105">
             <Atom className="h-5 w-5 text-white" />
           </div>
-          <span className="text-lg font-bold">PhysTutor</span>
+          <div>
+            <span className="text-lg font-bold tracking-tight bg-gradient-to-r from-indigo-700 to-violet-700 bg-clip-text text-transparent">
+              PhysTutor
+            </span>
+            <p className="text-[10px] font-medium text-slate-400 tracking-wide uppercase -mt-0.5">
+              AI Physics Platform
+            </p>
+          </div>
         </Link>
 
         <Link href="/chat">
-          <Button variant="outline" className="w-full justify-center gap-2">
+          <Button className="w-full justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-200 hover:shadow-lg hover:shadow-indigo-300 transition-all duration-200 hover:from-indigo-700 hover:to-violet-700 h-10 font-medium">
             <Plus className="h-4 w-4" />
             New Chat
           </Button>
         </Link>
       </div>
 
-      <div className="px-4 mb-2">
+      {/* Search */}
+      <div className="px-5 mb-4">
         <div className="relative">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-neutral-400" />
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
           <Input
             placeholder="Search..."
-            className="pl-8 h-9 bg-neutral-50 border-neutral-200"
+            className="pl-9 h-9 bg-slate-50 border-slate-200 rounded-xl text-sm placeholder:text-slate-400 focus:border-indigo-300 focus:ring-indigo-200 transition-all duration-200"
           />
         </div>
       </div>
 
-      <ScrollArea className="flex-1 px-2">
-        <div className="space-y-1 p-2">
-          <p className="px-2 text-xs font-medium text-neutral-400 uppercase tracking-wider mb-2">
-            Main Menu
-          </p>
-          {filteredNavItems.map((item) => (
-            <div key={item.label}>
-              {item.children ? (
-                <>
-                  <button
-                    onClick={() => toggleExpand(item.label)}
-                    className={cn(
-                      "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                      isActive(item.href)
-                        ? "bg-neutral-100 text-neutral-900"
-                        : "text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900"
-                    )}
-                  >
-                    <item.icon className="h-4 w-4" />
-                    <span className="flex-1 text-left">{item.label}</span>
-                    {expandedItems.includes(item.label) ? (
-                      <ChevronDown className="h-4 w-4" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4" />
-                    )}
-                  </button>
-                  {expandedItems.includes(item.label) && (
-                    <div className="ml-7 space-y-1 mt-1">
-                      {item.children
-                        .filter((child) => {
-                          if (child.href === "/assignments/create") {
-                            return userRole === "TA" || userRole === "ADMIN";
-                          }
-                          return true;
-                        })
-                        .map((child) => (
-                          <Link
-                            key={child.href}
-                            href={child.href}
-                            className={cn(
-                              "block rounded-lg px-3 py-1.5 text-sm transition-colors",
-                              pathname === child.href
-                                ? "text-neutral-900 font-medium"
-                                : "text-neutral-500 hover:text-neutral-900"
-                            )}
-                          >
-                            {child.label}
-                          </Link>
-                        ))}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <Link
-                  href={item.href}
-                  className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                    isActive(item.href)
-                      ? "bg-neutral-100 text-neutral-900"
-                      : "text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900"
-                  )}
-                >
-                  <item.icon className="h-4 w-4" />
-                  {item.label}
-                </Link>
-              )}
+      {/* Navigation */}
+      <ScrollArea className="flex-1 px-3">
+        <div className="space-y-6 py-2">
+          {sections.map((section) => (
+            <div key={section.label}>
+              <p className="px-3 mb-2 text-[11px] font-semibold text-slate-400 uppercase tracking-widest">
+                {section.label}
+              </p>
+              <div className="space-y-1">
+                {section.items.map(renderNavItem)}
+              </div>
             </div>
           ))}
-
-          {userRole === "ADMIN" && (
-            <>
-              <Separator className="my-3" />
-              <p className="px-2 text-xs font-medium text-neutral-400 uppercase tracking-wider mb-2">
-                Administration
-              </p>
-              {adminItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                    isActive(item.href)
-                      ? "bg-neutral-100 text-neutral-900"
-                      : "text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900"
-                  )}
-                >
-                  <item.icon className="h-4 w-4" />
-                  {item.label}
-                </Link>
-              ))}
-            </>
-          )}
         </div>
       </ScrollArea>
 
-      <div className="border-t p-4">
-        <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-full bg-neutral-200 flex items-center justify-center text-xs font-medium">
+      {/* User profile */}
+      <div className="border-t border-slate-100 p-4 mx-3 mb-2">
+        <div className="flex items-center gap-3 rounded-xl p-2 hover:bg-slate-50 transition-all duration-200 cursor-pointer">
+          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center text-sm font-semibold text-white shadow-sm">
             {userName?.[0]?.toUpperCase() || "U"}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">{userName}</p>
-            <p className="text-xs text-neutral-400 capitalize">{userRole.toLowerCase()}</p>
+            <p className="text-sm font-semibold text-slate-800 truncate">
+              {userName}
+            </p>
+            <p className="text-xs text-slate-400 capitalize font-medium">
+              {userRole.toLowerCase()}
+            </p>
           </div>
+          <ChevronRight className="h-4 w-4 text-slate-300" />
         </div>
       </div>
     </div>
@@ -235,24 +285,34 @@ export default function Sidebar({ userRole, userName }: SidebarProps) {
 
   return (
     <>
+      {/* Mobile toggle */}
       <button
-        className="fixed top-4 left-4 z-50 lg:hidden rounded-lg p-2 bg-white border shadow-sm"
+        className="fixed top-4 left-4 z-50 lg:hidden rounded-xl p-2.5 bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200"
         onClick={() => setMobileOpen(!mobileOpen)}
       >
-        {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        {mobileOpen ? (
+          <X className="h-5 w-5 text-slate-700" />
+        ) : (
+          <Menu className="h-5 w-5 text-slate-700" />
+        )}
       </button>
 
-      {mobileOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
+      {/* Mobile overlay */}
+      <div
+        className={cn(
+          "fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden transition-opacity duration-300",
+          mobileOpen
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none"
+        )}
+        onClick={() => setMobileOpen(false)}
+      />
 
+      {/* Sidebar */}
       <aside
         className={cn(
-          "fixed left-0 top-0 z-40 h-screen w-64 border-r bg-white transition-transform lg:translate-x-0",
-          mobileOpen ? "translate-x-0" : "-translate-x-full"
+          "fixed left-0 top-0 z-40 h-screen w-64 border-r border-slate-200 bg-white transition-all duration-300 ease-in-out lg:translate-x-0",
+          mobileOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"
         )}
       >
         {sidebarContent}

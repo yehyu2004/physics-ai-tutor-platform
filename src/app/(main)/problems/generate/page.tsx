@@ -6,11 +6,19 @@ import {
   Loader2,
   Copy,
   CheckCircle2,
+  Atom,
+  Zap,
+  Waves,
+  FlaskConical,
+  Magnet,
+  Sun,
+  Lightbulb,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+// Card components available if needed
+// import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -27,6 +35,32 @@ interface GeneratedProblem {
   solution: string;
   points: number;
 }
+
+const topicIcons: Record<string, React.ReactNode> = {
+  Kinematics: <Zap className="h-4 w-4" />,
+  "Newton's Laws": <Zap className="h-4 w-4" />,
+  "Work & Energy": <Zap className="h-4 w-4" />,
+  "Momentum & Collisions": <Zap className="h-4 w-4" />,
+  "Rotational Motion": <Atom className="h-4 w-4" />,
+  "Oscillations & Waves": <Waves className="h-4 w-4" />,
+  Electrostatics: <Magnet className="h-4 w-4" />,
+  "Electric Circuits": <Lightbulb className="h-4 w-4" />,
+  Magnetism: <Magnet className="h-4 w-4" />,
+  "Electromagnetic Induction": <Magnet className="h-4 w-4" />,
+  Thermodynamics: <FlaskConical className="h-4 w-4" />,
+  Optics: <Sun className="h-4 w-4" />,
+  "Modern Physics": <Atom className="h-4 w-4" />,
+  "Fluid Mechanics": <Waves className="h-4 w-4" />,
+  Gravitation: <Atom className="h-4 w-4" />,
+};
+
+const difficultyConfig = [
+  { value: "1", label: "Easy", color: "bg-emerald-100 text-emerald-700 border-emerald-200" },
+  { value: "2", label: "Medium", color: "bg-sky-100 text-sky-700 border-sky-200" },
+  { value: "3", label: "Average", color: "bg-indigo-100 text-indigo-700 border-indigo-200" },
+  { value: "4", label: "Hard", color: "bg-amber-100 text-amber-700 border-amber-200" },
+  { value: "5", label: "Expert", color: "bg-red-100 text-red-700 border-red-200" },
+];
 
 export default function ProblemGeneratorPage() {
   const [topic, setTopic] = useState("");
@@ -94,54 +128,75 @@ export default function ProblemGeneratorPage() {
   ];
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-8 animate-fade-in">
+      {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Problem Generator</h1>
-        <p className="text-sm text-neutral-500 mt-1">
+        <div className="flex items-center gap-3 mb-1">
+          <div className="p-2.5 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 shadow-sm">
+            <Sparkles className="h-5 w-5 text-white" />
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-neutral-900">
+            Problem Generator
+          </h1>
+        </div>
+        <p className="text-sm text-neutral-500 mt-2 ml-[52px]">
           Generate physics problems using AI for assignments and practice
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Configuration</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Topic</Label>
-            <Select value={topic} onValueChange={setTopic}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a physics topic" />
-              </SelectTrigger>
-              <SelectContent>
-                {topics.map((t) => (
-                  <SelectItem key={t} value={t}>
-                    {t}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+      {/* Configuration */}
+      <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-neutral-100 bg-neutral-50/50">
+          <h2 className="text-sm font-semibold text-neutral-700">Configuration</h2>
+        </div>
+        <div className="p-6 space-y-6">
+          {/* Topic Selection */}
+          <div className="space-y-3">
+            <Label className="text-sm font-semibold text-neutral-700">Physics Topic</Label>
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+              {topics.map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setTopic(t)}
+                  className={`flex items-center gap-2 px-3 py-2.5 text-xs font-medium rounded-lg border transition-all duration-200 ${
+                    topic === t
+                      ? "bg-indigo-50 border-indigo-300 text-indigo-700 shadow-sm"
+                      : "bg-white border-neutral-200 text-neutral-600 hover:bg-neutral-50 hover:border-neutral-300"
+                  }`}
+                >
+                  <span className={topic === t ? "text-indigo-500" : "text-neutral-400"}>
+                    {topicIcons[t] || <Atom className="h-4 w-4" />}
+                  </span>
+                  <span className="truncate">{t}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label>Difficulty (1-5)</Label>
-              <Select value={difficulty} onValueChange={setDifficulty}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">1 - Easy</SelectItem>
-                  <SelectItem value="2">2 - Below Average</SelectItem>
-                  <SelectItem value="3">3 - Average</SelectItem>
-                  <SelectItem value="4">4 - Hard</SelectItem>
-                  <SelectItem value="5">5 - Very Hard</SelectItem>
-                </SelectContent>
-              </Select>
+          {/* Difficulty Selection */}
+          <div className="space-y-3">
+            <Label className="text-sm font-semibold text-neutral-700">Difficulty Level</Label>
+            <div className="flex gap-2">
+              {difficultyConfig.map((d) => (
+                <button
+                  key={d.value}
+                  onClick={() => setDifficulty(d.value)}
+                  className={`flex-1 py-2.5 text-xs font-semibold rounded-lg border transition-all duration-200 ${
+                    difficulty === d.value
+                      ? d.color + " shadow-sm"
+                      : "bg-white border-neutral-200 text-neutral-500 hover:bg-neutral-50"
+                  }`}
+                >
+                  {d.label}
+                </button>
+              ))}
             </div>
+          </div>
 
+          {/* Type + Count Row */}
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Question Type</Label>
+              <Label className="text-sm font-semibold text-neutral-700">Question Type</Label>
               <Select value={questionType} onValueChange={setQuestionType}>
                 <SelectTrigger>
                   <SelectValue />
@@ -155,7 +210,7 @@ export default function ProblemGeneratorPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Number of Questions</Label>
+              <Label className="text-sm font-semibold text-neutral-700">Number of Questions</Label>
               <Input
                 type="number"
                 min={1}
@@ -169,7 +224,7 @@ export default function ProblemGeneratorPage() {
           <Button
             onClick={handleGenerate}
             disabled={loading || !topic}
-            className="gap-2"
+            className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm w-full sm:w-auto"
           >
             {loading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -178,76 +233,116 @@ export default function ProblemGeneratorPage() {
             )}
             Generate Problems
           </Button>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
+      {/* Loading State */}
       {loading && (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Loader2 className="h-8 w-8 animate-spin text-neutral-400 mx-auto mb-4" />
-            <p className="text-sm text-neutral-500">
-              Generating {count} {topic} problems...
-            </p>
-          </CardContent>
-        </Card>
+        <div className="bg-white rounded-xl border border-neutral-200 py-14 text-center">
+          <div className="relative mx-auto w-16 h-16 mb-4">
+            <div className="absolute inset-0 rounded-full border-2 border-indigo-100 animate-ping" />
+            <div className="relative flex items-center justify-center w-16 h-16 rounded-full bg-indigo-50">
+              <Sparkles className="h-7 w-7 text-indigo-500 animate-pulse" />
+            </div>
+          </div>
+          <p className="text-sm font-medium text-neutral-700">
+            Generating {count} {topic} problems...
+          </p>
+          <p className="text-xs text-neutral-400 mt-1">
+            This may take a few seconds
+          </p>
+        </div>
       )}
 
+      {/* Generated Problems */}
       {problems.length > 0 && (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold">
-            Generated Problems ({problems.length})
-          </h2>
-          {problems.map((problem, index) => (
-            <Card key={index}>
-              <CardContent className="p-6 space-y-3">
-                <div className="flex items-start justify-between">
-                  <span className="text-sm font-medium text-neutral-500">
-                    Problem {index + 1} ({problem.points} pts)
-                  </span>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => copyProblem(index)}
-                      className="gap-1"
-                    >
-                      {copied === index ? (
-                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                      ) : (
-                        <Copy className="h-3.5 w-3.5" />
-                      )}
-                      {copied === index ? "Copied" : "Copy"}
-                    </Button>
-                  </div>
-                </div>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-neutral-900">
+              Generated Problems
+              <span className="ml-2 text-sm font-normal text-neutral-400">
+                ({problems.length})
+              </span>
+            </h2>
+          </div>
 
-                <p className="text-sm whitespace-pre-wrap">{problem.questionText}</p>
+          {problems.map((problem, index) => (
+            <div
+              key={index}
+              className="bg-white rounded-xl border border-neutral-200 overflow-hidden animate-slide-up"
+              style={{ animationDelay: `${index * 100}ms` }}
+            >
+              {/* Problem Header */}
+              <div className="flex items-center justify-between px-6 py-3 bg-neutral-50 border-b border-neutral-100">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex items-center justify-center w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold">
+                    {index + 1}
+                  </span>
+                  <span className="text-sm font-medium text-neutral-600">
+                    Problem {index + 1}
+                  </span>
+                  <span className="text-xs text-neutral-400">
+                    {problem.points} pts
+                  </span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => copyProblem(index)}
+                  className={`gap-1.5 text-xs ${
+                    copied === index
+                      ? "text-emerald-600"
+                      : "text-neutral-500 hover:text-neutral-700"
+                  }`}
+                >
+                  {copied === index ? (
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                  ) : (
+                    <Copy className="h-3.5 w-3.5" />
+                  )}
+                  {copied === index ? "Copied!" : "Copy"}
+                </Button>
+              </div>
+
+              {/* Problem Body */}
+              <div className="p-6 space-y-4">
+                <p className="text-sm text-neutral-800 leading-relaxed whitespace-pre-wrap">
+                  {problem.questionText}
+                </p>
 
                 {problem.options && (
-                  <div className="space-y-1 pl-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {problem.options.map((opt, i) => (
-                      <p key={i} className="text-sm">
-                        {String.fromCharCode(65 + i)}. {opt}
-                      </p>
+                      <div
+                        key={i}
+                        className="flex items-start gap-2.5 px-4 py-2.5 rounded-lg bg-neutral-50 border border-neutral-100"
+                      >
+                        <span className="flex items-center justify-center w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold shrink-0 mt-0.5">
+                          {String.fromCharCode(65 + i)}
+                        </span>
+                        <p className="text-sm text-neutral-700">{opt}</p>
+                      </div>
                     ))}
                   </div>
                 )}
 
-                <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-200">
-                  <p className="text-xs font-medium text-emerald-700 mb-1">
+                <div className="rounded-lg p-4 bg-emerald-50 border border-emerald-200">
+                  <p className="text-xs font-semibold text-emerald-700 mb-1.5 uppercase tracking-wider">
                     Correct Answer
                   </p>
-                  <p className="text-sm text-emerald-800">{problem.correctAnswer}</p>
+                  <p className="text-sm text-emerald-800 font-medium">{problem.correctAnswer}</p>
                 </div>
 
-                <div className="bg-neutral-50 rounded-lg p-3 border">
-                  <p className="text-xs font-medium text-neutral-500 mb-1">
+                <div className="rounded-lg p-4 bg-indigo-50/50 border border-indigo-100">
+                  <p className="text-xs font-semibold text-indigo-700 mb-1.5 uppercase tracking-wider">
                     Solution
                   </p>
-                  <p className="text-sm whitespace-pre-wrap">{problem.solution}</p>
+                  <p className="text-sm text-neutral-700 whitespace-pre-wrap leading-relaxed">
+                    {problem.solution}
+                  </p>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           ))}
         </div>
       )}
