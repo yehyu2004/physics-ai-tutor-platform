@@ -23,7 +23,7 @@ export default function MainLayoutClient({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="h-screen bg-white overflow-hidden">
       <Sidebar
         userRole={userRole}
         userName={userName}
@@ -31,7 +31,7 @@ export default function MainLayoutClient({
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
       <div
-        className={`min-h-screen flex flex-col transition-[margin] duration-300 ease-in-out ${
+        className={`h-screen flex flex-col transition-[margin] duration-300 ease-in-out ${
           sidebarCollapsed ? "lg:ml-[68px]" : "lg:ml-64"
         }`}
       >
@@ -41,7 +41,7 @@ export default function MainLayoutClient({
           userImage={userImage}
           userRole={userRole}
         />
-        <main className="flex-1 p-6 bg-gray-50/50 overflow-hidden">{children}</main>
+        <main className="flex-1 p-6 bg-gray-50/50 overflow-auto">{children}</main>
       </div>
     </div>
   );

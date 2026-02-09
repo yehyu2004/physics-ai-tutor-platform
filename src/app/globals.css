@@ -12,6 +12,11 @@
   --accent-light: #f3e8ff;
 }
 
+html, body {
+  overflow: hidden;
+  height: 100%;
+}
+
 body {
   color: var(--foreground);
   background: var(--background);
