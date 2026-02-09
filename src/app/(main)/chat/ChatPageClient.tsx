@@ -485,7 +485,7 @@ export default function ChatPageClient({
 
         {/* Messages Area */}
         <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto">
-          <div className="max-w-3xl mx-auto px-4 py-6">
+          <div className="w-full max-w-[min(90%,56rem)] mx-auto px-4 py-6">
             {/* Empty State */}
             {messages.length === 0 && (
               <div className="flex flex-col items-center justify-center py-20 px-4">
@@ -588,7 +588,7 @@ export default function ChatPageClient({
         {/* Image Preview */}
         {imagePreview && (
           <div className="px-4 py-2 border-t border-gray-100">
-            <div className="max-w-3xl mx-auto">
+            <div className="w-full max-w-[min(90%,56rem)] mx-auto">
               <div className="relative inline-block">
                 <img
                   src={imagePreview}
@@ -608,7 +608,7 @@ export default function ChatPageClient({
 
         {/* Input Area - Clean Card */}
         <div className="p-4">
-          <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
+          <form onSubmit={handleSubmit} className="w-full max-w-[min(90%,56rem)] mx-auto">
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-2 flex items-end gap-2">
               <input
                 ref={fileInputRef}
