@@ -10,8 +10,17 @@ import "katex/dist/katex.min.css";
 mermaid.initialize({ startOnLoad: false, theme: "default" });
 
 function normalizeLatex(content: string): string {
+  // Convert \[...\] to $$...$$ and \(...\) to $...$
   content = content.replace(/\\\[([\s\S]*?)\\\]/g, (_, math) => `$$${math}$$`);
   content = content.replace(/\\\(([\s\S]*?)\\\)/g, (_, math) => `$${math}$`);
+  // Fix orphaned display math: a line starting with LaTeX commands ending with $$
+  // but missing the opening $$  (e.g. "=\frac{...}.$$" should be "$$=\frac{...}.$$")
+  content = content.replace(/^([ \t]*)(\\[a-zA-Z{].*?\$\$)$/gm, (_, indent, math) => {
+    if (!math.startsWith("$$")) {
+      return `${indent}$$${math}`;
+    }
+    return _;
+  });
   return content;
 }
 

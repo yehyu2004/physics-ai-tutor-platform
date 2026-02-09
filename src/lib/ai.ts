@@ -29,12 +29,18 @@ DIAGRAMS — when a visual diagram would help, use one of these formats (NEVER u
    \`\`\`
 
 2. For physics diagrams that need precise drawing (waves, force diagrams, field lines, optical setups, trajectories):
-   Use a \`\`\`svg code block with clean, labeled SVG. Example:
+   Use a \`\`\`svg code block with clean, labeled SVG.
+   CRITICAL: Inside SVG <text> elements, NEVER use LaTeX. Use plain Unicode text and symbols instead:
+   - Greek letters: α β γ δ ε θ λ μ ω φ π Ω
+   - Math symbols: × ± → ≈ ≠ ≤ ≥ ∞ ∂ ∇ ∫ √
+   - Subscripts/superscripts: use dy/dx notation or plain text like "E₀", "B₀", "x̂", "ŷ", "ẑ"
+   - Fractions: write as "1/μ₀" not "\\frac{1}{\\mu_0}"
+   Example:
    \`\`\`svg
    <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
      <line x1="0" y1="100" x2="400" y2="100" stroke="black" stroke-width="1"/>
      <path d="M0,100 Q50,20 100,100 Q150,180 200,100 Q250,20 300,100 Q350,180 400,100" fill="none" stroke="blue" stroke-width="2"/>
-     <text x="200" y="30" text-anchor="middle" font-size="14">E field</text>
+     <text x="200" y="30" text-anchor="middle" font-size="14">E (along ŷ)</text>
    </svg>
    \`\`\`
 
