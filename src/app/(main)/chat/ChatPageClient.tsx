@@ -112,7 +112,8 @@ export default function ChatPageClient({
 
   const loadConversation = async (convId: string) => {
     setActiveConversationId(convId);
-    setSidebarOpen(false);
+    setLoading(false);
+    setMessages([]);
     try {
       const res = await fetch(`/api/conversations/${convId}/messages`);
       if (res.ok) {
@@ -536,50 +537,55 @@ export default function ChatPageClient({
 
             {/* Messages */}
             <div className="space-y-5">
-              {messages.map((msg, index) => (
-                <div
-                  key={msg.id}
-                  className={cn(
-                    "flex gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300",
-                    msg.role === "user" ? "justify-end" : "justify-start"
-                  )}
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
-                  {/* AI Avatar */}
-                  {msg.role === "assistant" && (
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100 self-end">
-                      <Bot className="h-3.5 w-3.5 text-gray-500" />
-                    </div>
-                  )}
+              {messages.map((msg, index) => {
+                // Hide empty assistant messages (still streaming, typing indicator handles this)
+                if (msg.role === "assistant" && !msg.content) return null;
 
+                return (
                   <div
+                    key={msg.id}
                     className={cn(
-                      "text-sm leading-relaxed overflow-hidden",
-                      msg.role === "user"
-                        ? "max-w-[75%] bg-gray-100 text-gray-900 rounded-2xl rounded-br-md px-4 py-3"
-                        : "max-w-[85%] bg-white border border-gray-200 text-gray-900 rounded-2xl rounded-bl-md px-4 py-3"
+                      "flex gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300",
+                      msg.role === "user" ? "justify-end" : "justify-start"
                     )}
+                    style={{ animationDelay: `${index * 50}ms` }}
                   >
-                    {msg.imageUrl && (
-                      <img
-                        src={msg.imageUrl}
-                        alt="Uploaded"
-                        className="max-w-full rounded-lg mb-3 max-h-60 object-contain"
-                      />
+                    {/* AI Avatar */}
+                    {msg.role === "assistant" && (
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100 self-end">
+                        <Bot className="h-3.5 w-3.5 text-gray-500" />
+                      </div>
                     )}
-                    <div className="prose-sm overflow-x-auto">
-                      <MarkdownContent content={msg.content} />
-                    </div>
-                  </div>
 
-                  {/* User Avatar */}
-                  {msg.role === "user" && (
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-900 self-end">
-                      <User className="h-3.5 w-3.5 text-white" />
+                    <div
+                      className={cn(
+                        "text-sm leading-relaxed overflow-hidden",
+                        msg.role === "user"
+                          ? "max-w-[75%] bg-gray-100 text-gray-900 rounded-2xl rounded-br-md px-4 py-3"
+                          : "max-w-[85%] bg-white border border-gray-200 text-gray-900 rounded-2xl rounded-bl-md px-4 py-3"
+                      )}
+                    >
+                      {msg.imageUrl && (
+                        <img
+                          src={msg.imageUrl}
+                          alt="Uploaded"
+                          className="max-w-full rounded-lg mb-3 max-h-60 object-contain"
+                        />
+                      )}
+                      <div className="prose-sm overflow-x-auto">
+                        <MarkdownContent content={msg.content} />
+                      </div>
                     </div>
-                  )}
-                </div>
-              ))}
+
+                    {/* User Avatar */}
+                    {msg.role === "user" && (
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-900 self-end">
+                        <User className="h-3.5 w-3.5 text-white" />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
 
               {/* Typing Indicator */}
               {loading && <TypingIndicator />}
