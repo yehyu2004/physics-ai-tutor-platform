@@ -102,8 +102,19 @@ export default function ChatPageClient({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const container = scrollContainerRef.current;
+    if (!container) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+    // Only auto-scroll if user is near the bottom (within 200px)
+    const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 200;
+    if (isNearBottom) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages]);
 
   const filteredConversations = conversations.filter((conv) =>
@@ -493,7 +504,7 @@ export default function ChatPageClient({
         )}
 
         {/* Messages Area */}
-        <ScrollArea className="flex-1 min-h-0">
+        <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto">
           <div className="max-w-3xl mx-auto px-4 py-6">
             {/* Empty State */}
             {messages.length === 0 && (
@@ -537,63 +548,62 @@ export default function ChatPageClient({
 
             {/* Messages */}
             <div className="space-y-5">
-              {messages.map((msg, index) => {
-                // Hide empty assistant messages (still streaming, typing indicator handles this)
-                if (msg.role === "assistant" && !msg.content) return null;
+              {messages.map((msg, index) => (
+                <div
+                  key={msg.id}
+                  className={cn(
+                    "flex gap-3",
+                    msg.role === "user" ? "justify-end" : "justify-start"
+                  )}
+                >
+                  {/* AI Avatar */}
+                  {msg.role === "assistant" && (
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100 self-end">
+                      <Bot className="h-3.5 w-3.5 text-gray-500" />
+                    </div>
+                  )}
 
-                return (
                   <div
-                    key={msg.id}
                     className={cn(
-                      "flex gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300",
-                      msg.role === "user" ? "justify-end" : "justify-start"
+                      "text-sm leading-relaxed overflow-hidden",
+                      msg.role === "user"
+                        ? "max-w-[75%] bg-gray-100 text-gray-900 rounded-2xl rounded-br-md px-4 py-3"
+                        : "max-w-[85%] bg-white border border-gray-200 text-gray-900 rounded-2xl rounded-bl-md px-4 py-3"
                     )}
-                    style={{ animationDelay: `${index * 50}ms` }}
                   >
-                    {/* AI Avatar */}
-                    {msg.role === "assistant" && (
-                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100 self-end">
-                        <Bot className="h-3.5 w-3.5 text-gray-500" />
-                      </div>
+                    {msg.imageUrl && (
+                      <img
+                        src={msg.imageUrl}
+                        alt="Uploaded"
+                        className="max-w-full rounded-lg mb-3 max-h-60 object-contain"
+                      />
                     )}
-
-                    <div
-                      className={cn(
-                        "text-sm leading-relaxed overflow-hidden",
-                        msg.role === "user"
-                          ? "max-w-[75%] bg-gray-100 text-gray-900 rounded-2xl rounded-br-md px-4 py-3"
-                          : "max-w-[85%] bg-white border border-gray-200 text-gray-900 rounded-2xl rounded-bl-md px-4 py-3"
-                      )}
-                    >
-                      {msg.imageUrl && (
-                        <img
-                          src={msg.imageUrl}
-                          alt="Uploaded"
-                          className="max-w-full rounded-lg mb-3 max-h-60 object-contain"
-                        />
-                      )}
+                    {msg.role === "assistant" && !msg.content ? (
+                      <div className="flex items-center gap-1.5 py-1">
+                        <span className="h-1.5 w-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "0ms" }} />
+                        <span className="h-1.5 w-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "150ms" }} />
+                        <span className="h-1.5 w-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "300ms" }} />
+                      </div>
+                    ) : (
                       <div className="prose-sm overflow-x-auto">
                         <MarkdownContent content={msg.content} />
                       </div>
-                    </div>
-
-                    {/* User Avatar */}
-                    {msg.role === "user" && (
-                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-900 self-end">
-                        <User className="h-3.5 w-3.5 text-white" />
-                      </div>
                     )}
                   </div>
-                );
-              })}
 
-              {/* Typing Indicator */}
-              {loading && <TypingIndicator />}
+                  {/* User Avatar */}
+                  {msg.role === "user" && (
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-900 self-end">
+                      <User className="h-3.5 w-3.5 text-white" />
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
 
             <div ref={messagesEndRef} />
           </div>
-        </ScrollArea>
+        </div>
 
         {/* Image Preview */}
         {imagePreview && (
