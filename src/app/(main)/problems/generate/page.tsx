@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import mermaid from "mermaid";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Sparkles,
@@ -21,7 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MarkdownContent } from "@/components/ui/markdown-content";
+import { MarkdownContent, MermaidDiagram } from "@/components/ui/markdown-content";
 import {
   Select,
   SelectContent,
@@ -76,35 +75,6 @@ const difficultyConfig = [
   { value: "4", label: "Hard", color: "bg-amber-50 text-amber-700 border-amber-200" },
   { value: "5", label: "Expert", color: "bg-red-50 text-red-700 border-red-200" },
 ];
-
-function MermaidDiagram({ content }: { content: string }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [svg, setSvg] = useState<string>("");
-
-  const renderDiagram = useCallback(async () => {
-    try {
-      mermaid.initialize({ startOnLoad: false, theme: "default" });
-      const id = `mermaid-${Math.random().toString(36).slice(2, 9)}`;
-      const { svg: renderedSvg } = await mermaid.render(id, content);
-      setSvg(renderedSvg);
-    } catch (err) {
-      console.error("Mermaid render error:", err);
-      setSvg(`<pre class="text-xs text-red-500">Diagram render error</pre>`);
-    }
-  }, [content]);
-
-  useEffect(() => {
-    renderDiagram();
-  }, [renderDiagram]);
-
-  return (
-    <div
-      ref={containerRef}
-      className="rounded-lg border border-gray-200 bg-white p-4 overflow-auto max-w-full"
-      dangerouslySetInnerHTML={{ __html: svg }}
-    />
-  );
-}
 
 export default function ProblemGeneratorPage() {
   const router = useRouter();

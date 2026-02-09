@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import mermaid from "mermaid";
 import {
   ArrowLeft,
   Clock,
@@ -18,38 +17,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MarkdownContent } from "@/components/ui/markdown-content";
+import { MarkdownContent, MermaidDiagram } from "@/components/ui/markdown-content";
 import { formatShortDate } from "@/lib/utils";
 import Link from "next/link";
-
-function MermaidDiagram({ content }: { content: string }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [svg, setSvg] = useState<string>("");
-
-  const renderDiagram = useCallback(async () => {
-    try {
-      mermaid.initialize({ startOnLoad: false, theme: "default" });
-      const id = `mermaid-${Math.random().toString(36).slice(2, 9)}`;
-      const { svg: renderedSvg } = await mermaid.render(id, content);
-      setSvg(renderedSvg);
-    } catch (err) {
-      console.error("Mermaid render error:", err);
-      setSvg(`<pre class="text-xs text-red-500">Diagram render error</pre>`);
-    }
-  }, [content]);
-
-  useEffect(() => {
-    renderDiagram();
-  }, [renderDiagram]);
-
-  return (
-    <div
-      ref={containerRef}
-      className="rounded-lg border border-gray-200 bg-white p-4 overflow-auto max-w-full"
-      dangerouslySetInnerHTML={{ __html: svg }}
-    />
-  );
-}
 
 interface Question {
   id: string;

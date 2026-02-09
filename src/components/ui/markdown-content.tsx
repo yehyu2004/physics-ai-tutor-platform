@@ -1,15 +1,46 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
+import mermaid from "mermaid";
 import "katex/dist/katex.min.css";
+
+mermaid.initialize({ startOnLoad: false, theme: "default" });
 
 function normalizeLatex(content: string): string {
   content = content.replace(/\\\[([\s\S]*?)\\\]/g, (_, math) => `$$${math}$$`);
   content = content.replace(/\\\(([\s\S]*?)\\\)/g, (_, math) => `$${math}$`);
   return content;
+}
+
+export function MermaidDiagram({ content }: { content: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [svg, setSvg] = useState<string>("");
+
+  const renderDiagram = useCallback(async () => {
+    try {
+      const id = `mermaid-${Math.random().toString(36).slice(2, 9)}`;
+      const { svg: renderedSvg } = await mermaid.render(id, content);
+      setSvg(renderedSvg);
+    } catch (err) {
+      console.error("Mermaid render error:", err);
+      setSvg(`<pre class="text-xs text-red-500">Diagram render error</pre>`);
+    }
+  }, [content]);
+
+  useEffect(() => {
+    renderDiagram();
+  }, [renderDiagram]);
+
+  return (
+    <div
+      ref={containerRef}
+      className="rounded-lg border border-gray-200 bg-white p-4 overflow-auto max-w-full my-3"
+      dangerouslySetInnerHTML={{ __html: svg }}
+    />
+  );
 }
 
 interface MarkdownContentProps {
@@ -33,6 +64,11 @@ export function MarkdownContent({ content, className }: MarkdownContentProps) {
           h2: ({ children }) => <h2 className="text-base font-bold mb-2">{children}</h2>,
           h3: ({ children }) => <h3 className="text-sm font-bold mb-1">{children}</h3>,
           code: ({ className, children, ...props }) => {
+            const isMermaid = className?.includes("language-mermaid");
+            if (isMermaid) {
+              const code = String(children).replace(/\n$/, "");
+              return <MermaidDiagram content={code} />;
+            }
             const isBlock = className?.includes("language-");
             if (isBlock) {
               return (

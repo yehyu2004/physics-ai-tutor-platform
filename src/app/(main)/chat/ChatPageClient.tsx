@@ -302,7 +302,7 @@ export default function ChatPageClient({
   const activeConversation = conversations.find((c) => c.id === activeConversationId);
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
+    <div className="flex h-[calc(100vh-6.5rem)] overflow-hidden">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div
