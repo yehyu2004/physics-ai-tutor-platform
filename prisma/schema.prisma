@@ -46,6 +46,7 @@ model User {
   gradedSubmissions Submission[] @relation("GradedBy")
   createdAssignments Assignment[] @relation("CreatedBy")
   auditLogs     AuditLog[]
+  generatedProblemSets ProblemSet[] @relation("GeneratedBy")
 }
 
 model Account {
@@ -195,6 +196,32 @@ model AIConfig {
   systemPrompt String?  @db.Text
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
+}
+
+model ProblemSet {
+  id           String   @id @default(cuid())
+  topic        String
+  difficulty   Int
+  questionType String
+  createdById  String
+  createdAt    DateTime @default(now())
+
+  createdBy User              @relation("GeneratedBy", fields: [createdById], references: [id])
+  problems  GeneratedProblem[]
+}
+
+model GeneratedProblem {
+  id            String  @id @default(cuid())
+  problemSetId  String
+  questionText  String  @db.Text
+  questionType  String
+  options       Json?
+  correctAnswer String
+  solution      String  @db.Text
+  points        Float   @default(10)
+  diagram       Json?
+
+  problemSet ProblemSet @relation(fields: [problemSetId], references: [id], onDelete: Cascade)
 }
 
 model AuditLog {

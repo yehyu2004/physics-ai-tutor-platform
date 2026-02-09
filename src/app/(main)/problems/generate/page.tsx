@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import mermaid from "mermaid";
 import {
   Sparkles,
   Loader2,
@@ -13,10 +14,12 @@ import {
   Magnet,
   Sun,
   Lightbulb,
+  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MarkdownContent } from "@/components/ui/markdown-content";
 import {
   Select,
   SelectContent,
@@ -26,12 +29,24 @@ import {
 } from "@/components/ui/select";
 
 interface GeneratedProblem {
+  id?: string;
   questionText: string;
   questionType: string;
   options?: string[];
   correctAnswer: string;
   solution: string;
   points: number;
+  diagram?: { type: "svg" | "mermaid"; content: string };
+}
+
+interface ProblemSet {
+  id: string;
+  topic: string;
+  difficulty: number;
+  questionType: string;
+  createdBy: string;
+  createdAt: string;
+  problems: GeneratedProblem[];
 }
 
 const topicIcons: Record<string, React.ReactNode> = {
@@ -60,6 +75,35 @@ const difficultyConfig = [
   { value: "5", label: "Expert", color: "bg-red-50 text-red-700 border-red-200" },
 ];
 
+function MermaidDiagram({ content }: { content: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [svg, setSvg] = useState<string>("");
+
+  const renderDiagram = useCallback(async () => {
+    try {
+      mermaid.initialize({ startOnLoad: false, theme: "default" });
+      const id = `mermaid-${Math.random().toString(36).slice(2, 9)}`;
+      const { svg: renderedSvg } = await mermaid.render(id, content);
+      setSvg(renderedSvg);
+    } catch (err) {
+      console.error("Mermaid render error:", err);
+      setSvg(`<pre class="text-xs text-red-500">Diagram render error</pre>`);
+    }
+  }, [content]);
+
+  useEffect(() => {
+    renderDiagram();
+  }, [renderDiagram]);
+
+  return (
+    <div
+      ref={containerRef}
+      className="rounded-lg border border-gray-200 bg-white p-4 overflow-auto max-w-full"
+      dangerouslySetInnerHTML={{ __html: svg }}
+    />
+  );
+}
+
 export default function ProblemGeneratorPage() {
   const [topic, setTopic] = useState("");
   const [difficulty, setDifficulty] = useState("3");
@@ -67,12 +111,46 @@ export default function ProblemGeneratorPage() {
   const [questionType, setQuestionType] = useState("MC");
   const [loading, setLoading] = useState(false);
   const [problems, setProblems] = useState<GeneratedProblem[]>([]);
+  const [streamText, setStreamText] = useState("");
   const [copied, setCopied] = useState<number | null>(null);
+  const [pastSets, setPastSets] = useState<ProblemSet[]>([]);
+  const [showPast, setShowPast] = useState(false);
+  const [loadingPast, setLoadingPast] = useState(false);
+
+  const loadPastSets = async () => {
+    if (pastSets.length > 0) {
+      setShowPast(!showPast);
+      return;
+    }
+    setLoadingPast(true);
+    try {
+      const res = await fetch("/api/problems/generate");
+      if (res.ok) {
+        const data = await res.json();
+        setPastSets(data.problemSets || []);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingPast(false);
+      setShowPast(true);
+    }
+  };
+
+  const loadProblemSet = (ps: ProblemSet) => {
+    setProblems(ps.problems);
+    setTopic(ps.topic);
+    setDifficulty(String(ps.difficulty));
+    setQuestionType(ps.questionType);
+    setShowPast(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const handleGenerate = async () => {
     if (!topic.trim()) return;
     setLoading(true);
     setProblems([]);
+    setStreamText("");
 
     try {
       const res = await fetch("/api/problems/generate", {
@@ -86,9 +164,43 @@ export default function ProblemGeneratorPage() {
         }),
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        setProblems(data.problems || []);
+      if (!res.ok) {
+        throw new Error("Generation failed");
+      }
+
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error("No response stream");
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const event = JSON.parse(line.slice(6));
+            if (event.type === "delta") {
+              setStreamText((prev) => prev + event.content);
+            } else if (event.type === "done") {
+              setProblems(event.problems || []);
+              setStreamText("");
+              if (pastSets.length > 0) {
+                setPastSets([]);
+              }
+            } else if (event.type === "error") {
+              console.error("Generation error:", event.message);
+            }
+          } catch {
+            // skip malformed JSON
+          }
+        }
       }
     } catch (err) {
       console.error(err);
@@ -235,21 +347,26 @@ export default function ProblemGeneratorPage() {
         </div>
       </div>
 
-      {/* Loading State */}
+      {/* Loading State with streaming preview */}
       {loading && (
-        <div className="bg-white rounded-2xl border border-gray-100 py-14 text-center shadow-sm">
-          <div className="relative mx-auto w-16 h-16 mb-4">
-            <div className="absolute inset-0 rounded-full border-2 border-gray-200 animate-ping" />
-            <div className="relative flex items-center justify-center w-16 h-16 rounded-full bg-gray-50">
-              <Sparkles className="h-7 w-7 text-gray-500 animate-pulse" />
-            </div>
+        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+          <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-3">
+            <Loader2 className="h-4 w-4 animate-spin text-gray-500" />
+            <p className="text-sm font-medium text-gray-700">
+              Generating {count} {topic} problems...
+            </p>
           </div>
-          <p className="text-sm font-medium text-gray-700">
-            Generating {count} {topic} problems...
-          </p>
-          <p className="text-xs text-gray-400 mt-1">
-            This may take a few seconds
-          </p>
+          {streamText ? (
+            <pre className="p-6 text-xs font-mono text-gray-500 whitespace-pre-wrap max-h-80 overflow-y-auto leading-relaxed">
+              {streamText}
+              <span className="animate-pulse">|</span>
+            </pre>
+          ) : (
+            <div className="p-10 text-center">
+              <Sparkles className="h-7 w-7 text-gray-300 animate-pulse mx-auto mb-2" />
+              <p className="text-xs text-gray-400">Waiting for AI response...</p>
+            </div>
+          )}
         </div>
       )}
 
@@ -263,11 +380,14 @@ export default function ProblemGeneratorPage() {
                 ({problems.length})
               </span>
             </h2>
+            <span className="text-xs text-emerald-600 font-medium bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+              Auto-saved
+            </span>
           </div>
 
           {problems.map((problem, index) => (
             <div
-              key={index}
+              key={problem.id || index}
               className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm"
               style={{ animationDelay: `${index * 100}ms` }}
             >
@@ -305,9 +425,23 @@ export default function ProblemGeneratorPage() {
 
               {/* Problem Body */}
               <div className="p-6 space-y-4">
-                <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
-                  {problem.questionText}
-                </p>
+                <MarkdownContent
+                  content={problem.questionText}
+                  className="text-sm text-gray-800 leading-relaxed"
+                />
+
+                {problem.diagram && (
+                  <div className="my-3 flex justify-center">
+                    {problem.diagram.type === "svg" ? (
+                      <div
+                        className="rounded-lg border border-gray-200 bg-white p-4 overflow-auto max-w-full"
+                        dangerouslySetInnerHTML={{ __html: problem.diagram.content }}
+                      />
+                    ) : (
+                      <MermaidDiagram content={problem.diagram.content} />
+                    )}
+                  </div>
+                )}
 
                 {problem.options && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -319,7 +453,7 @@ export default function ProblemGeneratorPage() {
                         <span className="flex items-center justify-center w-5 h-5 rounded-full bg-gray-200 text-gray-700 text-xs font-bold shrink-0 mt-0.5">
                           {String.fromCharCode(65 + i)}
                         </span>
-                        <p className="text-sm text-gray-700">{opt}</p>
+                        <MarkdownContent content={opt} className="text-sm text-gray-700" />
                       </div>
                     ))}
                   </div>
@@ -329,22 +463,72 @@ export default function ProblemGeneratorPage() {
                   <p className="text-xs font-semibold text-emerald-700 mb-1.5 uppercase tracking-wider">
                     Correct Answer
                   </p>
-                  <p className="text-sm text-emerald-800 font-medium">{problem.correctAnswer}</p>
+                  <MarkdownContent content={problem.correctAnswer} className="text-sm text-emerald-800 font-medium" />
                 </div>
 
                 <div className="rounded-lg p-4 bg-gray-50 border border-gray-200">
                   <p className="text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wider">
                     Solution
                   </p>
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-                    {problem.solution}
-                  </p>
+                  <MarkdownContent content={problem.solution} className="text-sm text-gray-700 leading-relaxed" />
                 </div>
               </div>
             </div>
           ))}
         </div>
       )}
+
+      {/* Problem Bank */}
+      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+        <button
+          onClick={loadPastSets}
+          className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+        >
+          <div className="flex items-center gap-2.5">
+            <Sparkles className="h-4 w-4 text-gray-500" />
+            <h2 className="text-sm font-semibold text-gray-700">Problem Bank</h2>
+            {pastSets.length > 0 && (
+              <span className="text-xs text-gray-400">({pastSets.length} sets)</span>
+            )}
+          </div>
+          <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${showPast ? "rotate-180" : ""}`} />
+        </button>
+
+        {loadingPast && (
+          <div className="px-6 py-8 text-center">
+            <Loader2 className="h-5 w-5 animate-spin text-gray-400 mx-auto" />
+          </div>
+        )}
+
+        {showPast && pastSets.length === 0 && !loadingPast && (
+          <div className="px-6 py-8 text-center">
+            <p className="text-sm text-gray-400">No saved problem sets yet. Generate some problems above!</p>
+          </div>
+        )}
+
+        {showPast && pastSets.length > 0 && (
+          <div className="border-t border-gray-100">
+            {pastSets.map((ps) => (
+              <button
+                key={ps.id}
+                onClick={() => loadProblemSet(ps)}
+                className="w-full px-6 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-b-0 text-left"
+              >
+                <div>
+                  <p className="text-sm font-medium text-gray-800">{ps.topic}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {ps.problems.length} problems &middot; {ps.questionType} &middot; Difficulty {ps.difficulty}/5
+                    {ps.createdBy && ` &middot; by ${ps.createdBy}`}
+                  </p>
+                </div>
+                <span className="text-xs text-gray-400 shrink-0 ml-4">
+                  {new Date(ps.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

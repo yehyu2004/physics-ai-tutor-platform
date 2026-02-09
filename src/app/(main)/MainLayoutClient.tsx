@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Sidebar from "@/components/layout/Sidebar";
 import Topbar from "@/components/layout/Topbar";
 import type { UserRole } from "@/types";
@@ -19,10 +20,21 @@ export default function MainLayoutClient({
   userImage,
   userRole,
 }: MainLayoutClientProps) {
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
   return (
     <div className="min-h-screen bg-white">
-      <Sidebar userRole={userRole} userName={userName} />
-      <div className="lg:ml-64 min-h-screen flex flex-col">
+      <Sidebar
+        userRole={userRole}
+        userName={userName}
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+      />
+      <div
+        className={`min-h-screen flex flex-col transition-[margin] duration-300 ease-in-out ${
+          sidebarCollapsed ? "lg:ml-[68px]" : "lg:ml-64"
+        }`}
+      >
         <Topbar
           userName={userName}
           userEmail={userEmail}

@@ -82,13 +82,14 @@ const adminItems: NavItem[] = [
 interface SidebarProps {
   userRole: UserRole;
   userName: string;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
-export default function Sidebar({ userRole, userName }: SidebarProps) {
+export default function Sidebar({ userRole, userName, collapsed = false, onToggleCollapse }: SidebarProps) {
   const pathname = usePathname();
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
 
   const toggleExpand = (label: string) => {
     setExpandedItems((prev) =>
@@ -118,7 +119,7 @@ export default function Sidebar({ userRole, userName }: SidebarProps) {
   const renderNavItem = (item: NavItem) => {
     const active = isActive(item.href);
 
-    if (item.children) {
+    if (item.children && !collapsed) {
       const expanded = expandedItems.includes(item.label);
       return (
         <div key={item.label}>
@@ -180,15 +181,17 @@ export default function Sidebar({ userRole, userName }: SidebarProps) {
       <Link
         key={item.href}
         href={item.href}
+        title={item.label}
         className={cn(
           "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
           active
             ? "bg-gray-50 text-gray-900 font-semibold"
-            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
+          collapsed && "justify-center px-2"
         )}
       >
         <item.icon className="h-5 w-5 shrink-0" />
-        {item.label}
+        {!collapsed && item.label}
       </Link>
     );
   };
@@ -196,59 +199,70 @@ export default function Sidebar({ userRole, userName }: SidebarProps) {
   const sidebarContent = (
     <div className="flex h-full flex-col bg-white">
       {/* Logo and collapse */}
-      <div className="flex items-center justify-between px-5 pt-5 pb-4">
+      <div className={cn("flex items-center justify-between pt-5 pb-4", collapsed ? "px-3" : "px-5")}>
         <Link
           href="/dashboard"
           className="flex items-center gap-2.5"
         >
-          <Atom className="h-6 w-6 text-gray-900" />
-          <span className="text-lg font-semibold text-gray-900 tracking-tight">
-            PhysTutor
-          </span>
+          <Atom className="h-6 w-6 text-gray-900 shrink-0" />
+          {!collapsed && (
+            <span className="text-lg font-semibold text-gray-900 tracking-tight">
+              PhysTutor
+            </span>
+          )}
         </Link>
         <button
-          onClick={() => setCollapsed(!collapsed)}
+          onClick={onToggleCollapse}
           className="hidden lg:flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition-colors"
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
-          <PanelLeftClose className="h-4 w-4" />
+          <PanelLeftClose className={cn("h-4 w-4 transition-transform duration-300", collapsed && "rotate-180")} />
         </button>
       </div>
 
       {/* New Conversation button */}
-      <div className="px-4 mb-3">
+      <div className={cn("mb-3", collapsed ? "px-2" : "px-4")}>
         <Link href="/chat">
           <Button
             variant="outline"
-            className="w-full justify-center gap-2 rounded-lg border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900 h-9 text-sm font-medium"
+            className={cn(
+              "w-full justify-center gap-2 rounded-lg border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900 h-9 text-sm font-medium",
+              collapsed && "px-0"
+            )}
+            title="New Conversation"
           >
-            <Plus className="h-4 w-4" />
-            New Conversation
+            <Plus className="h-4 w-4 shrink-0" />
+            {!collapsed && "New Conversation"}
           </Button>
         </Link>
       </div>
 
       {/* Search */}
-      <div className="px-4 mb-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-          <Input
-            placeholder="Search..."
-            className="pl-9 pr-12 h-9 bg-white border-gray-200 rounded-lg text-sm placeholder:text-gray-400 focus:border-gray-300 focus:ring-gray-200"
-          />
-          <kbd className="pointer-events-none absolute right-2.5 top-2 inline-flex h-5 items-center rounded border border-gray-200 bg-gray-50 px-1.5 text-[10px] font-medium text-gray-400">
-            &#8984;K
-          </kbd>
+      {!collapsed && (
+        <div className="px-4 mb-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Search..."
+              className="pl-9 pr-12 h-9 bg-white border-gray-200 rounded-lg text-sm placeholder:text-gray-400 focus:border-gray-300 focus:ring-gray-200"
+            />
+            <kbd className="pointer-events-none absolute right-2.5 top-2 inline-flex h-5 items-center rounded border border-gray-200 bg-gray-50 px-1.5 text-[10px] font-medium text-gray-400">
+              &#8984;K
+            </kbd>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Navigation */}
-      <ScrollArea className="flex-1 px-3">
+      <ScrollArea className={cn("flex-1", collapsed ? "px-1.5" : "px-3")}>
         <div className="space-y-6 py-1">
           {sections.map((section) => (
             <div key={section.label}>
-              <p className="px-3 mb-2 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
-                {section.label}
-              </p>
+              {!collapsed && (
+                <p className="px-3 mb-2 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+                  {section.label}
+                </p>
+              )}
               <div className="space-y-0.5">
                 {section.items.map(renderNavItem)}
               </div>
@@ -258,20 +272,27 @@ export default function Sidebar({ userRole, userName }: SidebarProps) {
       </ScrollArea>
 
       {/* User profile */}
-      <div className="border-t border-gray-200 p-4">
-        <div className="flex items-center gap-3 rounded-lg p-2 hover:bg-gray-50 transition-colors cursor-pointer">
-          <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-600">
+      <div className={cn("border-t border-gray-200", collapsed ? "p-2" : "p-4")}>
+        <div className={cn(
+          "flex items-center rounded-lg hover:bg-gray-50 transition-colors cursor-pointer",
+          collapsed ? "justify-center p-2" : "gap-3 p-2"
+        )}>
+          <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-600 shrink-0">
             {userName?.[0]?.toUpperCase() || "U"}
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 truncate">
-              {userName}
-            </p>
-            <p className="text-xs text-gray-500 capitalize">
-              {userRole.toLowerCase()}
-            </p>
-          </div>
-          <ChevronRight className="h-4 w-4 text-gray-400" />
+          {!collapsed && (
+            <>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate">
+                  {userName}
+                </p>
+                <p className="text-xs text-gray-500 capitalize">
+                  {userRole.toLowerCase()}
+                </p>
+              </div>
+              <ChevronRight className="h-4 w-4 text-gray-400" />
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -305,8 +326,9 @@ export default function Sidebar({ userRole, userName }: SidebarProps) {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed left-0 top-0 z-40 h-screen w-64 border-r border-gray-200 bg-white transition-transform duration-300 ease-in-out lg:translate-x-0",
-          mobileOpen ? "translate-x-0 shadow-xl" : "-translate-x-full"
+          "fixed left-0 top-0 z-40 h-screen border-r border-gray-200 bg-white transition-all duration-300 ease-in-out lg:translate-x-0",
+          collapsed ? "lg:w-[68px]" : "lg:w-64",
+          mobileOpen ? "translate-x-0 shadow-xl w-64" : "-translate-x-full w-64"
         )}
       >
         {sidebarContent}
