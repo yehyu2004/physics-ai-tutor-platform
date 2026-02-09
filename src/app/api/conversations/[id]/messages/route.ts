@@ -28,7 +28,7 @@ export async function GET(
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    if (conversation.userId !== userId && userRole !== "ADMIN") {
+    if (conversation.userId !== userId && userRole !== "ADMIN" && userRole !== "TA") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

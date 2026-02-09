@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const session = await auth();
     if (!session?.user) {
@@ -10,11 +10,15 @@ export async function GET() {
     }
 
     const userRole = (session.user as { role?: string }).role;
-    if (userRole !== "ADMIN") {
+    if (userRole !== "ADMIN" && userRole !== "TA") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get("userId");
+
     const conversations = await prisma.conversation.findMany({
+      where: userId ? { userId } : {},
       include: {
         user: { select: { name: true, email: true } },
         _count: { select: { messages: true } },

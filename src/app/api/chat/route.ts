@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { streamChat, SOCRATIC_SYSTEM_PROMPT, type ChatMessage, type AIProvider } from "@/lib/ai";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { checkContentFlags, handleContentFlag, trackRateLimitAbuse } from "@/lib/abuse-detection";
 
 export async function POST(req: Request) {
   try {
@@ -32,6 +33,8 @@ export async function POST(req: Request) {
       );
     }
 
+    const userName = (session.user as { name?: string }).name || "Unknown";
+
     const rateCheck = checkRateLimit(userId, user?.isRestricted || false);
     if (!rateCheck.allowed) {
       await prisma.auditLog.create({
@@ -41,6 +44,8 @@ export async function POST(req: Request) {
           details: { remaining: rateCheck.remaining, resetAt: new Date(rateCheck.resetAt).toISOString() },
         },
       });
+      // Fire-and-forget: track rate limit abuse escalation
+      trackRateLimitAbuse(userId, userName).catch(() => {});
       return Response.json(
         { error: `Rate limit exceeded. Please wait before sending more messages. Resets at ${new Date(rateCheck.resetAt).toLocaleTimeString()}.` },
         { status: 429 }
@@ -48,6 +53,12 @@ export async function POST(req: Request) {
     }
 
     const { conversationId, message, imageUrl, model, mode } = await req.json();
+
+    // Fire-and-forget: check content for jailbreak/prompt injection patterns
+    const contentFlags = checkContentFlags(message);
+    if (contentFlags.length > 0) {
+      handleContentFlag(userId, userName, message, contentFlags).catch(() => {});
+    }
 
     let convId = conversationId;
 

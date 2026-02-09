@@ -227,7 +227,7 @@ model GeneratedProblem {
 model AuditLog {
   id        String   @id @default(cuid())
   userId    String
-  action    String   // "rate_limit_hit", "content_flag", "ban", "unban", "restrict", "unrestrict"
+  action    String   // "rate_limit_hit", "content_flag", "abuse_detected", "ban", "unban", "restrict", "unrestrict"
   details   Json?
   createdAt DateTime @default(now())
 

@@ -112,8 +112,11 @@ export default function Sidebar({ userRole, userName, collapsed = false, onToggl
     { label: "TOOLS", items: filterByRole(toolItems) },
   ];
 
-  if (userRole === "ADMIN") {
-    sections.push({ label: "ADMIN", items: adminItems });
+  if (userRole === "ADMIN" || userRole === "TA") {
+    const staffItems = userRole === "ADMIN"
+      ? adminItems
+      : adminItems.filter((item) => item.href === "/admin/qa-history");
+    sections.push({ label: "ADMIN", items: staffItems });
   }
 
   const renderNavItem = (item: NavItem) => {
