@@ -32,8 +32,8 @@ model User {
   passwordHash  String?
   role          Role      @default(STUDENT)
   isBanned      Boolean   @default(false)
-  bannedAt      DateTime?
   isRestricted  Boolean   @default(false)
+  bannedAt      DateTime?
   isDeleted     Boolean   @default(false)
   deletedAt     DateTime?
   createdAt     DateTime  @default(now())
@@ -45,6 +45,7 @@ model User {
   submissions   Submission[]
   gradedSubmissions Submission[] @relation("GradedBy")
   createdAssignments Assignment[] @relation("CreatedBy")
+  auditLogs     AuditLog[]
 }
 
 model Account {
@@ -100,6 +101,7 @@ model Message {
   content        String   @db.Text
   imageUrl       String?
   model          String?  // "gpt-5-mini" or "claude-haiku-4.5"
+  mode           String?  // "normal" or "socratic"
   createdAt      DateTime @default(now())
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
@@ -193,4 +195,14 @@ model AIConfig {
   systemPrompt String?  @db.Text
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String   // "rate_limit_hit", "content_flag", "ban", "unban", "restrict", "unrestrict"
+  details   Json?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

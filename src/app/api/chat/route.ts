@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { streamChat, type ChatMessage, type AIProvider } from "@/lib/ai";
+import { streamChat, SOCRATIC_SYSTEM_PROMPT, type ChatMessage, type AIProvider } from "@/lib/ai";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
   try {
@@ -12,19 +13,42 @@ export async function POST(req: Request) {
 
     const userId = (session.user as { id: string }).id;
 
-    // Check if user is restricted from using AI chat
-    const currentUser = await prisma.user.findUnique({
+    // Check if user is banned or restricted from using AI chat
+    const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { isRestricted: true },
+      select: { isBanned: true, isRestricted: true },
     });
-    if (currentUser?.isRestricted) {
+
+    if (user?.isBanned) {
+      return NextResponse.json(
+        { error: "Your account has been suspended. Please contact an administrator." },
+        { status: 403 }
+      );
+    }
+
+    if (user?.isRestricted) {
       return NextResponse.json(
         { error: "Your account has been restricted from using AI chat. Please contact your instructor." },
         { status: 403 }
       );
     }
 
-    const { conversationId, message, imageUrl, model } = await req.json();
+    const rateCheck = checkRateLimit(userId, user?.isRestricted || false);
+    if (!rateCheck.allowed) {
+      await prisma.auditLog.create({
+        data: {
+          userId,
+          action: "rate_limit_hit",
+          details: { remaining: rateCheck.remaining, resetAt: new Date(rateCheck.resetAt).toISOString() },
+        },
+      });
+      return NextResponse.json(
+        { error: `Rate limit exceeded. Please wait before sending more messages. Resets at ${new Date(rateCheck.resetAt).toLocaleTimeString()}.` },
+        { status: 429 }
+      );
+    }
+
+    const { conversationId, message, imageUrl, model, mode } = await req.json();
 
     let convId = conversationId;
 
@@ -44,6 +68,7 @@ export async function POST(req: Request) {
         role: "user",
         content: message,
         imageUrl,
+        mode: mode || "normal",
       },
     });
 
@@ -68,7 +93,7 @@ export async function POST(req: Request) {
         where: { isActive: true },
       });
 
-      const systemPrompt = aiConfig?.systemPrompt || undefined;
+      const systemPrompt = mode === "socratic" ? SOCRATIC_SYSTEM_PROMPT : (aiConfig?.systemPrompt || undefined);
 
       if (provider === "openai") {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -97,6 +122,7 @@ export async function POST(req: Request) {
         role: "assistant",
         content: fullContent,
         model: model || "gpt-5-mini",
+        mode: mode || "normal",
       },
     });
 
