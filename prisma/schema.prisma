@@ -32,8 +32,8 @@ model User {
   passwordHash  String?
   role          Role      @default(STUDENT)
   isBanned      Boolean   @default(false)
-  bannedAt      DateTime?
   isRestricted  Boolean   @default(false)
+  bannedAt      DateTime?
   isDeleted     Boolean   @default(false)
   deletedAt     DateTime?
   createdAt     DateTime  @default(now())

@@ -57,6 +57,7 @@ const toolItems: NavItem[] = [
       { label: "Create New", href: "/assignments/create" },
     ],
   },
+  { label: "Analytics", href: "/analytics", icon: BarChart3 },
   {
     label: "Problem Generator",
     href: "/problems/generate",
@@ -73,6 +74,7 @@ const toolItems: NavItem[] = [
 
 const adminItems: NavItem[] = [
   { label: "Users", href: "/admin/users", icon: Users },
+  { label: "Analytics", href: "/admin/analytics", icon: BarChart3 },
   { label: "Q&A History", href: "/admin/qa-history", icon: BarChart3 },
   { label: "Settings", href: "/admin/settings", icon: Settings },
 ];

@@ -21,8 +21,8 @@ import {
   PanelLeftClose,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
 
 import { cn } from "@/lib/utils";
 
@@ -77,7 +77,6 @@ function TypingIndicator() {
   );
 }
 
-
 const SUGGESTED_TOPICS = [
   { icon: Zap, label: "Explain Newton's Laws" },
   { icon: Atom, label: "Quantum mechanics basics" },
@@ -98,6 +97,7 @@ export default function ChatPageClient({
   const [model, setModel] = useState("gpt-5-mini");
   const [searchQuery, setSearchQuery] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [chatMode, setChatMode] = useState<"normal" | "socratic">("normal");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -130,6 +130,14 @@ export default function ChatPageClient({
     setInput("");
     setSidebarOpen(false);
   };
+
+  const autoResizeTextarea = useCallback(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = "auto";
+      textarea.style.height = `${Math.min(textarea.scrollHeight, 160)}px`;
+    }
+  }, []);
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -192,6 +200,7 @@ export default function ChatPageClient({
           message: messageText,
           imageUrl: uploadedImageUrl,
           model,
+          mode: chatMode,
         }),
       });
 
@@ -256,7 +265,7 @@ export default function ChatPageClient({
     } finally {
       setLoading(false);
     }
-  }, [activeConversationId, imageFile, model]);
+  }, [activeConversationId, imageFile, model, chatMode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -266,7 +275,9 @@ export default function ChatPageClient({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      submitMessage(input);
+      if (input.trim() || imageFile) {
+        submitMessage(input);
+      }
     }
   };
 
@@ -416,8 +427,27 @@ export default function ChatPageClient({
             </div>
           </div>
 
-          {/* Model Selector - Minimal Pill */}
+          {/* Socratic Mode Toggle + Model Selector */}
           <div className="flex items-center gap-2">
+            {/* Socratic Mode Toggle */}
+            <Button
+              type="button"
+              variant={chatMode === "socratic" ? "outline" : "ghost"}
+              size="sm"
+              onClick={() => setChatMode(chatMode === "socratic" ? "normal" : "socratic")}
+              className={cn(
+                "h-8 gap-1.5 text-xs",
+                chatMode === "socratic"
+                  ? "bg-amber-100 text-amber-700 border-amber-300 hover:bg-amber-200 hover:text-amber-800"
+                  : ""
+              )}
+              title="Socratic guided mode"
+            >
+              <Lightbulb className="h-3.5 w-3.5" />
+              Socratic
+            </Button>
+
+            {/* Model Selector - Minimal Pill */}
             <div className="flex items-center bg-gray-100 rounded-full p-0.5">
               <button
                 onClick={() => setModel("gpt-5-mini")}
@@ -448,6 +478,13 @@ export default function ChatPageClient({
             </div>
           </div>
         </div>
+
+        {/* Socratic Mode Banner */}
+        {chatMode === "socratic" && (
+          <div className="px-4 py-2 bg-amber-50 border-b border-amber-200 text-amber-800 text-xs text-center">
+            Socratic guided mode: AI will guide your thinking through questions rather than giving direct answers
+          </div>
+        )}
 
         {/* Messages Area */}
         <ScrollArea className="flex-1 min-h-0">
@@ -589,7 +626,10 @@ export default function ChatPageClient({
               <textarea
                 ref={textareaRef}
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  autoResizeTextarea();
+                }}
                 onKeyDown={handleKeyDown}
                 placeholder="Ask a physics question..."
                 disabled={loading}

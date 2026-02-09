@@ -12,9 +12,10 @@ export async function POST(req: Request) {
 
     const userId = (session.user as { id: string }).id;
 
+    // Check if user is banned or restricted from using AI chat
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { isRestricted: true, isBanned: true },
+      select: { isBanned: true, isRestricted: true },
     });
 
     if (user?.isBanned) {
