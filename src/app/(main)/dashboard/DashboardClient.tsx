@@ -14,9 +14,7 @@ import {
   ArrowRight,
   Clock,
   BookOpen,
-  Atom,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatShortDate } from "@/lib/utils";
 
@@ -60,14 +58,11 @@ function SectionHeading({
   subtitle?: string;
 }) {
   return (
-    <div className="flex items-center gap-3 mb-5">
-      <div>
-        <h2 className="text-lg font-semibold text-neutral-900">{title}</h2>
-        {subtitle && (
-          <p className="text-sm text-neutral-500 mt-0.5">{subtitle}</p>
-        )}
-      </div>
-      <div className="flex-1 h-px bg-neutral-200" />
+    <div className="mb-5">
+      <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+      {subtitle && (
+        <p className="text-sm text-gray-400 mt-0.5">{subtitle}</p>
+      )}
     </div>
   );
 }
@@ -89,7 +84,6 @@ export default function DashboardClient({
       description: "Chat with your AI physics tutor",
       href: "/chat",
       roles: ["STUDENT", "TA", "ADMIN"],
-      color: "bg-indigo-100 text-indigo-600",
     },
     {
       icon: FileText,
@@ -97,7 +91,6 @@ export default function DashboardClient({
       description: "View and complete assignments",
       href: "/assignments",
       roles: ["STUDENT", "TA", "ADMIN"],
-      color: "bg-violet-100 text-violet-600",
     },
     {
       icon: Upload,
@@ -105,7 +98,6 @@ export default function DashboardClient({
       description: "Upload your homework solutions",
       href: "/assignments",
       roles: ["STUDENT"],
-      color: "bg-emerald-100 text-emerald-600",
     },
     {
       icon: Sparkles,
@@ -113,7 +105,6 @@ export default function DashboardClient({
       description: "Create problems with AI assistance",
       href: "/problems/generate",
       roles: ["TA", "ADMIN"],
-      color: "bg-amber-100 text-amber-600",
     },
     {
       icon: PenTool,
@@ -121,7 +112,6 @@ export default function DashboardClient({
       description: "Design a new assignment for students",
       href: "/assignments/create",
       roles: ["TA", "ADMIN"],
-      color: "bg-rose-100 text-rose-600",
     },
     {
       icon: ClipboardList,
@@ -129,7 +119,6 @@ export default function DashboardClient({
       description: "Review and grade student submissions",
       href: "/grading",
       roles: ["TA", "ADMIN"],
-      color: "bg-cyan-100 text-cyan-600",
     },
   ];
 
@@ -145,27 +134,18 @@ export default function DashboardClient({
           label: "Total Users",
           sublabel: "Platform-wide",
           icon: Users,
-          borderColor: "border-l-indigo-500",
-          iconBg: "bg-indigo-100",
-          iconColor: "text-indigo-600",
         },
         {
           value: adminStats.totalConversations,
           label: "Total Conversations",
           sublabel: "All users combined",
           icon: MessageSquare,
-          borderColor: "border-l-violet-500",
-          iconBg: "bg-violet-100",
-          iconColor: "text-violet-600",
         },
         {
           value: adminStats.totalSubmissions,
           label: "Total Submissions",
           sublabel: "All assignments",
           icon: GraduationCap,
-          borderColor: "border-l-emerald-500",
-          iconBg: "bg-emerald-100",
-          iconColor: "text-emerald-600",
         },
       ];
     }
@@ -176,27 +156,18 @@ export default function DashboardClient({
           label: "My Chats",
           sublabel: "AI conversations",
           icon: MessageSquare,
-          borderColor: "border-l-indigo-500",
-          iconBg: "bg-indigo-100",
-          iconColor: "text-indigo-600",
         },
         {
           value: taStats.pendingGrading,
           label: "Pending Grading",
           sublabel: "Submissions to review",
           icon: ClipboardList,
-          borderColor: "border-l-violet-500",
-          iconBg: "bg-violet-100",
-          iconColor: "text-violet-600",
         },
         {
           value: taStats.createdAssignments,
           label: "My Assignments",
           sublabel: "Created by you",
           icon: FileText,
-          borderColor: "border-l-emerald-500",
-          iconBg: "bg-emerald-100",
-          iconColor: "text-emerald-600",
         },
       ];
     }
@@ -206,62 +177,30 @@ export default function DashboardClient({
         label: "Questions Asked",
         sublabel: "AI conversations",
         icon: MessageSquare,
-        borderColor: "border-l-indigo-500",
-        iconBg: "bg-indigo-100",
-        iconColor: "text-indigo-600",
       },
       {
         value: stats.assignmentCount,
         label: "Assignments",
         sublabel: "Available assignments",
         icon: FileText,
-        borderColor: "border-l-violet-500",
-        iconBg: "bg-violet-100",
-        iconColor: "text-violet-600",
       },
       {
         value: stats.submissionCount,
         label: "Submissions",
         sublabel: "Completed work",
         icon: GraduationCap,
-        borderColor: "border-l-emerald-500",
-        iconBg: "bg-emerald-100",
-        iconColor: "text-emerald-600",
       },
     ];
   })();
 
   return (
     <div className="space-y-10 pb-8">
-      {/* Welcome Hero */}
-      <div
-        className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-500 p-8 text-white shadow-lg animate-fade-in"
-      >
-        {/* Decorative background elements */}
-        <div className="absolute top-0 right-0 -mt-4 -mr-4 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
-        <div className="absolute bottom-0 left-1/2 -mb-8 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
-        <div className="absolute top-4 right-8 opacity-20">
-          <Atom className="h-20 w-20" />
-        </div>
-
-        <div className="relative">
-          <p className="text-indigo-200 text-sm font-medium mb-1">{date}</p>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-            Welcome back, {userName}
-          </h1>
-          <p className="text-indigo-100 mt-2 text-base max-w-lg">
-            Ready to explore physics today? Pick up where you left off or start
-            something new.
-          </p>
-          <Link
-            href="/chat"
-            className="inline-flex items-center gap-2 mt-5 px-5 py-2.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors backdrop-blur-sm"
-          >
-            <MessageSquare className="h-4 w-4" />
-            Start a conversation
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-        </div>
+      {/* Welcome Section — plain text, no colored background */}
+      <div className="pt-2 animate-fade-in">
+        <h1 className="text-2xl md:text-3xl font-semibold text-gray-900">
+          Welcome Back, {userName}
+        </h1>
+        <p className="text-gray-400 mt-1">{date}</p>
       </div>
 
       {/* Stat Cards */}
@@ -269,64 +208,59 @@ export default function DashboardClient({
         <SectionHeading title="Overview" subtitle="Your activity at a glance" />
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
           {statCards.map((stat, index) => (
-            <Card
+            <div
               key={stat.label}
-              className={`border-l-4 ${stat.borderColor} shadow-md hover:shadow-lg transition-shadow animate-fade-in`}
+              className="relative overflow-hidden bg-white border border-gray-100 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow animate-fade-in"
               style={{ animationDelay: `${index * 100}ms` }}
             >
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-3xl font-bold text-neutral-900">
-                      {stat.value}
-                    </p>
-                    <p className="text-sm font-medium text-neutral-700 mt-1">
-                      {stat.label}
-                    </p>
-                    <p className="text-xs text-neutral-400 mt-0.5">
-                      {stat.sublabel}
-                    </p>
-                  </div>
-                  <div
-                    className={`h-11 w-11 rounded-full ${stat.iconBg} flex items-center justify-center shrink-0`}
-                  >
-                    <stat.icon className={`h-5 w-5 ${stat.iconColor}`} />
-                  </div>
+              {/* Gradient blob decoration */}
+              <div className="absolute -top-8 -right-8 w-32 h-32 bg-gradient-to-br from-pink-200 to-purple-200 opacity-25 blur-2xl rounded-full pointer-events-none" />
+
+              {/* Stat number with subtle dashed green accent */}
+              <div className="relative inline-block mb-3">
+                <div className="border border-dashed border-emerald-200 rounded-xl px-3 py-1.5 inline-block">
+                  <p className="text-4xl font-bold text-gray-900">
+                    {stat.value}
+                  </p>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+
+              {/* Icon + label */}
+              <div className="flex items-center gap-2 mt-1">
+                <stat.icon className="h-4 w-4 text-gray-400" />
+                <span className="text-sm text-gray-500">{stat.label}</span>
+              </div>
+
+              {/* Description */}
+              <p className="text-xs text-gray-400 mt-1">{stat.sublabel}</p>
+            </div>
           ))}
         </div>
       </div>
 
       {/* Quick Start */}
       <div>
-        <SectionHeading title="Quick Start" subtitle="Jump into your tools" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredQuickStart.slice(0, 6).map((item, index) => (
+        <SectionHeading title="Quick Start" subtitle="Top physics tools" />
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
+          {filteredQuickStart.slice(0, 8).map((item, index) => (
             <Link key={item.href + item.label} href={item.href}>
-              <Card
-                className="hover:shadow-lg transition-all duration-200 cursor-pointer h-full group border-neutral-200/80 hover:border-indigo-200"
+              <div
+                className="bg-white border border-gray-100 rounded-2xl p-6 hover:shadow-md transition-all duration-200 cursor-pointer h-full group animate-fade-in"
                 style={{ animationDelay: `${index * 80}ms` }}
               >
-                <CardContent className="p-6 animate-fade-in">
-                  <div
-                    className={`h-12 w-12 rounded-xl ${item.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-200`}
-                  >
-                    <item.icon className="h-5 w-5" />
-                  </div>
-                  <p className="text-sm font-semibold text-neutral-900">
-                    {item.label}
-                  </p>
-                  <p className="text-xs text-neutral-500 mt-1 leading-relaxed">
-                    {item.description}
-                  </p>
-                  <div className="flex items-center gap-1 mt-3 text-xs font-medium text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    Open
-                    <ArrowRight className="h-3 w-3" />
-                  </div>
-                </CardContent>
-              </Card>
+                {/* Circular icon with ring decoration */}
+                <div className="w-12 h-12 rounded-full border-2 border-gray-200 flex items-center justify-center mb-4 relative group-hover:border-gray-300 transition-colors">
+                  <div className="absolute inset-0 rounded-full border border-gray-100 scale-125 opacity-50" />
+                  <item.icon className="h-5 w-5 text-gray-600" />
+                </div>
+
+                <p className="text-sm font-medium text-gray-700">
+                  {item.label}
+                </p>
+                <p className="text-xs text-gray-400 mt-1 leading-relaxed">
+                  {item.description}
+                </p>
+              </div>
             </Link>
           ))}
         </div>
@@ -340,15 +274,15 @@ export default function DashboardClient({
         />
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Recent Conversations */}
-          <Card className="shadow-md animate-fade-in">
-            <CardHeader className="flex flex-row items-center justify-between pb-4">
+          <div className="bg-white border border-gray-100 rounded-2xl shadow-sm animate-fade-in">
+            <div className="flex items-center justify-between p-6 pb-4">
               <div className="flex items-center gap-2.5">
-                <div className="h-8 w-8 rounded-lg bg-indigo-100 flex items-center justify-center">
-                  <MessageSquare className="h-4 w-4 text-indigo-600" />
+                <div className="h-8 w-8 rounded-lg bg-indigo-50 flex items-center justify-center">
+                  <MessageSquare className="h-4 w-4 text-indigo-500" />
                 </div>
-                <CardTitle className="text-base">
+                <h3 className="text-base font-semibold text-gray-900">
                   Recent Conversations
-                </CardTitle>
+                </h3>
               </div>
               <Link
                 href="/chat"
@@ -356,8 +290,8 @@ export default function DashboardClient({
               >
                 View all <ArrowRight className="h-3.5 w-3.5" />
               </Link>
-            </CardHeader>
-            <CardContent>
+            </div>
+            <div className="px-6 pb-6">
               {recentConversations.length === 0 ? (
                 <div className="py-8 text-center">
                   <div className="flex justify-center gap-2 mb-4">
@@ -371,10 +305,10 @@ export default function DashboardClient({
                       <BookOpen className="h-5 w-5 text-indigo-300" />
                     </div>
                   </div>
-                  <p className="text-sm font-medium text-neutral-600">
+                  <p className="text-sm font-medium text-gray-600">
                     No conversations yet
                   </p>
-                  <p className="text-xs text-neutral-400 mt-1">
+                  <p className="text-xs text-gray-400 mt-1">
                     Start chatting with the AI tutor to get help with physics!
                   </p>
                   <Link
@@ -386,44 +320,47 @@ export default function DashboardClient({
                   </Link>
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="divide-y divide-gray-100">
                   {recentConversations.map((conv) => (
                     <Link
                       key={conv.id}
                       href={`/chat/${conv.id}`}
-                      className="flex items-start gap-3 rounded-lg p-3 hover:bg-indigo-50/50 transition-colors group"
+                      className="flex items-start gap-3 py-3 hover:bg-gray-50/50 -mx-2 px-2 rounded-lg transition-colors group first:pt-0"
                     >
                       <div className="h-8 w-8 rounded-full bg-indigo-50 flex items-center justify-center shrink-0 mt-0.5">
                         <MessageSquare className="h-3.5 w-3.5 text-indigo-500" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-neutral-800 truncate group-hover:text-indigo-700 transition-colors">
+                        <p className="text-sm font-medium text-gray-800 truncate group-hover:text-indigo-700 transition-colors">
                           {conv.title}
                         </p>
-                        <p className="text-xs text-neutral-400 truncate mt-0.5">
+                        <p className="text-xs text-gray-400 truncate mt-0.5">
                           {conv.lastMessage}
                         </p>
                       </div>
-                      <span className="text-xs text-neutral-400 shrink-0 mt-0.5">
+                      <span className="text-xs text-gray-400 shrink-0 mt-0.5">
                         {formatShortDate(conv.updatedAt)}
                       </span>
                     </Link>
                   ))}
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {/* Upcoming Assignments */}
-          <Card className="shadow-md animate-fade-in" style={{ animationDelay: "100ms" }}>
-            <CardHeader className="flex flex-row items-center justify-between pb-4">
+          <div
+            className="bg-white border border-gray-100 rounded-2xl shadow-sm animate-fade-in"
+            style={{ animationDelay: "100ms" }}
+          >
+            <div className="flex items-center justify-between p-6 pb-4">
               <div className="flex items-center gap-2.5">
-                <div className="h-8 w-8 rounded-lg bg-violet-100 flex items-center justify-center">
-                  <FileText className="h-4 w-4 text-violet-600" />
+                <div className="h-8 w-8 rounded-lg bg-violet-50 flex items-center justify-center">
+                  <FileText className="h-4 w-4 text-violet-500" />
                 </div>
-                <CardTitle className="text-base">
+                <h3 className="text-base font-semibold text-gray-900">
                   Upcoming Assignments
-                </CardTitle>
+                </h3>
               </div>
               <Link
                 href="/assignments"
@@ -431,8 +368,8 @@ export default function DashboardClient({
               >
                 View all <ArrowRight className="h-3.5 w-3.5" />
               </Link>
-            </CardHeader>
-            <CardContent>
+            </div>
+            <div className="px-6 pb-6">
               {upcomingAssignments.length === 0 ? (
                 <div className="py-8 text-center">
                   <div className="flex justify-center gap-2 mb-4">
@@ -446,26 +383,26 @@ export default function DashboardClient({
                       <Clock className="h-5 w-5 text-violet-300" />
                     </div>
                   </div>
-                  <p className="text-sm font-medium text-neutral-600">
+                  <p className="text-sm font-medium text-gray-600">
                     No upcoming assignments
                   </p>
-                  <p className="text-xs text-neutral-400 mt-1">
+                  <p className="text-xs text-gray-400 mt-1">
                     You are all caught up! Check back later for new work.
                   </p>
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="divide-y divide-gray-100">
                   {upcomingAssignments.map((assignment) => (
                     <Link
                       key={assignment.id}
                       href={`/assignments/${assignment.id}`}
-                      className="flex items-start gap-3 rounded-lg p-3 hover:bg-violet-50/50 transition-colors group"
+                      className="flex items-start gap-3 py-3 hover:bg-gray-50/50 -mx-2 px-2 rounded-lg transition-colors group first:pt-0"
                     >
                       <div className="h-8 w-8 rounded-full bg-violet-50 flex items-center justify-center shrink-0 mt-0.5">
                         <FileText className="h-3.5 w-3.5 text-violet-500" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-neutral-800 truncate group-hover:text-violet-700 transition-colors">
+                        <p className="text-sm font-medium text-gray-800 truncate group-hover:text-violet-700 transition-colors">
                           {assignment.title}
                         </p>
                         <div className="flex items-center gap-2 mt-1.5">
@@ -478,7 +415,7 @@ export default function DashboardClient({
                               : "File Upload"}
                           </Badge>
                           {assignment.dueDate && (
-                            <span className="text-xs text-neutral-400 flex items-center gap-1">
+                            <span className="text-xs text-gray-400 flex items-center gap-1">
                               <Clock className="h-3 w-3" />
                               Due {formatShortDate(assignment.dueDate)}
                             </span>
@@ -489,8 +426,8 @@ export default function DashboardClient({
                   ))}
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       </div>
     </div>

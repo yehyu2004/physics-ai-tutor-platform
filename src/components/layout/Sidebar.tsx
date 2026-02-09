@@ -20,6 +20,7 @@ import {
   Menu,
   X,
   Atom,
+  PanelLeftClose,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -85,6 +86,7 @@ export default function Sidebar({ userRole, userName }: SidebarProps) {
   const pathname = usePathname();
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
 
   const toggleExpand = (label: string) => {
     setExpandedItems((prev) =>
@@ -103,7 +105,7 @@ export default function Sidebar({ userRole, userName }: SidebarProps) {
     items.filter((item) => !item.roles || item.roles.includes(userRole));
 
   const sections: NavSection[] = [
-    { label: "MAIN", items: filterByRole(mainItems) },
+    { label: "MAIN MENU", items: filterByRole(mainItems) },
     { label: "TOOLS", items: filterByRole(toolItems) },
   ];
 
@@ -121,22 +123,13 @@ export default function Sidebar({ userRole, userName }: SidebarProps) {
           <button
             onClick={() => toggleExpand(item.label)}
             className={cn(
-              "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
+              "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
               active
-                ? "bg-indigo-50 text-indigo-700"
-                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                ? "bg-gray-50 text-gray-900 font-semibold"
+                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
             )}
           >
-            <div
-              className={cn(
-                "flex h-7 w-7 items-center justify-center rounded-lg transition-all duration-200",
-                active
-                  ? "bg-indigo-100 text-indigo-600"
-                  : "bg-slate-100 text-slate-500 group-hover:bg-slate-200"
-              )}
-            >
-              <item.icon className="h-4 w-4" />
-            </div>
+            <item.icon className="h-5 w-5 shrink-0" />
             <span className="flex-1 text-left">{item.label}</span>
             <div
               className={cn(
@@ -144,7 +137,7 @@ export default function Sidebar({ userRole, userName }: SidebarProps) {
                 expanded ? "rotate-0" : "-rotate-90"
               )}
             >
-              <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+              <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
             </div>
           </button>
           <div
@@ -153,7 +146,7 @@ export default function Sidebar({ userRole, userName }: SidebarProps) {
               expanded ? "max-h-40 opacity-100" : "max-h-0 opacity-0"
             )}
           >
-            <div className="ml-10 mt-1 space-y-0.5 border-l-2 border-slate-100 pl-3">
+            <div className="ml-8 mt-1 space-y-0.5 border-l border-gray-200 pl-3">
               {item.children
                 .filter((child) => {
                   if (child.href === "/assignments/create") {
@@ -166,10 +159,10 @@ export default function Sidebar({ userRole, userName }: SidebarProps) {
                     key={child.href}
                     href={child.href}
                     className={cn(
-                      "block rounded-lg px-3 py-1.5 text-sm transition-all duration-200",
+                      "block rounded-lg px-3 py-1.5 text-sm transition-colors",
                       pathname === child.href
-                        ? "text-indigo-700 font-medium bg-indigo-50/50"
-                        : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                        ? "text-gray-900 font-medium"
+                        : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
                     )}
                   >
                     {child.label}
@@ -186,76 +179,75 @@ export default function Sidebar({ userRole, userName }: SidebarProps) {
         key={item.href}
         href={item.href}
         className={cn(
-          "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
+          "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
           active
-            ? "bg-indigo-50 text-indigo-700 shadow-sm shadow-indigo-100"
-            : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+            ? "bg-gray-50 text-gray-900 font-semibold"
+            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
         )}
       >
-        <div
-          className={cn(
-            "flex h-7 w-7 items-center justify-center rounded-lg transition-all duration-200",
-            active
-              ? "bg-indigo-100 text-indigo-600"
-              : "bg-slate-100 text-slate-500 group-hover:bg-slate-200 group-hover:text-slate-700"
-          )}
-        >
-          <item.icon className="h-4 w-4" />
-        </div>
+        <item.icon className="h-5 w-5 shrink-0" />
         {item.label}
       </Link>
     );
   };
 
   const sidebarContent = (
-    <div className="flex h-full flex-col bg-gradient-to-b from-white via-white to-slate-50/80">
-      {/* Branding */}
-      <div className="px-5 pt-5 pb-4">
+    <div className="flex h-full flex-col bg-white">
+      {/* Logo and collapse */}
+      <div className="flex items-center justify-between px-5 pt-5 pb-4">
         <Link
           href="/dashboard"
-          className="group flex items-center gap-3 mb-5"
+          className="flex items-center gap-2.5"
         >
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 shadow-lg shadow-indigo-200 transition-all duration-200 group-hover:shadow-indigo-300 group-hover:scale-105">
-            <Atom className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <span className="text-lg font-bold tracking-tight bg-gradient-to-r from-indigo-700 to-violet-700 bg-clip-text text-transparent">
-              PhysTutor
-            </span>
-            <p className="text-[10px] font-medium text-slate-400 tracking-wide uppercase -mt-0.5">
-              AI Physics Platform
-            </p>
-          </div>
+          <Atom className="h-6 w-6 text-gray-900" />
+          <span className="text-lg font-semibold text-gray-900 tracking-tight">
+            PhysTutor
+          </span>
         </Link>
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className="hidden lg:flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition-colors"
+        >
+          <PanelLeftClose className="h-4 w-4" />
+        </button>
+      </div>
 
+      {/* New Conversation button */}
+      <div className="px-4 mb-3">
         <Link href="/chat">
-          <Button className="w-full justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-200 hover:shadow-lg hover:shadow-indigo-300 transition-all duration-200 hover:from-indigo-700 hover:to-violet-700 h-10 font-medium">
+          <Button
+            variant="outline"
+            className="w-full justify-center gap-2 rounded-lg border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900 h-9 text-sm font-medium"
+          >
             <Plus className="h-4 w-4" />
-            New Chat
+            New Conversation
           </Button>
         </Link>
       </div>
 
       {/* Search */}
-      <div className="px-5 mb-4">
+      <div className="px-4 mb-4">
         <div className="relative">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
           <Input
             placeholder="Search..."
-            className="pl-9 h-9 bg-slate-50 border-slate-200 rounded-xl text-sm placeholder:text-slate-400 focus:border-indigo-300 focus:ring-indigo-200 transition-all duration-200"
+            className="pl-9 pr-12 h-9 bg-white border-gray-200 rounded-lg text-sm placeholder:text-gray-400 focus:border-gray-300 focus:ring-gray-200"
           />
+          <kbd className="pointer-events-none absolute right-2.5 top-2 inline-flex h-5 items-center rounded border border-gray-200 bg-gray-50 px-1.5 text-[10px] font-medium text-gray-400">
+            &#8984;K
+          </kbd>
         </div>
       </div>
 
       {/* Navigation */}
       <ScrollArea className="flex-1 px-3">
-        <div className="space-y-6 py-2">
+        <div className="space-y-6 py-1">
           {sections.map((section) => (
             <div key={section.label}>
-              <p className="px-3 mb-2 text-[11px] font-semibold text-slate-400 uppercase tracking-widest">
+              <p className="px-3 mb-2 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
                 {section.label}
               </p>
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 {section.items.map(renderNavItem)}
               </div>
             </div>
@@ -264,20 +256,20 @@ export default function Sidebar({ userRole, userName }: SidebarProps) {
       </ScrollArea>
 
       {/* User profile */}
-      <div className="border-t border-slate-100 p-4 mx-3 mb-2">
-        <div className="flex items-center gap-3 rounded-xl p-2 hover:bg-slate-50 transition-all duration-200 cursor-pointer">
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center text-sm font-semibold text-white shadow-sm">
+      <div className="border-t border-gray-200 p-4">
+        <div className="flex items-center gap-3 rounded-lg p-2 hover:bg-gray-50 transition-colors cursor-pointer">
+          <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-600">
             {userName?.[0]?.toUpperCase() || "U"}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-slate-800 truncate">
+            <p className="text-sm font-medium text-gray-900 truncate">
               {userName}
             </p>
-            <p className="text-xs text-slate-400 capitalize font-medium">
+            <p className="text-xs text-gray-500 capitalize">
               {userRole.toLowerCase()}
             </p>
           </div>
-          <ChevronRight className="h-4 w-4 text-slate-300" />
+          <ChevronRight className="h-4 w-4 text-gray-400" />
         </div>
       </div>
     </div>
@@ -287,20 +279,20 @@ export default function Sidebar({ userRole, userName }: SidebarProps) {
     <>
       {/* Mobile toggle */}
       <button
-        className="fixed top-4 left-4 z-50 lg:hidden rounded-xl p-2.5 bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200"
+        className="fixed top-4 left-4 z-50 lg:hidden rounded-lg p-2 bg-white border border-gray-200 shadow-sm hover:bg-gray-50 transition-colors"
         onClick={() => setMobileOpen(!mobileOpen)}
       >
         {mobileOpen ? (
-          <X className="h-5 w-5 text-slate-700" />
+          <X className="h-5 w-5 text-gray-700" />
         ) : (
-          <Menu className="h-5 w-5 text-slate-700" />
+          <Menu className="h-5 w-5 text-gray-700" />
         )}
       </button>
 
       {/* Mobile overlay */}
       <div
         className={cn(
-          "fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden transition-opacity duration-300",
+          "fixed inset-0 z-40 bg-black/30 lg:hidden transition-opacity duration-300",
           mobileOpen
             ? "opacity-100 pointer-events-auto"
             : "opacity-0 pointer-events-none"
@@ -311,8 +303,8 @@ export default function Sidebar({ userRole, userName }: SidebarProps) {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed left-0 top-0 z-40 h-screen w-64 border-r border-slate-200 bg-white transition-all duration-300 ease-in-out lg:translate-x-0",
-          mobileOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"
+          "fixed left-0 top-0 z-40 h-screen w-64 border-r border-gray-200 bg-white transition-transform duration-300 ease-in-out lg:translate-x-0",
+          mobileOpen ? "translate-x-0 shadow-xl" : "-translate-x-full"
         )}
       >
         {sidebarContent}

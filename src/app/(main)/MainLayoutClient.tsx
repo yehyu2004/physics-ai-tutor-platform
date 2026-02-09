@@ -20,7 +20,7 @@ export default function MainLayoutClient({
   userRole,
 }: MainLayoutClientProps) {
   return (
-    <div className="min-h-screen bg-slate-50/50">
+    <div className="min-h-screen bg-white">
       <Sidebar userRole={userRole} userName={userName} />
       <div className="lg:ml-64 min-h-screen flex flex-col">
         <Topbar
@@ -29,7 +29,7 @@ export default function MainLayoutClient({
           userImage={userImage}
           userRole={userRole}
         />
-        <main className="flex-1 p-6">{children}</main>
+        <main className="flex-1 p-6 bg-gray-50/50">{children}</main>
       </div>
     </div>
   );

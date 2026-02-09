@@ -17,8 +17,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-// Card components available if needed
-// import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -55,11 +53,11 @@ const topicIcons: Record<string, React.ReactNode> = {
 };
 
 const difficultyConfig = [
-  { value: "1", label: "Easy", color: "bg-emerald-100 text-emerald-700 border-emerald-200" },
-  { value: "2", label: "Medium", color: "bg-sky-100 text-sky-700 border-sky-200" },
-  { value: "3", label: "Average", color: "bg-indigo-100 text-indigo-700 border-indigo-200" },
-  { value: "4", label: "Hard", color: "bg-amber-100 text-amber-700 border-amber-200" },
-  { value: "5", label: "Expert", color: "bg-red-100 text-red-700 border-red-200" },
+  { value: "1", label: "Easy", color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  { value: "2", label: "Medium", color: "bg-sky-50 text-sky-700 border-sky-200" },
+  { value: "3", label: "Average", color: "bg-gray-100 text-gray-700 border-gray-300" },
+  { value: "4", label: "Hard", color: "bg-amber-50 text-amber-700 border-amber-200" },
+  { value: "5", label: "Expert", color: "bg-red-50 text-red-700 border-red-200" },
 ];
 
 export default function ProblemGeneratorPage() {
@@ -128,43 +126,43 @@ export default function ProblemGeneratorPage() {
   ];
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 animate-fade-in">
+    <div className="max-w-4xl mx-auto space-y-8">
       {/* Header */}
       <div>
         <div className="flex items-center gap-3 mb-1">
-          <div className="p-2.5 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 shadow-sm">
+          <div className="p-2.5 rounded-xl bg-gray-900 shadow-sm">
             <Sparkles className="h-5 w-5 text-white" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-neutral-900">
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900">
             Problem Generator
           </h1>
         </div>
-        <p className="text-sm text-neutral-500 mt-2 ml-[52px]">
+        <p className="text-sm text-gray-500 mt-2 ml-[52px]">
           Generate physics problems using AI for assignments and practice
         </p>
       </div>
 
       {/* Configuration */}
-      <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-neutral-100 bg-neutral-50/50">
-          <h2 className="text-sm font-semibold text-neutral-700">Configuration</h2>
+      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+        <div className="px-6 py-4 border-b border-gray-100">
+          <h2 className="text-sm font-semibold text-gray-700">Configuration</h2>
         </div>
         <div className="p-6 space-y-6">
           {/* Topic Selection */}
           <div className="space-y-3">
-            <Label className="text-sm font-semibold text-neutral-700">Physics Topic</Label>
+            <Label className="text-sm font-semibold text-gray-700">Physics Topic</Label>
             <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
               {topics.map((t) => (
                 <button
                   key={t}
                   onClick={() => setTopic(t)}
-                  className={`flex items-center gap-2 px-3 py-2.5 text-xs font-medium rounded-lg border transition-all duration-200 ${
+                  className={`flex items-center gap-2 px-3 py-2.5 text-xs font-medium rounded-lg border transition-colors ${
                     topic === t
-                      ? "bg-indigo-50 border-indigo-300 text-indigo-700 shadow-sm"
-                      : "bg-white border-neutral-200 text-neutral-600 hover:bg-neutral-50 hover:border-neutral-300"
+                      ? "bg-gray-900 border-gray-900 text-white shadow-sm"
+                      : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300"
                   }`}
                 >
-                  <span className={topic === t ? "text-indigo-500" : "text-neutral-400"}>
+                  <span className={topic === t ? "text-gray-300" : "text-gray-400"}>
                     {topicIcons[t] || <Atom className="h-4 w-4" />}
                   </span>
                   <span className="truncate">{t}</span>
@@ -175,16 +173,16 @@ export default function ProblemGeneratorPage() {
 
           {/* Difficulty Selection */}
           <div className="space-y-3">
-            <Label className="text-sm font-semibold text-neutral-700">Difficulty Level</Label>
+            <Label className="text-sm font-semibold text-gray-700">Difficulty Level</Label>
             <div className="flex gap-2">
               {difficultyConfig.map((d) => (
                 <button
                   key={d.value}
                   onClick={() => setDifficulty(d.value)}
-                  className={`flex-1 py-2.5 text-xs font-semibold rounded-lg border transition-all duration-200 ${
+                  className={`flex-1 py-2.5 text-xs font-semibold rounded-lg border transition-colors ${
                     difficulty === d.value
                       ? d.color + " shadow-sm"
-                      : "bg-white border-neutral-200 text-neutral-500 hover:bg-neutral-50"
+                      : "bg-white border-gray-200 text-gray-500 hover:bg-gray-50"
                   }`}
                 >
                   {d.label}
@@ -196,9 +194,9 @@ export default function ProblemGeneratorPage() {
           {/* Type + Count Row */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="text-sm font-semibold text-neutral-700">Question Type</Label>
+              <Label className="text-sm font-semibold text-gray-700">Question Type</Label>
               <Select value={questionType} onValueChange={setQuestionType}>
-                <SelectTrigger>
+                <SelectTrigger className="border-gray-200 rounded-lg focus:ring-1 focus:ring-gray-300">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -210,13 +208,14 @@ export default function ProblemGeneratorPage() {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-semibold text-neutral-700">Number of Questions</Label>
+              <Label className="text-sm font-semibold text-gray-700">Number of Questions</Label>
               <Input
                 type="number"
                 min={1}
                 max={10}
                 value={count}
                 onChange={(e) => setCount(Number(e.target.value))}
+                className="border-gray-200 rounded-lg focus-visible:ring-1 focus-visible:ring-gray-300"
               />
             </div>
           </div>
@@ -224,7 +223,7 @@ export default function ProblemGeneratorPage() {
           <Button
             onClick={handleGenerate}
             disabled={loading || !topic}
-            className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm w-full sm:w-auto"
+            className="gap-2 bg-gray-900 hover:bg-gray-800 text-white shadow-sm w-full sm:w-auto rounded-lg"
           >
             {loading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -238,17 +237,17 @@ export default function ProblemGeneratorPage() {
 
       {/* Loading State */}
       {loading && (
-        <div className="bg-white rounded-xl border border-neutral-200 py-14 text-center">
+        <div className="bg-white rounded-2xl border border-gray-100 py-14 text-center shadow-sm">
           <div className="relative mx-auto w-16 h-16 mb-4">
-            <div className="absolute inset-0 rounded-full border-2 border-indigo-100 animate-ping" />
-            <div className="relative flex items-center justify-center w-16 h-16 rounded-full bg-indigo-50">
-              <Sparkles className="h-7 w-7 text-indigo-500 animate-pulse" />
+            <div className="absolute inset-0 rounded-full border-2 border-gray-200 animate-ping" />
+            <div className="relative flex items-center justify-center w-16 h-16 rounded-full bg-gray-50">
+              <Sparkles className="h-7 w-7 text-gray-500 animate-pulse" />
             </div>
           </div>
-          <p className="text-sm font-medium text-neutral-700">
+          <p className="text-sm font-medium text-gray-700">
             Generating {count} {topic} problems...
           </p>
-          <p className="text-xs text-neutral-400 mt-1">
+          <p className="text-xs text-gray-400 mt-1">
             This may take a few seconds
           </p>
         </div>
@@ -258,9 +257,9 @@ export default function ProblemGeneratorPage() {
       {problems.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-neutral-900">
+            <h2 className="text-lg font-semibold text-gray-900">
               Generated Problems
-              <span className="ml-2 text-sm font-normal text-neutral-400">
+              <span className="ml-2 text-sm font-normal text-gray-400">
                 ({problems.length})
               </span>
             </h2>
@@ -269,19 +268,19 @@ export default function ProblemGeneratorPage() {
           {problems.map((problem, index) => (
             <div
               key={index}
-              className="bg-white rounded-xl border border-neutral-200 overflow-hidden animate-slide-up"
+              className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm"
               style={{ animationDelay: `${index * 100}ms` }}
             >
               {/* Problem Header */}
-              <div className="flex items-center justify-between px-6 py-3 bg-neutral-50 border-b border-neutral-100">
+              <div className="flex items-center justify-between px-6 py-3 bg-gray-50 border-b border-gray-100">
                 <div className="flex items-center gap-2.5">
-                  <span className="flex items-center justify-center w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold">
+                  <span className="flex items-center justify-center w-7 h-7 rounded-full bg-gray-200 text-gray-700 text-xs font-bold">
                     {index + 1}
                   </span>
-                  <span className="text-sm font-medium text-neutral-600">
+                  <span className="text-sm font-medium text-gray-600">
                     Problem {index + 1}
                   </span>
-                  <span className="text-xs text-neutral-400">
+                  <span className="text-xs text-gray-400">
                     {problem.points} pts
                   </span>
                 </div>
@@ -292,7 +291,7 @@ export default function ProblemGeneratorPage() {
                   className={`gap-1.5 text-xs ${
                     copied === index
                       ? "text-emerald-600"
-                      : "text-neutral-500 hover:text-neutral-700"
+                      : "text-gray-500 hover:text-gray-700"
                   }`}
                 >
                   {copied === index ? (
@@ -306,7 +305,7 @@ export default function ProblemGeneratorPage() {
 
               {/* Problem Body */}
               <div className="p-6 space-y-4">
-                <p className="text-sm text-neutral-800 leading-relaxed whitespace-pre-wrap">
+                <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
                   {problem.questionText}
                 </p>
 
@@ -315,12 +314,12 @@ export default function ProblemGeneratorPage() {
                     {problem.options.map((opt, i) => (
                       <div
                         key={i}
-                        className="flex items-start gap-2.5 px-4 py-2.5 rounded-lg bg-neutral-50 border border-neutral-100"
+                        className="flex items-start gap-2.5 px-4 py-2.5 rounded-lg bg-gray-50 border border-gray-100"
                       >
-                        <span className="flex items-center justify-center w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold shrink-0 mt-0.5">
+                        <span className="flex items-center justify-center w-5 h-5 rounded-full bg-gray-200 text-gray-700 text-xs font-bold shrink-0 mt-0.5">
                           {String.fromCharCode(65 + i)}
                         </span>
-                        <p className="text-sm text-neutral-700">{opt}</p>
+                        <p className="text-sm text-gray-700">{opt}</p>
                       </div>
                     ))}
                   </div>
@@ -333,11 +332,11 @@ export default function ProblemGeneratorPage() {
                   <p className="text-sm text-emerald-800 font-medium">{problem.correctAnswer}</p>
                 </div>
 
-                <div className="rounded-lg p-4 bg-indigo-50/50 border border-indigo-100">
-                  <p className="text-xs font-semibold text-indigo-700 mb-1.5 uppercase tracking-wider">
+                <div className="rounded-lg p-4 bg-gray-50 border border-gray-200">
+                  <p className="text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wider">
                     Solution
                   </p>
-                  <p className="text-sm text-neutral-700 whitespace-pre-wrap leading-relaxed">
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
                     {problem.solution}
                   </p>
                 </div>

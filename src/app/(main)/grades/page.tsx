@@ -10,8 +10,6 @@ import {
   Award,
   BarChart3,
 } from "lucide-react";
-// Card components available if needed
-// import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatShortDate } from "@/lib/utils";
 
@@ -62,8 +60,8 @@ export default function GradesPage() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-3">
-        <Loader2 className="h-8 w-8 animate-spin text-indigo-400" />
-        <p className="text-sm text-neutral-400">Loading grades...</p>
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+        <p className="text-sm text-gray-400">Loading grades...</p>
       </div>
     );
   }
@@ -75,100 +73,88 @@ export default function GradesPage() {
   const pendingCount = grades.filter((g) => g.score === null).length;
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-neutral-900">
+        <h1 className="text-2xl font-bold tracking-tight text-gray-900">
           Grades
         </h1>
-        <p className="text-sm text-neutral-500 mt-1">
+        <p className="text-sm text-gray-500 mt-1">
           Track your performance across all assignments
         </p>
       </div>
 
       {/* Summary Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl border border-neutral-200 p-5 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-indigo-50 rounded-full -mr-6 -mt-6" />
-          <div className="relative">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="p-2 rounded-lg bg-indigo-50">
-                <TrendingUp className="h-4 w-4 text-indigo-600" />
-              </div>
-              <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider">Average</span>
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="p-2 rounded-lg bg-gray-50">
+              <TrendingUp className="h-4 w-4 text-gray-600" />
             </div>
-            <p className="text-3xl font-bold text-neutral-900">{avgPercent}%</p>
-            <p className="text-xs text-neutral-400 mt-1">
-              {gradedEntries.length > 0
-                ? `Letter Grade: ${getLetterGrade(avgPercent)}`
-                : "No graded work yet"}
-            </p>
+            <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Average</span>
           </div>
+          <p className="text-3xl font-bold text-gray-900">{avgPercent}%</p>
+          <p className="text-xs text-gray-400 mt-1">
+            {gradedEntries.length > 0
+              ? `Letter Grade: ${getLetterGrade(avgPercent)}`
+              : "No graded work yet"}
+          </p>
         </div>
 
-        <div className="bg-white rounded-xl border border-neutral-200 p-5 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-50 rounded-full -mr-6 -mt-6" />
-          <div className="relative">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="p-2 rounded-lg bg-emerald-50">
-                <Award className="h-4 w-4 text-emerald-600" />
-              </div>
-              <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider">Points</span>
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="p-2 rounded-lg bg-gray-50">
+              <Award className="h-4 w-4 text-gray-600" />
             </div>
-            <p className="text-3xl font-bold text-neutral-900">
-              {totalEarned}
-              <span className="text-lg text-neutral-400 font-normal">/{totalPossible}</span>
-            </p>
-            <p className="text-xs text-neutral-400 mt-1">Total points earned</p>
+            <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Points</span>
           </div>
+          <p className="text-3xl font-bold text-gray-900">
+            {totalEarned}
+            <span className="text-lg text-gray-400 font-normal">/{totalPossible}</span>
+          </p>
+          <p className="text-xs text-gray-400 mt-1">Total points earned</p>
         </div>
 
-        <div className="bg-white rounded-xl border border-neutral-200 p-5 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-violet-50 rounded-full -mr-6 -mt-6" />
-          <div className="relative">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="p-2 rounded-lg bg-violet-50">
-                <BarChart3 className="h-4 w-4 text-violet-600" />
-              </div>
-              <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider">Graded</span>
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="p-2 rounded-lg bg-gray-50">
+              <BarChart3 className="h-4 w-4 text-gray-600" />
             </div>
-            <p className="text-3xl font-bold text-neutral-900">{gradedEntries.length}</p>
-            <p className="text-xs text-neutral-400 mt-1">Assignments graded</p>
+            <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Graded</span>
           </div>
+          <p className="text-3xl font-bold text-gray-900">{gradedEntries.length}</p>
+          <p className="text-xs text-gray-400 mt-1">Assignments graded</p>
         </div>
 
-        <div className="bg-white rounded-xl border border-neutral-200 p-5 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-amber-50 rounded-full -mr-6 -mt-6" />
-          <div className="relative">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="p-2 rounded-lg bg-amber-50">
-                <Clock className="h-4 w-4 text-amber-600" />
-              </div>
-              <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider">Pending</span>
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="p-2 rounded-lg bg-gray-50">
+              <Clock className="h-4 w-4 text-gray-600" />
             </div>
-            <p className="text-3xl font-bold text-neutral-900">{pendingCount}</p>
-            <p className="text-xs text-neutral-400 mt-1">Awaiting grading</p>
+            <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Pending</span>
           </div>
+          <p className="text-3xl font-bold text-gray-900">{pendingCount}</p>
+          <p className="text-xs text-gray-400 mt-1">Awaiting grading</p>
         </div>
       </div>
 
       {/* Grades List */}
       {grades.length === 0 ? (
-        <div className="bg-white rounded-xl border border-neutral-200 py-16 text-center animate-slide-up">
-          <div className="mx-auto w-16 h-16 rounded-full bg-indigo-50 flex items-center justify-center mb-4">
-            <GraduationCap className="h-8 w-8 text-indigo-400" />
+        <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center shadow-sm">
+          <div className="mx-auto w-14 h-14 rounded-full bg-gray-50 flex items-center justify-center mb-4">
+            <GraduationCap className="h-7 w-7 text-gray-400" />
           </div>
-          <h3 className="text-lg font-semibold text-neutral-800">No grades yet</h3>
-          <p className="text-sm text-neutral-400 mt-1 max-w-sm mx-auto">
+          <h3 className="text-lg font-semibold text-gray-900">No grades yet</h3>
+          <p className="text-sm text-gray-500 mt-1 max-w-sm mx-auto">
             Submit assignments to see your grades here.
           </p>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-neutral-100">
-            <h2 className="text-base font-semibold text-neutral-900">All Grades</h2>
+        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+          <div className="px-6 py-4 border-b border-gray-100">
+            <h2 className="text-base font-semibold text-gray-900">All Grades</h2>
           </div>
-          <div className="divide-y divide-neutral-100">
+          <div className="divide-y divide-gray-100">
             {grades.map((grade) => {
               const scored = grade.score !== null;
               const pct = scored ? Math.round(((grade.score as number) / grade.totalPoints) * 100) : 0;
@@ -177,17 +163,17 @@ export default function GradesPage() {
               return (
                 <div
                   key={grade.id}
-                  className="flex items-center gap-4 px-6 py-4 hover:bg-neutral-50/50 transition-colors"
+                  className="flex items-center gap-4 px-6 py-4 hover:bg-gray-50/50 transition-colors"
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-neutral-900 truncate">
+                    <p className="font-medium text-gray-900 truncate">
                       {grade.assignmentTitle}
                     </p>
                     <div className="flex items-center gap-3 mt-1.5">
-                      <Badge variant="secondary" className="text-xs font-medium">
+                      <Badge variant="secondary" className="text-xs font-medium bg-gray-50 text-gray-600 border-gray-200">
                         {grade.assignmentType === "QUIZ" ? "Quiz" : "File Upload"}
                       </Badge>
-                      <span className="text-xs text-neutral-400">
+                      <span className="text-xs text-gray-400">
                         Submitted {formatShortDate(grade.submittedAt)}
                       </span>
                     </div>
@@ -197,7 +183,7 @@ export default function GradesPage() {
                     <div className="flex items-center gap-4 shrink-0">
                       {/* Progress bar */}
                       <div className="w-32 hidden sm:block">
-                        <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
+                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                           <div
                             className={`h-full rounded-full transition-all duration-500 ${colors.bg}`}
                             style={{ width: `${pct}%` }}
@@ -215,7 +201,7 @@ export default function GradesPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-neutral-50 border border-neutral-200 text-neutral-400 shrink-0">
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-200 text-gray-400 shrink-0">
                       <Clock className="h-4 w-4" />
                       <span className="text-sm font-medium">Pending</span>
                     </div>
