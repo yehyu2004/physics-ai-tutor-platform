@@ -134,6 +134,7 @@ model Assignment {
   totalPoints Float          @default(100)
   published   Boolean        @default(false)
   createdAt   DateTime       @default(now())
+  pdfUrl      String?
   createdById String
 
   course      Course?        @relation(fields: [courseId], references: [id])

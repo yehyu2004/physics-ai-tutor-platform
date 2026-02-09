@@ -110,3 +110,45 @@ src/
 prisma/
   schema.prisma      # Database schema
 ```
+
+## Deployment Notes
+
+Things to address before letting students use the platform in production:
+
+### File Storage
+- Uploaded files (quiz PDFs, question images, student submissions) are currently stored locally in `public/uploads/`.
+- This **will not persist** on Vercel or any platform with an ephemeral filesystem.
+- Before deploying, switch to a persistent storage provider:
+  - **Vercel Blob** (simplest if hosting on Vercel)
+  - **AWS S3** / **Cloudflare R2** (more control, works anywhere)
+- Update `src/app/api/upload/route.ts` to use the chosen provider instead of writing to disk.
+
+### Database
+- Ensure your `DATABASE_URL` points to a production PostgreSQL instance (e.g., Neon, Supabase, Railway, or AWS RDS).
+- Run `npx prisma db push` or `npx prisma migrate deploy` against the production database before first launch.
+
+### Authentication
+- Set a strong, unique `NEXTAUTH_SECRET` in production.
+- Configure `NEXTAUTH_URL` to your production domain.
+- For Google OAuth, add your production domain to the authorized redirect URIs in the Google Cloud Console.
+
+### Environment Variables
+All of these must be set in your hosting provider's environment:
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | Yes | PostgreSQL connection string |
+| `NEXTAUTH_SECRET` | Yes | Random secret for session encryption |
+| `NEXTAUTH_URL` | Yes | Production URL (e.g., `https://phystutor.example.com`) |
+| `GOOGLE_CLIENT_ID` | Optional | Google OAuth client ID |
+| `GOOGLE_CLIENT_SECRET` | Optional | Google OAuth client secret |
+| `OPENAI_API_KEY` | Yes* | OpenAI API key (*at least one AI provider needed) |
+| `ANTHROPIC_API_KEY` | Yes* | Anthropic API key (*at least one AI provider needed) |
+
+### First-Time Setup Checklist
+1. Provision a PostgreSQL database and set `DATABASE_URL`
+2. Run database migrations (`npx prisma migrate deploy`)
+3. Set all required environment variables
+4. Deploy the app
+5. Register the first user and promote to ADMIN via Prisma Studio or direct DB update
+6. Configure AI provider settings in the Admin dashboard

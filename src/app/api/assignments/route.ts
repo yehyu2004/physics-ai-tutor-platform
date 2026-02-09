@@ -41,7 +41,7 @@ export async function POST(req: Request) {
     }
 
     const userId = (session.user as { id: string }).id;
-    const { title, description, dueDate, type, totalPoints, questions } = await req.json();
+    const { title, description, dueDate, type, totalPoints, questions, pdfUrl } = await req.json();
 
     const assignment = await prisma.assignment.create({
       data: {
@@ -50,6 +50,7 @@ export async function POST(req: Request) {
         dueDate: dueDate ? new Date(dueDate) : null,
         type,
         totalPoints: totalPoints || 100,
+        pdfUrl: pdfUrl || null,
         createdById: userId,
         questions: {
           create: (questions || []).map((q: { questionText: string; questionType: string; options?: string[]; correctAnswer?: string; points?: number; diagram?: { type: string; content: string }; imageUrl?: string }, i: number) => ({

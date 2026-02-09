@@ -9,6 +9,7 @@ import {
   ArrowLeft,
   ImagePlus,
   X,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,6 +43,9 @@ export default function CreateAssignmentPage() {
   const [type, setType] = useState<"QUIZ" | "FILE_UPLOAD">("QUIZ");
   const [totalPoints, setTotalPoints] = useState(100);
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [uploadingPdf, setUploadingPdf] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const addQuestion = () => {
@@ -95,6 +99,29 @@ export default function CreateAssignmentPage() {
     );
   };
 
+  const handlePdfUpload = async (file: File) => {
+    setPdfFile(file);
+    setUploadingPdf(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      if (res.ok) {
+        const data = await res.json();
+        setPdfUrl(data.url);
+      }
+    } catch (err) {
+      console.error("PDF upload failed:", err);
+    } finally {
+      setUploadingPdf(false);
+    }
+  };
+
+  const removePdf = () => {
+    setPdfFile(null);
+    setPdfUrl(null);
+  };
+
   const handleSubmit = async (publish: boolean) => {
     if (!title.trim()) return;
     setLoading(true);
@@ -136,6 +163,7 @@ export default function CreateAssignmentPage() {
           dueDate: dueDate || null,
           type,
           totalPoints,
+          pdfUrl: pdfUrl || null,
           questions: type === "QUIZ" ? questionsWithUrls : [],
         }),
       });
@@ -235,6 +263,53 @@ export default function CreateAssignmentPage() {
           </div>
         </CardContent>
       </Card>
+
+      {type === "QUIZ" && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Quiz PDF (Optional)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-neutral-500 mb-3">
+              Upload a PDF with quiz content. Students will see it inline above the questions.
+            </p>
+            {pdfUrl ? (
+              <div className="flex items-center gap-3 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+                <FileText className="h-5 w-5 text-emerald-600 shrink-0" />
+                <span className="text-sm text-emerald-700 truncate flex-1">
+                  {pdfFile?.name || "PDF uploaded"}
+                </span>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={removePdf}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <label className="flex flex-col items-center gap-2 p-6 border-2 border-dashed rounded-lg cursor-pointer hover:bg-neutral-50 transition-colors">
+                {uploadingPdf ? (
+                  <Loader2 className="h-8 w-8 animate-spin text-neutral-400" />
+                ) : (
+                  <FileText className="h-8 w-8 text-neutral-300" />
+                )}
+                <span className="text-sm text-neutral-500">
+                  {uploadingPdf ? "Uploading..." : "Click to upload a PDF"}
+                </span>
+                <input
+                  type="file"
+                  className="hidden"
+                  accept=".pdf"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handlePdfUpload(file);
+                  }}
+                />
+              </label>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {type === "QUIZ" && (
         <div className="space-y-4">
