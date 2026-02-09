@@ -1,0 +1,125 @@
+import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { aiAssistedGrading, type AIProvider } from "@/lib/ai";
+
+export async function POST(req: Request) {
+  try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userRole = (session.user as { role?: string }).role;
+    if (userRole !== "TA" && userRole !== "ADMIN") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const graderId = (session.user as { id: string }).id;
+    const { submissionId, grades } = await req.json();
+
+    const submission = await prisma.submission.findUnique({
+      where: { id: submissionId },
+      include: { answers: true },
+    });
+
+    if (!submission) {
+      return NextResponse.json({ error: "Submission not found" }, { status: 404 });
+    }
+
+    for (const grade of grades) {
+      await prisma.submissionAnswer.update({
+        where: { id: grade.answerId },
+        data: {
+          score: grade.score,
+          feedback: grade.feedback,
+        },
+      });
+    }
+
+    const updatedAnswers = await prisma.submissionAnswer.findMany({
+      where: { submissionId },
+    });
+
+    const totalScore = updatedAnswers.reduce(
+      (sum, ans) => sum + (ans.score || 0),
+      0
+    );
+
+    await prisma.submission.update({
+      where: { id: submissionId },
+      data: {
+        totalScore,
+        gradedAt: new Date(),
+        gradedById: graderId,
+      },
+    });
+
+    return NextResponse.json({ success: true, totalScore });
+  } catch (error) {
+    console.error("Grading error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+export async function PUT(req: Request) {
+  try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userRole = (session.user as { role?: string }).role;
+    if (userRole !== "TA" && userRole !== "ADMIN") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const { answerId } = await req.json();
+
+    const answer = await prisma.submissionAnswer.findUnique({
+      where: { id: answerId },
+      include: {
+        question: {
+          include: { rubrics: true },
+        },
+      },
+    });
+
+    if (!answer) {
+      return NextResponse.json({ error: "Answer not found" }, { status: 404 });
+    }
+
+    const aiConfig = await prisma.aIConfig.findFirst({
+      where: { isActive: true },
+    });
+
+    const provider = (aiConfig?.provider as AIProvider) || "openai";
+
+    const rubricDesc = answer.question.rubrics
+      .map((r) => `${r.description} (${r.points} pts)`)
+      .join("\n");
+
+    const result = await aiAssistedGrading(
+      answer.question.questionText,
+      answer.question.correctAnswer || "",
+      answer.answer || "",
+      rubricDesc || "Grade based on correctness and completeness",
+      answer.question.points,
+      provider
+    );
+
+    if (!result) {
+      return NextResponse.json({ error: "AI grading failed" }, { status: 500 });
+    }
+
+    const parsed = JSON.parse(result);
+
+    return NextResponse.json({
+      suggestedScore: parsed.score,
+      suggestedFeedback: parsed.feedback,
+    });
+  } catch (error) {
+    console.error("AI grading error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
