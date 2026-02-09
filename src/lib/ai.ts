@@ -21,6 +21,16 @@ Your responsibilities:
 
 Always show your work and explain the reasoning behind each step.`;
 
+export const SOCRATIC_SYSTEM_PROMPT = `You are a Socratic physics tutor for university-level General Physics students at NTHU.
+
+Instead of giving direct answers, guide students to discover solutions themselves:
+- Ask probing questions that lead toward the answer
+- When a student is stuck, give a small hint rather than the full solution
+- Encourage them to identify relevant physics principles first
+- Use LaTeX notation: $...$ for inline math and $$...$$ for display math. NEVER use \\[...\\] or \\(...\\) delimiters.
+- Celebrate when they make progress
+- Only reveal the full solution if they explicitly ask after multiple attempts`;
+
 export type AIProvider = "openai" | "anthropic";
 
 export interface ChatMessage {
@@ -117,6 +127,58 @@ async function streamAnthropic(
   return stream;
 }
 
+const PROBLEM_GEN_SYSTEM = `You are a physics problem generator for university-level General Physics. Always respond with valid JSON.
+
+IMPORTANT formatting rules for ALL text fields (questionText, options, correctAnswer, solution):
+- Use proper LaTeX math notation: $...$ for inline math and $$...$$ for display math.
+- NEVER output raw LaTeX commands as plain text. Always wrap them in $ or $$ delimiters.
+- Use markdown formatting: **bold** for emphasis, line breaks for readability.
+- In solutions, use step-by-step markdown formatting with line breaks between steps.
+- Example correct: "A pipe of radius $2.0\\ \\mathrm{mm}$ and length $1.00\\ \\mathrm{m}$"
+- Example incorrect: "A pipe of radius $2.0\\ \\mathrm{mm}$ and length $1.00\\ \\mathrm{m}$"
+
+DIAGRAM GENERATION:
+For problems that benefit from a visual diagram, include a "diagram" field in the JSON with the following structure:
+- "type": either "svg" or "mermaid"
+- "content": the diagram code
+
+Use "svg" type for physics-specific diagrams (circuits, force/free-body diagrams, optical setups, electromagnetic field lines, current-carrying wires, fluid flow, projectile trajectories, wave diagrams, etc.). Generate clean, well-labeled SVG code with:
+  - White background, clear black lines
+  - Labeled components (use <text> elements)
+  - Appropriate physics symbols and arrows
+  - viewBox for proper scaling (e.g., viewBox="0 0 400 300")
+  - No external dependencies
+
+Use "mermaid" type for conceptual/process diagrams (energy flow, thermodynamic cycles, state transitions, problem-solving flowcharts). Use valid Mermaid syntax.
+
+If no diagram is needed, omit the "diagram" field entirely.`;
+
+function buildProblemPrompt(topic: string, difficulty: number, count: number, questionType: string, format: "array" | "object"): string {
+  const formatInstruction = format === "object"
+    ? 'Format your response as a JSON object with a "problems" key containing an array of objects'
+    : 'Format your response as a JSON array with objects';
+
+  return `Generate ${count} physics problem(s) about "${topic}" at difficulty level ${difficulty}/5.
+Question type: ${questionType}
+
+For each problem, provide:
+1. The question text using proper markdown with LaTeX math ($...$ for inline, $$...$$ for display math)
+2. ${questionType === "MC" ? "4 options labeled A, B, C, D (each option should also use LaTeX for any math)" : ""}
+3. The correct answer (use LaTeX for any math expressions)
+4. A detailed step-by-step solution using markdown formatting and LaTeX for all math
+5. If the problem benefits from a visual diagram, include a "diagram" object with "type" ("svg" or "mermaid") and "content" (the diagram code)
+
+${formatInstruction} having these fields:
+- questionText: string (markdown + LaTeX)
+- questionType: "${questionType}"
+${questionType === "MC" ? '- options: string[] (array of 4 options, each with LaTeX math as needed)' : ""}
+- correctAnswer: string (with LaTeX)
+- solution: string (markdown + LaTeX, step-by-step)
+- points: number (suggest appropriate points, typically 10-25)
+- diagram: { type: "svg" | "mermaid", content: string } (optional, include for problems with physical setups like circuits, force diagrams, EM fields, optics, etc.)`;
+}
+
+
 export async function generateProblems(
   topic: string,
   difficulty: number,
@@ -124,28 +186,13 @@ export async function generateProblems(
   questionType: string,
   provider: AIProvider = "openai"
 ) {
-  const prompt = `Generate ${count} physics problem(s) about "${topic}" at difficulty level ${difficulty}/5.
-Question type: ${questionType}
-
-For each problem, provide:
-1. The question text (use LaTeX for math: $...$ for inline, $$...$$ for display)
-2. ${questionType === "MC" ? "4 options labeled A, B, C, D" : ""}
-3. The correct answer
-4. A detailed solution/explanation
-
-Format your response as a JSON array with objects having these fields:
-- questionText: string
-- questionType: "${questionType}"
-${questionType === "MC" ? '- options: string[] (array of 4 options)' : ""}
-- correctAnswer: string
-- solution: string
-- points: number (suggest appropriate points, typically 10-25)`;
+  const prompt = buildProblemPrompt(topic, difficulty, count, questionType, "array");
 
   if (provider === "openai") {
     const response = await openai.chat.completions.create({
       model: "gpt-5-mini",
       messages: [
-        { role: "system", content: "You are a physics problem generator for university-level General Physics. Always respond with valid JSON." },
+        { role: "system", content: PROBLEM_GEN_SYSTEM },
         { role: "user", content: prompt },
       ],
       response_format: { type: "json_object" },
@@ -155,11 +202,39 @@ ${questionType === "MC" ? '- options: string[] (array of 4 options)' : ""}
     const response = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 4096,
-      system: "You are a physics problem generator for university-level General Physics. Always respond with valid JSON.",
+      system: PROBLEM_GEN_SYSTEM,
       messages: [{ role: "user", content: prompt }],
     });
     const block = response.content[0];
     return block.type === "text" ? block.text : null;
+  }
+}
+
+export async function streamGenerateProblems(
+  topic: string,
+  difficulty: number,
+  count: number,
+  questionType: string,
+  provider: AIProvider = "openai"
+) {
+  const prompt = buildProblemPrompt(topic, difficulty, count, questionType, "object");
+
+  if (provider === "openai") {
+    return openai.chat.completions.create({
+      model: "gpt-5-mini",
+      messages: [
+        { role: "system", content: PROBLEM_GEN_SYSTEM },
+        { role: "user", content: prompt },
+      ],
+      stream: true,
+    });
+  } else {
+    return anthropic.messages.stream({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 4096,
+      system: PROBLEM_GEN_SYSTEM + " Wrap your JSON response in a ```json code block.",
+      messages: [{ role: "user", content: prompt }],
+    });
   }
 }
 

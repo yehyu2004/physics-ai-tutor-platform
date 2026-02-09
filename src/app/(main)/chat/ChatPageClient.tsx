@@ -1,10 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkMath from "remark-math";
-import rehypeKatex from "rehype-katex";
-import "katex/dist/katex.min.css";
+import { MarkdownContent } from "@/components/ui/markdown-content";
 import {
   Plus,
   Send,
@@ -47,11 +44,6 @@ interface ChatPageClientProps {
   userId: string;
 }
 
-function normalizeLatex(content: string): string {
-  content = content.replace(/\\\[([\s\S]*?)\\\]/g, (_, math) => `$$${math}$$`);
-  content = content.replace(/\\\(([\s\S]*?)\\\)/g, (_, math) => `$${math}$`);
-  return content;
-}
 
 function formatRelativeDate(dateStr: string): string {
   const date = new Date(dateStr);
@@ -85,48 +77,6 @@ function TypingIndicator() {
   );
 }
 
-function MarkdownContent({ content }: { content: string }) {
-  return (
-    <ReactMarkdown
-      remarkPlugins={[remarkMath]}
-      rehypePlugins={[rehypeKatex]}
-      components={{
-        p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-        ol: ({ children }) => <ol className="list-decimal pl-5 mb-2 space-y-1">{children}</ol>,
-        ul: ({ children }) => <ul className="list-disc pl-5 mb-2 space-y-1">{children}</ul>,
-        li: ({ children }) => <li>{children}</li>,
-        strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
-        h1: ({ children }) => <h1 className="text-lg font-bold mb-2">{children}</h1>,
-        h2: ({ children }) => <h2 className="text-base font-bold mb-2">{children}</h2>,
-        h3: ({ children }) => <h3 className="text-sm font-bold mb-1">{children}</h3>,
-        code: ({ className, children, ...props }) => {
-          const isBlock = className?.includes("language-");
-          if (isBlock) {
-            return (
-              <pre className="bg-gray-900 text-gray-100 rounded-lg p-4 my-3 overflow-x-auto text-xs font-mono leading-relaxed border border-gray-800">
-                <code className={className} {...props}>{children}</code>
-              </pre>
-            );
-          }
-          return (
-            <code className="px-1.5 py-0.5 bg-gray-100 text-gray-700 rounded text-sm font-mono" {...props}>
-              {children}
-            </code>
-          );
-        },
-        pre: ({ children }) => <>{children}</>,
-        blockquote: ({ children }) => (
-          <blockquote className="border-l-2 border-gray-300 pl-4 italic text-gray-500 my-2 py-1">
-            {children}
-          </blockquote>
-        ),
-        hr: () => <hr className="my-3 border-gray-200" />,
-      }}
-    >
-      {normalizeLatex(content)}
-    </ReactMarkdown>
-  );
-}
 
 const SUGGESTED_TOPICS = [
   { icon: Zap, label: "Explain Newton's Laws" },
@@ -228,6 +178,11 @@ export default function ChatPageClient({
     removeImage();
     setLoading(true);
 
+    const assistantMsgId = (Date.now() + 1).toString();
+
+    // Add empty assistant message that will be streamed into
+    setMessages((prev) => [...prev, { id: assistantMsgId, role: "assistant", content: "" }]);
+
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -240,39 +195,64 @@ export default function ChatPageClient({
         }),
       });
 
-      if (!res.ok) throw new Error("Chat request failed");
-
-      const data = await res.json();
-
-      if (data.conversationId && !activeConversationId) {
-        setActiveConversationId(data.conversationId);
-        setConversations((prev) => [
-          {
-            id: data.conversationId,
-            title: messageText.slice(0, 50) || "New Chat",
-            updatedAt: new Date().toISOString(),
-          },
-          ...prev,
-        ]);
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({ error: "Chat request failed" }));
+        throw new Error(errData.error || "Chat request failed");
       }
 
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: data.content,
-      };
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error("No response stream");
 
-      setMessages((prev) => [...prev, assistantMessage]);
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const jsonStr = line.slice(6);
+          try {
+            const event = JSON.parse(jsonStr);
+            if (event.type === "meta" && event.conversationId && !activeConversationId) {
+              setActiveConversationId(event.conversationId);
+              setConversations((prev) => [
+                {
+                  id: event.conversationId,
+                  title: messageText.slice(0, 50) || "New Chat",
+                  updatedAt: new Date().toISOString(),
+                },
+                ...prev,
+              ]);
+            } else if (event.type === "delta") {
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === assistantMsgId
+                    ? { ...msg, content: msg.content + event.content }
+                    : msg
+                )
+              );
+            }
+          } catch {
+            // skip malformed JSON
+          }
+        }
+      }
     } catch (err) {
       console.error("Chat error:", err);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: (Date.now() + 1).toString(),
-          role: "assistant",
-          content: "Sorry, I encountered an error. Please try again.",
-        },
-      ]);
+      const errorMsg = err instanceof Error ? err.message : "Sorry, I encountered an error. Please try again.";
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === assistantMsgId && !msg.content
+            ? { ...msg, content: errorMsg }
+            : msg
+        )
+      );
     } finally {
       setLoading(false);
     }
