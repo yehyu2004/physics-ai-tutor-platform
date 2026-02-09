@@ -41,7 +41,7 @@ export default function MainLayoutClient({
           userImage={userImage}
           userRole={userRole}
         />
-        <main className="flex-1 p-6 bg-gray-50/50">{children}</main>
+        <main className="flex-1 p-6 bg-gray-50/50 overflow-hidden">{children}</main>
       </div>
     </div>
   );

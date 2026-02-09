@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
@@ -21,83 +21,12 @@ function normalizeLatex(content: string): string {
   return content;
 }
 
-export function MermaidDiagram({ content }: { content: string }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [svg, setSvg] = useState<string | null>(null);
-  const [error, setError] = useState(false);
-
-  const renderDiagram = useCallback(async () => {
-    try {
-      const mermaid = (await import("mermaid")).default;
-      mermaid.initialize({ startOnLoad: false, theme: "default", securityLevel: "loose" });
-      // Validate syntax first — parse() throws on invalid mermaid
-      await mermaid.parse(content);
-      const id = `mermaid-${Math.random().toString(36).slice(2, 9)}`;
-      const { svg: renderedSvg } = await mermaid.render(id, content);
-      setSvg(renderedSvg);
-    } catch {
-      setError(true);
-    } finally {
-      // Aggressively clean up any error elements mermaid leaks into the DOM
-      document.querySelectorAll('[id^="dmermaid-"], [id^="mermaid-"] + style, .mermaid-error, [data-mermaid-error]').forEach((el) => el.remove());
-      document.querySelectorAll('body > [id^="mermaid-"]').forEach((el) => el.remove());
-      document.querySelectorAll('body > svg[id]').forEach((el) => {
-        if (el.id.startsWith("mermaid-")) el.remove();
-      });
-    }
-  }, [content]);
-
-  useEffect(() => {
-    renderDiagram();
-  }, [renderDiagram]);
-
-  if (error) {
-    return (
-      <pre className="bg-gray-900 text-gray-100 rounded-lg p-4 my-3 overflow-x-auto text-xs font-mono leading-relaxed border border-gray-800">
-        <code>{content}</code>
-      </pre>
-    );
-  }
-
-  if (!svg) return null;
-
-  return (
-    <div
-      ref={containerRef}
-      className="rounded-lg border border-gray-200 bg-white p-4 overflow-auto max-w-full my-3"
-      dangerouslySetInnerHTML={{ __html: svg }}
-    />
-  );
-}
-
 interface MarkdownContentProps {
   content: string;
   className?: string;
 }
 
-// Clean up any mermaid error elements leaked into the document body on mount
-function useMermaidCleanup() {
-  useEffect(() => {
-    const cleanup = () => {
-      document.querySelectorAll('body > [id*="mermaid"], body > #d, body > svg[aria-roledescription="error"]').forEach((el) => el.remove());
-      // Also remove any large red error text blocks mermaid creates
-      document.querySelectorAll('body > div[style*="color: red"], body > div[style*="color:red"]').forEach((el) => el.remove());
-      // Catch-all: remove any direct body children that contain "error in text"
-      document.querySelectorAll('body > *').forEach((el) => {
-        if (el instanceof HTMLElement && !el.id && el.textContent?.includes("error in text")) {
-          el.remove();
-        }
-      });
-    };
-    cleanup();
-    // Run again after a short delay in case mermaid renders asynchronously
-    const timer = setTimeout(cleanup, 500);
-    return () => clearTimeout(timer);
-  }, []);
-}
-
 export function MarkdownContent({ content, className }: MarkdownContentProps) {
-  useMermaidCleanup();
   return (
     <div className={className}>
       <ReactMarkdown
@@ -114,9 +43,6 @@ export function MarkdownContent({ content, className }: MarkdownContentProps) {
           h3: ({ children }) => <h3 className="text-sm font-bold mb-1">{children}</h3>,
           code: ({ className, children, ...props }) => {
             const code = String(children).replace(/\n$/, "");
-            if (className?.includes("language-mermaid")) {
-              return <MermaidDiagram content={code} />;
-            }
             if (className?.includes("language-svg")) {
               const trimmed = code.trim();
               if (trimmed.startsWith("<svg")) {
@@ -144,6 +70,7 @@ export function MarkdownContent({ content, className }: MarkdownContentProps) {
           },
           pre: ({ children }) => <>{children}</>,
           img: ({ src, alt }) => (
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={src}
               alt={alt || ""}

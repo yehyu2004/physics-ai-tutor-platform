@@ -60,23 +60,6 @@ function formatRelativeDate(dateStr: string): string {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-function TypingIndicator() {
-  return (
-    <div className="flex items-end gap-3">
-      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100">
-        <Bot className="h-3.5 w-3.5 text-gray-500" />
-      </div>
-      <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-md px-4 py-3">
-        <div className="flex items-center gap-1.5">
-          <span className="h-1.5 w-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "0ms" }} />
-          <span className="h-1.5 w-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "150ms" }} />
-          <span className="h-1.5 w-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "300ms" }} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
 const SUGGESTED_TOPICS = [
   { icon: Zap, label: "Explain Newton's Laws" },
   { icon: Atom, label: "Quantum mechanics basics" },
@@ -548,7 +531,7 @@ export default function ChatPageClient({
 
             {/* Messages */}
             <div className="space-y-5">
-              {messages.map((msg, index) => (
+              {messages.map((msg) => (
                 <div
                   key={msg.id}
                   className={cn(

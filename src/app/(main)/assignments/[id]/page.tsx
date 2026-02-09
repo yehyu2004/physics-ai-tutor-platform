@@ -17,7 +17,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MarkdownContent, MermaidDiagram } from "@/components/ui/markdown-content";
+import { MarkdownContent } from "@/components/ui/markdown-content";
+import MermaidDiagram from "@/components/chat/MermaidDiagram";
 import { formatShortDate } from "@/lib/utils";
 import Link from "next/link";
 
