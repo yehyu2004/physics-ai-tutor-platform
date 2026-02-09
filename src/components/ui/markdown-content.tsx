@@ -30,13 +30,20 @@ export function MermaidDiagram({ content }: { content: string }) {
     try {
       const mermaid = (await import("mermaid")).default;
       mermaid.initialize({ startOnLoad: false, theme: "default", securityLevel: "loose" });
+      // Validate syntax first — parse() throws on invalid mermaid
+      await mermaid.parse(content);
       const id = `mermaid-${Math.random().toString(36).slice(2, 9)}`;
       const { svg: renderedSvg } = await mermaid.render(id, content);
       setSvg(renderedSvg);
     } catch {
       setError(true);
-      // Clean up mermaid error elements it inserts into the DOM
-      document.querySelectorAll('[id^="dmermaid-"]').forEach((el) => el.remove());
+    } finally {
+      // Aggressively clean up any error elements mermaid leaks into the DOM
+      document.querySelectorAll('[id^="dmermaid-"], [id^="mermaid-"] + style, .mermaid-error, [data-mermaid-error]').forEach((el) => el.remove());
+      document.querySelectorAll('body > [id^="mermaid-"]').forEach((el) => el.remove());
+      document.querySelectorAll('body > svg[id]').forEach((el) => {
+        if (el.id.startsWith("mermaid-")) el.remove();
+      });
     }
   }, [content]);
 
@@ -68,7 +75,29 @@ interface MarkdownContentProps {
   className?: string;
 }
 
+// Clean up any mermaid error elements leaked into the document body on mount
+function useMermaidCleanup() {
+  useEffect(() => {
+    const cleanup = () => {
+      document.querySelectorAll('body > [id*="mermaid"], body > #d, body > svg[aria-roledescription="error"]').forEach((el) => el.remove());
+      // Also remove any large red error text blocks mermaid creates
+      document.querySelectorAll('body > div[style*="color: red"], body > div[style*="color:red"]').forEach((el) => el.remove());
+      // Catch-all: remove any direct body children that contain "error in text"
+      document.querySelectorAll('body > *').forEach((el) => {
+        if (el instanceof HTMLElement && !el.id && el.textContent?.includes("error in text")) {
+          el.remove();
+        }
+      });
+    };
+    cleanup();
+    // Run again after a short delay in case mermaid renders asynchronously
+    const timer = setTimeout(cleanup, 500);
+    return () => clearTimeout(timer);
+  }, []);
+}
+
 export function MarkdownContent({ content, className }: MarkdownContentProps) {
+  useMermaidCleanup();
   return (
     <div className={className}>
       <ReactMarkdown
