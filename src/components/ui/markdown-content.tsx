@@ -23,24 +23,36 @@ function normalizeLatex(content: string): string {
 
 export function MermaidDiagram({ content }: { content: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [svg, setSvg] = useState<string>("");
+  const [svg, setSvg] = useState<string | null>(null);
+  const [error, setError] = useState(false);
 
   const renderDiagram = useCallback(async () => {
     try {
       const mermaid = (await import("mermaid")).default;
-      mermaid.initialize({ startOnLoad: false, theme: "default" });
+      mermaid.initialize({ startOnLoad: false, theme: "default", securityLevel: "loose" });
       const id = `mermaid-${Math.random().toString(36).slice(2, 9)}`;
       const { svg: renderedSvg } = await mermaid.render(id, content);
       setSvg(renderedSvg);
-    } catch (err) {
-      console.error("Mermaid render error:", err);
-      setSvg(`<pre class="text-xs text-red-500">Diagram render error</pre>`);
+    } catch {
+      setError(true);
+      // Clean up mermaid error elements it inserts into the DOM
+      document.querySelectorAll('[id^="dmermaid-"]').forEach((el) => el.remove());
     }
   }, [content]);
 
   useEffect(() => {
     renderDiagram();
   }, [renderDiagram]);
+
+  if (error) {
+    return (
+      <pre className="bg-gray-900 text-gray-100 rounded-lg p-4 my-3 overflow-x-auto text-xs font-mono leading-relaxed border border-gray-800">
+        <code>{content}</code>
+      </pre>
+    );
+  }
+
+  if (!svg) return null;
 
   return (
     <div
