@@ -11,6 +11,19 @@ export async function POST(req: Request) {
     }
 
     const userId = (session.user as { id: string }).id;
+
+    // Check if user is restricted from using AI chat
+    const currentUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { isRestricted: true },
+    });
+    if (currentUser?.isRestricted) {
+      return NextResponse.json(
+        { error: "Your account has been restricted from using AI chat. Please contact your instructor." },
+        { status: 403 }
+      );
+    }
+
     const { conversationId, message, imageUrl, model } = await req.json();
 
     let convId = conversationId;
