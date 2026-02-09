@@ -96,7 +96,7 @@ export default function ChatPageClient({
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [model, setModel] = useState("gpt-5-mini");
   const [searchQuery, setSearchQuery] = useState("");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [chatMode, setChatMode] = useState<"normal" | "socratic">("normal");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -303,19 +303,21 @@ export default function ChatPageClient({
 
   return (
     <div className="flex h-[calc(100vh-6.5rem)] overflow-hidden">
-      {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-30 bg-black/20 md:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+      {/* Mobile sidebar overlay (only on small screens) */}
+      <div
+        className={cn(
+          "fixed inset-0 z-30 bg-black/20 md:hidden transition-opacity duration-300",
+          sidebarOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        )}
+        onClick={() => setSidebarOpen(false)}
+      />
 
       {/* Conversation Sidebar */}
       <div
         className={cn(
-          "fixed inset-y-0 left-0 z-40 w-72 bg-white border-r border-gray-100 flex flex-col transition-transform duration-300 md:relative md:translate-x-0 md:z-0",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          "bg-white border-r border-gray-100 flex flex-col transition-all duration-300",
+          "fixed inset-y-0 left-0 z-40 md:relative md:z-0",
+          sidebarOpen ? "translate-x-0 w-72" : "-translate-x-full w-72 md:translate-x-0 md:w-0 md:border-r-0 md:overflow-hidden"
         )}
       >
         {/* Sidebar Header */}
@@ -362,12 +364,15 @@ export default function ChatPageClient({
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <p className={cn(
-                      "text-sm truncate leading-tight",
-                      activeConversationId === conv.id
-                        ? "font-semibold text-gray-900"
-                        : "font-normal text-gray-600"
-                    )}>
+                    <p
+                      title={conv.title}
+                      className={cn(
+                        "text-sm truncate leading-tight",
+                        activeConversationId === conv.id
+                          ? "font-semibold text-gray-900"
+                          : "font-normal text-gray-600"
+                      )}
+                    >
                       {conv.title}
                     </p>
                     <p className="text-xs text-gray-400 mt-0.5">
@@ -408,10 +413,10 @@ export default function ChatPageClient({
         {/* Chat Header */}
         <div className="h-14 border-b border-gray-100 flex items-center justify-between px-4 shrink-0 bg-white">
           <div className="flex items-center gap-3">
-            {/* Mobile sidebar toggle */}
+            {/* Conversation list toggle */}
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-1.5 rounded-lg hover:bg-gray-50 transition-colors md:hidden"
+              className="p-1.5 rounded-lg hover:bg-gray-50 transition-colors"
             >
               {sidebarOpen ? (
                 <PanelLeftClose className="h-5 w-5 text-gray-500" />
