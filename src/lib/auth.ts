@@ -30,6 +30,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         });
 
         if (!user || !user.passwordHash) return null;
+        if (user.isBanned || user.isDeleted) return null;
 
         const isValid = await bcrypt.compare(
           credentials.password as string,
@@ -53,6 +54,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (account?.provider === "google") {
         const email = user.email;
         if (!email?.endsWith("@gapp.nthu.edu.tw")) {
+          return false;
+        }
+      }
+      // Block banned or soft-deleted users from signing in
+      if (user.email) {
+        const dbUser = await prisma.user.findUnique({
+          where: { email: user.email },
+          select: { isBanned: true, isDeleted: true },
+        });
+        if (dbUser?.isBanned || dbUser?.isDeleted) {
           return false;
         }
       }

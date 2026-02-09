@@ -4,11 +4,10 @@ import React, { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Atom, Mail, Lock, Loader2 } from "lucide-react";
+import { Atom, Mail, Lock, Loader2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
 export default function LoginPage() {
@@ -17,6 +16,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [shakeError, setShakeError] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,6 +33,8 @@ export default function LoginPage() {
 
     if (result?.error) {
       setError("Invalid email or password");
+      setShakeError(true);
+      setTimeout(() => setShakeError(false), 500);
     } else {
       router.push("/dashboard");
       router.refresh();
@@ -44,78 +46,44 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-neutral-50 to-neutral-100 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-neutral-900">
-              <Atom className="h-7 w-7 text-white" />
-            </div>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 relative overflow-hidden">
+      {/* Subtle gradient blob decorations */}
+      <div className="absolute top-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-gradient-to-br from-pink-100/40 to-purple-100/40 blur-3xl" />
+      <div className="absolute bottom-[-15%] left-[-10%] w-[400px] h-[400px] rounded-full bg-gradient-to-tr from-purple-100/30 to-pink-100/30 blur-3xl" />
+
+      <div className="relative z-10 w-full max-w-md mx-4">
+        {/* Logo / Branding */}
+        <div className="flex flex-col items-center mb-8">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gray-900 mb-4">
+            <Atom className="h-6 w-6 text-white" />
           </div>
-          <CardTitle className="text-2xl">Welcome back</CardTitle>
-          <CardDescription>Sign in to PhysTutor</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
-              <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-600">
-                {error}
-              </div>
-            )}
+          <h1 className="text-xl font-semibold text-gray-900 tracking-tight">
+            PhysTutor
+          </h1>
+          <p className="text-sm text-gray-500 mt-0.5">
+            Master Physics with AI
+          </p>
+        </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-2.5 h-4 w-4 text-neutral-400" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-9"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-2.5 h-4 w-4 text-neutral-400" />
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="pl-9"
-                  required
-                />
-              </div>
-            </div>
-
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : null}
-              Sign In
-            </Button>
-          </form>
-
-          <div className="relative my-6">
-            <Separator />
-            <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-2 text-xs text-neutral-400">
-              or
-            </span>
+        {/* Card */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+          {/* Header */}
+          <div className="text-center mb-6">
+            <h2 className="text-xl font-semibold text-gray-900">
+              Welcome back
+            </h2>
+            <p className="text-gray-500 mt-1 text-sm">
+              Sign in to continue your learning journey
+            </p>
           </div>
 
+          {/* Google OAuth Button */}
           <Button
             variant="outline"
-            className="w-full"
+            className="w-full h-11 rounded-lg text-sm font-medium border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-colors"
             onClick={handleGoogleSignIn}
           >
-            <svg className="h-4 w-4 mr-2" viewBox="0 0 24 24">
+            <svg className="h-5 w-5 mr-3" viewBox="0 0 24 24">
               <path
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
                 fill="#4285F4"
@@ -136,14 +104,86 @@ export default function LoginPage() {
             Sign in with Google (NTHU)
           </Button>
 
-          <p className="mt-6 text-center text-sm text-neutral-500">
-            Don&apos;t have an account?{" "}
-            <Link href="/register" className="font-medium text-neutral-900 hover:underline">
-              Sign up
-            </Link>
-          </p>
-        </CardContent>
-      </Card>
+          {/* Divider */}
+          <div className="relative my-6">
+            <Separator className="bg-gray-200" />
+            <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-3 text-xs text-gray-400 font-medium">
+              or continue with email
+            </span>
+          </div>
+
+          {/* Email/Password Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className={`rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-600 flex items-center gap-2 ${shakeError ? "animate-auth-shake" : ""}`}>
+                <div className="h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />
+                {error}
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+                Email
+              </Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className={`pl-10 h-11 rounded-lg border-gray-200 focus-visible:ring-1 focus-visible:ring-gray-300 focus-visible:border-gray-300 text-sm ${error ? "border-red-300 focus-visible:ring-red-300 focus-visible:border-red-300" : ""}`}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="password" className="text-sm font-medium text-gray-700">
+                Password
+              </Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className={`pl-10 h-11 rounded-lg border-gray-200 focus-visible:ring-1 focus-visible:ring-gray-300 focus-visible:border-gray-300 text-sm ${error ? "border-red-300 focus-visible:ring-red-300 focus-visible:border-red-300" : ""}`}
+                  required
+                />
+              </div>
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full h-11 rounded-lg bg-gray-900 hover:bg-gray-800 text-white font-medium transition-colors text-sm"
+              disabled={loading}
+            >
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : null}
+              Sign In
+              {!loading && <ArrowRight className="h-4 w-4 ml-2" />}
+            </Button>
+          </form>
+
+          {/* Sign up link */}
+          <div className="mt-6 pt-5 border-t border-gray-100 text-center">
+            <p className="text-sm text-gray-500">
+              Don&apos;t have an account?{" "}
+              <Link
+                href="/register"
+                className="font-semibold text-gray-900 hover:text-gray-700 transition-colors"
+              >
+                Create one
+              </Link>
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
