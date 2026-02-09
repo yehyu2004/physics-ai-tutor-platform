@@ -64,10 +64,21 @@ export function MarkdownContent({ content, className }: MarkdownContentProps) {
           h2: ({ children }) => <h2 className="text-base font-bold mb-2">{children}</h2>,
           h3: ({ children }) => <h3 className="text-sm font-bold mb-1">{children}</h3>,
           code: ({ className, children, ...props }) => {
-            const isMermaid = className?.includes("language-mermaid");
-            if (isMermaid) {
-              const code = String(children).replace(/\n$/, "");
+            const code = String(children).replace(/\n$/, "");
+            if (className?.includes("language-mermaid")) {
               return <MermaidDiagram content={code} />;
+            }
+            if (className?.includes("language-svg")) {
+              // Sanitize: only allow SVG content starting with <svg
+              const trimmed = code.trim();
+              if (trimmed.startsWith("<svg")) {
+                return (
+                  <div
+                    className="rounded-lg border border-gray-200 bg-white p-4 overflow-auto max-w-full my-3 flex justify-center"
+                    dangerouslySetInnerHTML={{ __html: trimmed }}
+                  />
+                );
+              }
             }
             const isBlock = className?.includes("language-");
             if (isBlock) {
