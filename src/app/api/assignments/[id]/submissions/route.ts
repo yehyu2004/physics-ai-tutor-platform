@@ -35,6 +35,7 @@ export async function GET(
         },
       },
       orderBy: { submittedAt: "desc" },
+      take: 200,
     });
 
     const formattedSubmissions = submissions.map((s) => ({

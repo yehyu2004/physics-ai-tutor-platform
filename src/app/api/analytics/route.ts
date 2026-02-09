@@ -11,7 +11,9 @@ export async function GET() {
 
     const userId = (session.user as { id: string }).id;
 
-    const [submissions, messages, conversations] = await Promise.all([
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+    const [submissions, messages, conversations, totalMessages] = await Promise.all([
       prisma.submission.findMany({
         where: { userId },
         include: {
@@ -23,20 +25,22 @@ export async function GET() {
           },
         },
         orderBy: { submittedAt: "desc" },
+        take: 100,
       }),
       prisma.message.findMany({
         where: {
           conversation: { userId },
+          createdAt: { gte: weekAgo },
         },
         select: { createdAt: true, role: true },
         orderBy: { createdAt: "desc" },
       }),
       prisma.conversation.count({ where: { userId } }),
+      prisma.message.count({ where: { conversation: { userId } } }),
     ]);
 
     // Calculate weekly activity (last 7 days)
     const now = new Date();
-    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const dailyActivity: Record<string, number> = {};
     for (let i = 6; i >= 0; i--) {
       const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
@@ -44,11 +48,9 @@ export async function GET() {
       dailyActivity[key] = 0;
     }
     for (const msg of messages) {
-      if (msg.createdAt >= weekAgo) {
-        const key = msg.createdAt.toISOString().split("T")[0];
-        if (dailyActivity[key] !== undefined) {
-          dailyActivity[key]++;
-        }
+      const key = msg.createdAt.toISOString().split("T")[0];
+      if (dailyActivity[key] !== undefined) {
+        dailyActivity[key]++;
       }
     }
 
@@ -70,7 +72,6 @@ export async function GET() {
     const totalPossible = gradedSubmissions.reduce((sum, s) => sum + s.assignment.totalPoints, 0);
     const averagePercent = totalPossible > 0 ? Math.round((totalEarned / totalPossible) * 100) : 0;
 
-    const totalMessages = messages.length;
     const estimatedStudyMinutes = Math.round(totalMessages * 1.5);
 
     return NextResponse.json({

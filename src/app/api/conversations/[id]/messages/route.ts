@@ -20,6 +20,7 @@ export async function GET(
       include: {
         messages: {
           orderBy: { createdAt: "asc" },
+          take: 200,
         },
       },
     });

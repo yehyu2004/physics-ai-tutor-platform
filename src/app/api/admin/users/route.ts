@@ -31,6 +31,7 @@ export async function GET() {
         createdAt: true,
       },
       orderBy: { createdAt: "desc" },
+      take: 500,
     });
 
     return NextResponse.json({

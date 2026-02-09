@@ -15,8 +15,9 @@ export default async function ChatConversationPage({
   const user = session.user as { id: string };
 
   const conversations = await prisma.conversation.findMany({
-    where: { userId: user.id },
+    where: { userId: user.id, isDeleted: false },
     orderBy: { updatedAt: "desc" },
+    take: 50,
     select: { id: true, title: true, updatedAt: true },
   });
 

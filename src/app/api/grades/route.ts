@@ -19,6 +19,7 @@ export async function GET() {
         },
       },
       orderBy: { submittedAt: "desc" },
+      take: 100,
     });
 
     const grades = submissions.map((s) => ({

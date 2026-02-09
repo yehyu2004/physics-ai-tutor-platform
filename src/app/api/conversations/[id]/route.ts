@@ -22,8 +22,9 @@ export async function DELETE(
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    await prisma.conversation.delete({
+    await prisma.conversation.update({
       where: { id: params.id },
+      data: { isDeleted: true, deletedAt: new Date() },
     });
 
     return NextResponse.json({ success: true });

@@ -82,10 +82,13 @@ export async function POST(req: Request) {
       },
     });
 
-    const previousMessages = await prisma.message.findMany({
+    // Load last 50 messages for AI context (avoids unbounded query + token limits)
+    const recentMessages = await prisma.message.findMany({
       where: { conversationId: convId },
-      orderBy: { createdAt: "asc" },
+      orderBy: { createdAt: "desc" },
+      take: 50,
     });
+    const previousMessages = recentMessages.reverse();
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const chatMessages: ChatMessage[] = previousMessages.map((m: any) => ({

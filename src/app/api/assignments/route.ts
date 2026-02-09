@@ -14,6 +14,7 @@ export async function GET() {
     const assignments = await prisma.assignment.findMany({
       where: userRole === "STUDENT" ? { published: true } : {},
       orderBy: { createdAt: "desc" },
+      take: 100,
       include: {
         createdBy: { select: { name: true } },
         _count: { select: { submissions: true, questions: true } },
