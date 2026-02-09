@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useSession } from "next-auth/react";
+import mermaid from "mermaid";
 import {
   ArrowLeft,
   Clock,
@@ -17,8 +18,38 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { MarkdownContent } from "@/components/ui/markdown-content";
 import { formatShortDate } from "@/lib/utils";
 import Link from "next/link";
+
+function MermaidDiagram({ content }: { content: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [svg, setSvg] = useState<string>("");
+
+  const renderDiagram = useCallback(async () => {
+    try {
+      mermaid.initialize({ startOnLoad: false, theme: "default" });
+      const id = `mermaid-${Math.random().toString(36).slice(2, 9)}`;
+      const { svg: renderedSvg } = await mermaid.render(id, content);
+      setSvg(renderedSvg);
+    } catch (err) {
+      console.error("Mermaid render error:", err);
+      setSvg(`<pre class="text-xs text-red-500">Diagram render error</pre>`);
+    }
+  }, [content]);
+
+  useEffect(() => {
+    renderDiagram();
+  }, [renderDiagram]);
+
+  return (
+    <div
+      ref={containerRef}
+      className="rounded-lg border border-gray-200 bg-white p-4 overflow-auto max-w-full"
+      dangerouslySetInnerHTML={{ __html: svg }}
+    />
+  );
+}
 
 interface Question {
   id: string;
@@ -28,6 +59,8 @@ interface Question {
   correctAnswer: string | null;
   points: number;
   order: number;
+  diagram?: { type: "svg" | "mermaid"; content: string } | null;
+  imageUrl?: string | null;
 }
 
 interface Assignment {
@@ -197,7 +230,7 @@ export default function AssignmentDetailPage({
       {assignment.description && (
         <Card>
           <CardContent className="p-6">
-            <p className="text-sm whitespace-pre-wrap">{assignment.description}</p>
+            <MarkdownContent content={assignment.description} className="text-sm" />
           </CardContent>
         </Card>
       )}
@@ -215,7 +248,30 @@ export default function AssignmentDetailPage({
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <p className="text-sm whitespace-pre-wrap">{q.questionText}</p>
+                <MarkdownContent content={q.questionText} className="text-sm" />
+
+                {q.diagram && (
+                  <div className="my-3 flex justify-center">
+                    {q.diagram.type === "svg" ? (
+                      <div
+                        className="rounded-lg border border-gray-200 bg-white p-4 overflow-auto max-w-full"
+                        dangerouslySetInnerHTML={{ __html: q.diagram.content }}
+                      />
+                    ) : (
+                      <MermaidDiagram content={q.diagram.content} />
+                    )}
+                  </div>
+                )}
+
+                {q.imageUrl && (
+                  <div className="my-3">
+                    <img
+                      src={q.imageUrl}
+                      alt="Question diagram"
+                      className="rounded-lg max-w-full border border-gray-200"
+                    />
+                  </div>
+                )}
 
                 {q.questionType === "MC" && q.options && (
                   <div className="space-y-2">
@@ -234,9 +290,10 @@ export default function AssignmentDetailPage({
                           }
                           className="shrink-0"
                         />
-                        <span className="text-sm">
-                          {String.fromCharCode(65 + oIndex)}. {opt}
-                        </span>
+                        <MarkdownContent
+                          content={`${String.fromCharCode(65 + oIndex)}. ${opt}`}
+                          className="text-sm"
+                        />
                       </label>
                     ))}
                   </div>

@@ -51,13 +51,15 @@ export async function POST(req: Request) {
         totalPoints: totalPoints || 100,
         createdById: userId,
         questions: {
-          create: (questions || []).map((q: { questionText: string; questionType: string; options?: string[]; correctAnswer?: string; points?: number }, i: number) => ({
+          create: (questions || []).map((q: { questionText: string; questionType: string; options?: string[]; correctAnswer?: string; points?: number; diagram?: { type: string; content: string }; imageUrl?: string }, i: number) => ({
             questionText: q.questionText,
             questionType: q.questionType,
             options: q.options || null,
             correctAnswer: q.correctAnswer || null,
             points: q.points || 10,
             order: i,
+            diagram: q.diagram || null,
+            imageUrl: q.imageUrl || null,
           })),
         },
       },

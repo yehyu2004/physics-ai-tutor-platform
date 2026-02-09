@@ -145,6 +145,8 @@ model AssignmentQuestion {
   correctAnswer String?
   points        Float        @default(10)
   order         Int          @default(0)
+  diagram       Json?        // { type: "svg" | "mermaid", content: string }
+  imageUrl      String?
 
   assignment Assignment       @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
   answers    SubmissionAnswer[]

@@ -7,6 +7,8 @@ import {
   Trash2,
   Loader2,
   ArrowLeft,
+  ImagePlus,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +30,8 @@ interface Question {
   options: string[];
   correctAnswer: string;
   points: number;
+  imageFile?: File | null;
+  imagePreview?: string | null;
 }
 
 export default function CreateAssignmentPage() {
@@ -74,11 +78,55 @@ export default function CreateAssignmentPage() {
     setQuestions((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const handleImageUpload = (qIndex: number, file: File) => {
+    const preview = URL.createObjectURL(file);
+    setQuestions((prev) =>
+      prev.map((q, i) =>
+        i === qIndex ? { ...q, imageFile: file, imagePreview: preview } : q
+      )
+    );
+  };
+
+  const removeImage = (qIndex: number) => {
+    setQuestions((prev) =>
+      prev.map((q, i) =>
+        i === qIndex ? { ...q, imageFile: null, imagePreview: null } : q
+      )
+    );
+  };
+
   const handleSubmit = async (publish: boolean) => {
     if (!title.trim()) return;
     setLoading(true);
 
     try {
+      // Upload images for questions that have them
+      const questionsWithUrls = await Promise.all(
+        questions.map(async (q) => {
+          let imageUrl: string | undefined;
+          if (q.imageFile) {
+            const formData = new FormData();
+            formData.append("file", q.imageFile);
+            const uploadRes = await fetch("/api/upload", {
+              method: "POST",
+              body: formData,
+            });
+            if (uploadRes.ok) {
+              const data = await uploadRes.json();
+              imageUrl = data.url;
+            }
+          }
+          return {
+            questionText: q.questionText,
+            questionType: q.questionType,
+            options: q.options,
+            correctAnswer: q.correctAnswer,
+            points: q.points,
+            ...(imageUrl && { imageUrl }),
+          };
+        })
+      );
+
       const res = await fetch("/api/assignments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -88,7 +136,7 @@ export default function CreateAssignmentPage() {
           dueDate: dueDate || null,
           type,
           totalPoints,
-          questions: type === "QUIZ" ? questions : [],
+          questions: type === "QUIZ" ? questionsWithUrls : [],
         }),
       });
 
@@ -216,13 +264,47 @@ export default function CreateAssignmentPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Question Text</Label>
+                  <Label>Question Text (supports Markdown and LaTeX: $...$)</Label>
                   <Textarea
                     value={q.questionText}
                     onChange={(e) => updateQuestion(qIndex, "questionText", e.target.value)}
-                    placeholder="Enter the question (supports LaTeX: $...$)"
+                    placeholder="Enter the question (supports Markdown and LaTeX: $...$)"
                     rows={2}
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Question Image (optional)</Label>
+                  {q.imagePreview ? (
+                    <div className="relative inline-block">
+                      <img
+                        src={q.imagePreview}
+                        alt="Question image"
+                        className="rounded-lg border border-gray-200 max-h-40"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(qIndex)}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="flex items-center gap-2 px-3 py-2 border border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors w-fit">
+                      <ImagePlus className="h-4 w-4 text-gray-400" />
+                      <span className="text-sm text-gray-500">Add image</span>
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleImageUpload(qIndex, file);
+                        }}
+                      />
+                    </label>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">

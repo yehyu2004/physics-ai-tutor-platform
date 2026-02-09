@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { MarkdownContent } from "@/components/ui/markdown-content";
 
 interface SubmissionForGrading {
   id: string;
@@ -300,7 +301,7 @@ export default function GradingPage() {
                     </div>
 
                     <div className="p-5 space-y-4">
-                      <p className="text-sm text-gray-700 leading-relaxed">{answer.questionText}</p>
+                      <MarkdownContent content={answer.questionText} className="text-sm text-gray-700 leading-relaxed" />
 
                       {/* Student Answer */}
                       <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">

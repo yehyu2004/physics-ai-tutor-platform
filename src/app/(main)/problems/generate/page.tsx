@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import mermaid from "mermaid";
+import { useRouter } from "next/navigation";
 import {
   Sparkles,
   Loader2,
@@ -15,6 +16,7 @@ import {
   Sun,
   Lightbulb,
   ChevronDown,
+  FilePlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -105,6 +107,7 @@ function MermaidDiagram({ content }: { content: string }) {
 }
 
 export default function ProblemGeneratorPage() {
+  const router = useRouter();
   const [topic, setTopic] = useState("");
   const [difficulty, setDifficulty] = useState("3");
   const [count, setCount] = useState(3);
@@ -206,6 +209,42 @@ export default function ProblemGeneratorPage() {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const [creatingAssignment, setCreatingAssignment] = useState(false);
+
+  const createAssignmentFromProblems = async () => {
+    if (problems.length === 0) return;
+    setCreatingAssignment(true);
+    try {
+      const totalPoints = problems.reduce((sum, p) => sum + p.points, 0);
+      const res = await fetch("/api/assignments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: `${topic} - Generated Problems`,
+          description: `Auto-generated ${problems.length} ${questionType} problems on ${topic} (difficulty ${difficulty}/5).`,
+          type: "QUIZ",
+          totalPoints,
+          questions: problems.map((p) => ({
+            questionText: p.questionText,
+            questionType: p.questionType || questionType,
+            options: p.options || null,
+            correctAnswer: p.correctAnswer,
+            points: p.points,
+            diagram: p.diagram || null,
+          })),
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        router.push(`/assignments/${data.assignment.id}`);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setCreatingAssignment(false);
     }
   };
 
@@ -380,9 +419,24 @@ export default function ProblemGeneratorPage() {
                 ({problems.length})
               </span>
             </h2>
-            <span className="text-xs text-emerald-600 font-medium bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
-              Auto-saved
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-emerald-600 font-medium bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                Auto-saved
+              </span>
+              <Button
+                onClick={createAssignmentFromProblems}
+                disabled={creatingAssignment}
+                size="sm"
+                className="gap-1.5 bg-gray-900 hover:bg-gray-800 text-white rounded-lg"
+              >
+                {creatingAssignment ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <FilePlus className="h-3.5 w-3.5" />
+                )}
+                Create Assignment
+              </Button>
+            </div>
           </div>
 
           {problems.map((problem, index) => (
