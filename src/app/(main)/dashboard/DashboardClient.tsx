@@ -206,33 +206,23 @@ export default function DashboardClient({
       {/* Stat Cards */}
       <div>
         <SectionHeading title="Overview" subtitle="Your activity at a glance" />
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {statCards.map((stat, index) => (
             <div
               key={stat.label}
-              className="relative overflow-hidden bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow animate-fade-in"
+              className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-5 hover:border-gray-200 dark:hover:border-gray-700 transition-colors animate-fade-in group"
               style={{ animationDelay: `${index * 100}ms` }}
             >
-              {/* Gradient blob decoration */}
-              <div className="absolute -top-8 -right-8 w-32 h-32 bg-gradient-to-br from-pink-200 to-purple-200 opacity-25 blur-2xl rounded-full pointer-events-none" />
-
-              {/* Stat number with subtle dashed green accent */}
-              <div className="relative inline-block mb-3">
-                <div className="border border-dashed border-emerald-200 dark:border-emerald-700 rounded-xl px-3 py-1.5 inline-block">
-                  <p className="text-4xl font-bold text-gray-900 dark:text-gray-100">
-                    {stat.value}
-                  </p>
+              <div className="flex items-center justify-between mb-3">
+                <div className="h-9 w-9 rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center group-hover:bg-gray-100 dark:group-hover:bg-gray-750 transition-colors">
+                  <stat.icon className="h-4.5 w-4.5 text-gray-500 dark:text-gray-400" />
                 </div>
               </div>
-
-              {/* Icon + label */}
-              <div className="flex items-center gap-2 mt-1">
-                <stat.icon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
-                <span className="text-sm text-gray-500 dark:text-gray-400">{stat.label}</span>
-              </div>
-
-              {/* Description */}
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{stat.sublabel}</p>
+              <p className="text-3xl font-bold text-gray-900 dark:text-gray-100 tabular-nums">
+                {stat.value}
+              </p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mt-1">{stat.label}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{stat.sublabel}</p>
             </div>
           ))}
         </div>
@@ -241,17 +231,15 @@ export default function DashboardClient({
       {/* Quick Start */}
       <div>
         <SectionHeading title="Quick Start" subtitle="Top physics tools" />
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
           {filteredQuickStart.slice(0, 8).map((item, index) => (
             <Link key={item.href + item.label} href={item.href}>
               <div
-                className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-6 hover:shadow-md transition-all duration-200 cursor-pointer h-full group animate-fade-in"
+                className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-5 hover:border-gray-200 dark:hover:border-gray-700 transition-all duration-200 cursor-pointer h-full group animate-fade-in"
                 style={{ animationDelay: `${index * 80}ms` }}
               >
-                {/* Circular icon with ring decoration */}
-                <div className="w-12 h-12 rounded-full border-2 border-gray-200 dark:border-gray-700 flex items-center justify-center mb-4 relative group-hover:border-gray-300 transition-colors">
-                  <div className="absolute inset-0 rounded-full border border-gray-100 dark:border-gray-800 scale-125 opacity-50" />
-                  <item.icon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center mb-3 group-hover:bg-gray-100 dark:group-hover:bg-gray-750 transition-colors">
+                  <item.icon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
                 </div>
 
                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300">

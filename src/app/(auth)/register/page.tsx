@@ -71,11 +71,7 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 relative overflow-hidden">
-      {/* Subtle gradient blob decorations */}
-      <div className="absolute top-[-15%] left-[-10%] w-[450px] h-[450px] rounded-full bg-gradient-to-br from-purple-100/40 to-pink-100/40 blur-3xl" />
-      <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-gradient-to-tr from-pink-100/30 to-purple-100/30 blur-3xl" />
-
-      <div className="relative z-10 w-full max-w-md mx-4 py-8">
+      <div className="relative z-10 w-full max-w-md mx-4 px-1 py-8">
         {/* Logo / Branding */}
         <div className="flex flex-col items-center mb-8">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gray-900 dark:bg-gray-100 mb-4">

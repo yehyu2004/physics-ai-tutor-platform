@@ -292,8 +292,8 @@ export default function Sidebar({ userRole, userName, collapsed = false, onToggl
                 <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                   {userName}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
-                  {userRole.toLowerCase()}
+                <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                  {userRole}
                 </p>
               </div>
               <ChevronDown className={cn(

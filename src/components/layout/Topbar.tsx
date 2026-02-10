@@ -239,24 +239,24 @@ export default function Topbar({ userName, userEmail, userImage, userRole }: Top
 
   return (
     <>
-      <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-950 px-6">
-        <div className="flex flex-col">
-          <div className="flex items-center gap-1 text-sm">
+      <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-950 px-4 sm:px-6">
+        <div className="flex flex-col min-w-0">
+          <div className="flex items-center gap-1 text-sm min-w-0">
             <Link
               href="/dashboard"
-              className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+              className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors shrink-0 hidden sm:inline"
             >
               PhysTutor
             </Link>
             {breadcrumbs.map((crumb, i) => (
               <React.Fragment key={crumb.href}>
-                <ChevronRight className="h-3.5 w-3.5 text-gray-300 dark:text-gray-600" />
+                <ChevronRight className={`h-3.5 w-3.5 text-gray-300 dark:text-gray-600 shrink-0 ${i === 0 ? 'hidden sm:block' : ''}`} />
                 {i === breadcrumbs.length - 1 ? (
-                  <span className="text-gray-900 dark:text-gray-100 font-medium">{crumb.label}</span>
+                  <span className="text-gray-900 dark:text-gray-100 font-medium truncate">{crumb.label}</span>
                 ) : (
                   <Link
                     href={crumb.href}
-                    className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                    className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors shrink-0"
                   >
                     {crumb.label}
                   </Link>
@@ -279,12 +279,13 @@ export default function Topbar({ userName, userEmail, userImage, userRole }: Top
                   }
                 }}
                 disabled={examToggling}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-red-50 border border-red-200 text-red-700 text-xs font-medium hover:bg-red-100 transition-colors disabled:opacity-50"
+                className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-md bg-red-50 border border-red-200 text-red-700 text-xs font-medium hover:bg-red-100 transition-colors disabled:opacity-50"
+                title="Exam Mode Active"
               >
-                <ShieldAlert className="h-3.5 w-3.5" />
-                Exam Mode
+                <ShieldAlert className="h-3.5 w-3.5 shrink-0" />
+                <span className="hidden sm:inline">Exam Mode</span>
                 {isStaff && (
-                  <span className="text-[10px] text-red-400 ml-0.5">(click to turn off)</span>
+                  <span className="hidden sm:inline text-[10px] text-red-400 ml-0.5">(click to turn off)</span>
                 )}
               </button>
               {examTooltipOpen && !isStaff && (
@@ -309,11 +310,11 @@ export default function Topbar({ userName, userEmail, userImage, userRole }: Top
             <button
               onClick={toggleExamMode}
               disabled={examToggling}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-gray-50 border border-gray-200 text-gray-500 text-xs font-medium hover:bg-gray-100 hover:text-gray-700 transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-md bg-gray-50 border border-gray-200 text-gray-500 text-xs font-medium hover:bg-gray-100 hover:text-gray-700 transition-colors disabled:opacity-50"
               title="Enable Exam Mode"
             >
-              <ShieldAlert className="h-3.5 w-3.5" />
-              Exam Mode
+              <ShieldAlert className="h-3.5 w-3.5 shrink-0" />
+              <span className="hidden sm:inline">Exam Mode</span>
             </button>
           )}
 
@@ -468,8 +469,8 @@ export default function Topbar({ userName, userEmail, userImage, userRole }: Top
                   <div className="flex flex-col">
                     <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{userName}</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">{userEmail}</p>
-                    <span className="mt-0.5 inline-flex items-center rounded-md bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 text-[10px] font-medium text-gray-600 dark:text-gray-400 capitalize w-fit">
-                      {userRole.toLowerCase()}
+                    <span className="mt-0.5 inline-flex items-center rounded-md bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 text-[10px] font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide w-fit">
+                      {userRole}
                     </span>
                   </div>
                 </div>

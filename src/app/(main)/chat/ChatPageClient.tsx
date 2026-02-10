@@ -83,10 +83,20 @@ export default function ChatPageClient({
   const [model, setModel] = useState("gpt-5.2");
   const [searchQuery, setSearchQuery] = useState("");
   const [sidebarOpen, setSidebarOpenRaw] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem("chat-sidebar-open");
     if (saved !== null) setSidebarOpenRaw(saved === "true");
+    // Detect mobile and close sidebar by default
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (mobile) setSidebarOpenRaw(false);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
   }, []);
   const setSidebarOpen = useCallback((value: boolean | ((prev: boolean) => boolean)) => {
     setSidebarOpenRaw((prev) => {
@@ -129,6 +139,7 @@ export default function ChatPageClient({
     setActiveConversationId(convId);
     setLoading(false);
     setMessages([]);
+    if (isMobile) setSidebarOpen(false);
     try {
       const res = await fetch(`/api/conversations/${convId}/messages`);
       if (res.ok) {
@@ -353,20 +364,23 @@ export default function ChatPageClient({
   return (
     <div className="flex h-[calc(100vh-6.5rem)] overflow-hidden">
       {/* Mobile sidebar overlay (only on small screens) */}
-      <div
-        className={cn(
-          "fixed inset-0 z-30 bg-black/20 md:hidden transition-opacity duration-300",
-          sidebarOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-        )}
-        onClick={() => setSidebarOpen(false)}
-      />
+      {isMobile && (
+        <div
+          className={cn(
+            "fixed inset-0 z-40 bg-black/30 backdrop-blur-sm transition-opacity duration-300",
+            sidebarOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+          )}
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
       {/* Conversation Sidebar */}
       <div
         className={cn(
           "bg-white dark:bg-gray-950 border-r border-gray-100 dark:border-gray-800 flex flex-col transition-all duration-300",
-          "fixed inset-y-0 left-0 z-40 md:relative md:z-0",
-          sidebarOpen ? "translate-x-0 w-72" : "-translate-x-full w-72 md:translate-x-0 md:w-0 md:border-r-0 md:overflow-hidden"
+          isMobile
+            ? cn("fixed inset-y-0 left-0 z-50 w-72 shadow-xl", sidebarOpen ? "translate-x-0" : "-translate-x-full")
+            : cn("relative", sidebarOpen ? "w-72" : "w-0 border-r-0 overflow-hidden")
         )}
       >
         {/* Sidebar Header */}

@@ -105,9 +105,9 @@ export default function ProfileClient() {
             <p className="text-sm text-gray-500 dark:text-gray-400">{profile.email}</p>
             <Badge
               variant="secondary"
-              className="mt-1.5 capitalize text-xs"
+              className="mt-1.5 text-xs uppercase tracking-wide"
             >
-              {profile.role.toLowerCase()}
+              {profile.role}
             </Badge>
           </div>
         </div>
@@ -125,7 +125,7 @@ export default function ProfileClient() {
             <Shield className="h-4 w-4 text-gray-400" />
             <div>
               <p className="text-gray-500 dark:text-gray-400 text-xs">Role</p>
-              <p className="text-gray-900 dark:text-gray-100 capitalize">{profile.role.toLowerCase()}</p>
+              <p className="text-gray-900 dark:text-gray-100 uppercase tracking-wide">{profile.role}</p>
             </div>
           </div>
           <div className="flex items-center gap-3 text-sm">
