@@ -16,7 +16,7 @@ import {
 
 export default function AdminSettingsPage() {
   const [provider, setProvider] = useState("openai");
-  const [model, setModel] = useState("gpt-5-mini");
+  const [model, setModel] = useState("gpt-5.2");
   const [systemPrompt, setSystemPrompt] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -28,7 +28,7 @@ export default function AdminSettingsPage() {
       .then((data) => {
         if (data.config) {
           setProvider(data.config.provider || "openai");
-          setModel(data.config.model || "gpt-5-mini");
+          setModel(data.config.model || "gpt-5.2");
           setSystemPrompt(data.config.systemPrompt || "");
         }
         setLoading(false);
@@ -101,6 +101,7 @@ export default function AdminSettingsPage() {
                 <SelectContent>
                   {provider === "openai" ? (
                     <>
+                      <SelectItem value="gpt-5.2">GPT-5.2</SelectItem>
                       <SelectItem value="gpt-5-mini">GPT-5 Mini</SelectItem>
                     </>
                   ) : (

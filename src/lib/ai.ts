@@ -106,7 +106,7 @@ export async function streamChat(
   const system = systemPrompt || DEFAULT_SYSTEM_PROMPT;
 
   if (provider === "openai") {
-    return streamOpenAI(messages, model || "gpt-5-mini", system);
+    return streamOpenAI(messages, model || "gpt-5.2", system);
   } else {
     return streamAnthropic(messages, model || "claude-haiku-4-5-20251001", system);
   }
@@ -117,32 +117,35 @@ async function streamOpenAI(
   model: string,
   systemPrompt: string
 ) {
-  const openaiMessages: OpenAI.ChatCompletionMessageParam[] = [
-    { role: "system", content: systemPrompt },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const input: any[] = [
+    { role: "developer", content: systemPrompt },
   ];
 
   for (const msg of messages) {
     if (msg.imageUrls?.length && msg.role === "user") {
-      openaiMessages.push({
+      input.push({
         role: "user",
         content: [
-          { type: "text", text: msg.content },
+          { type: "input_text", text: msg.content },
           ...msg.imageUrls.map((url) => ({
-            type: "image_url" as const,
-            image_url: { url },
+            type: "input_image",
+            image_url: url,
           })),
         ],
       });
     } else if (msg.role === "user") {
-      openaiMessages.push({ role: "user", content: msg.content });
+      input.push({ role: "user", content: msg.content });
     } else {
-      openaiMessages.push({ role: "assistant", content: msg.content });
+      input.push({ role: "assistant", content: msg.content });
     }
   }
 
-  const stream = await openai.chat.completions.create({
+  const stream = await openai.responses.create({
     model,
-    messages: openaiMessages,
+    input,
+    reasoning: { effort: "low" },
+    tools: [{ type: "web_search_preview" }],
     stream: true,
   });
 
@@ -250,15 +253,16 @@ export async function generateProblems(
   const prompt = buildProblemPrompt(topic, difficulty, count, questionType, "array");
 
   if (provider === "openai") {
-    const response = await openai.chat.completions.create({
-      model: "gpt-5-mini",
-      messages: [
-        { role: "system", content: PROBLEM_GEN_SYSTEM },
+    const response = await openai.responses.create({
+      model: "gpt-5.2",
+      input: [
+        { role: "developer", content: PROBLEM_GEN_SYSTEM },
         { role: "user", content: prompt },
       ],
-      response_format: { type: "json_object" },
+      reasoning: { effort: "low" },
+      text: { format: { type: "json_object" } },
     });
-    return response.choices[0].message.content;
+    return response.output_text;
   } else {
     const response = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
@@ -281,12 +285,13 @@ export async function streamGenerateProblems(
   const prompt = buildProblemPrompt(topic, difficulty, count, questionType, "object");
 
   if (provider === "openai") {
-    return openai.chat.completions.create({
-      model: "gpt-5-mini",
-      messages: [
-        { role: "system", content: PROBLEM_GEN_SYSTEM },
+    return openai.responses.create({
+      model: "gpt-5.2",
+      input: [
+        { role: "developer", content: PROBLEM_GEN_SYSTEM },
         { role: "user", content: prompt },
       ],
+      reasoning: { effort: "low" },
       stream: true,
     });
   } else {
@@ -320,15 +325,16 @@ Provide your response as JSON with:
 - feedback: string (constructive feedback explaining the grade)`;
 
   if (provider === "openai") {
-    const response = await openai.chat.completions.create({
-      model: "gpt-5-mini",
-      messages: [
-        { role: "system", content: "You are a fair and constructive physics grading assistant. Always respond with valid JSON." },
+    const response = await openai.responses.create({
+      model: "gpt-5.2",
+      input: [
+        { role: "developer", content: "You are a fair and constructive physics grading assistant. Always respond with valid JSON." },
         { role: "user", content: prompt },
       ],
-      response_format: { type: "json_object" },
+      reasoning: { effort: "low" },
+      text: { format: { type: "json_object" } },
     });
-    return response.choices[0].message.content;
+    return response.output_text;
   } else {
     const response = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
