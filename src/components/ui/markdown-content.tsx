@@ -8,17 +8,20 @@ import "katex/dist/katex.min.css";
 
 function normalizeLatex(content: string): string {
   // Convert \[...\] to $$...$$ and \(...\) to $...$
-  content = content.replace(/\\\[([\s\S]*?)\\\]/g, (_, math) => `$$${math}$$`);
+  content = content.replace(/\\\[([\s\S]*?)\\\]/g, (_, math) => `\n$$\n${math.trim()}\n$$\n`);
   content = content.replace(/\\\(([\s\S]*?)\\\)/g, (_, math) => `$${math}$`);
-  // Fix orphaned display math: a line starting with LaTeX commands ending with $$
-  // but missing the opening $$  (e.g. "=\frac{...}.$$" should be "$$=\frac{...}.$$")
-  content = content.replace(/^([ \t]*)(\\[a-zA-Z{].*?\$\$)$/gm, (_, indent, math) => {
-    if (!math.startsWith("$$")) {
-      return `${indent}$$${math}`;
-    }
-    return _;
+
+  // Ensure $$ display math delimiters are on their own lines.
+  // remark-math requires $$ to start at the beginning of a line.
+  // First, handle matched $$...$$ pairs (including multi-line).
+  content = content.replace(/\$\$([\s\S]*?)\$\$/g, (_match, math) => {
+    return `\n$$\n${math.trim()}\n$$\n`;
   });
-  return content;
+
+  // Clean up excessive blank lines created by the replacements
+  content = content.replace(/\n{3,}/g, "\n\n");
+
+  return content.trim();
 }
 
 interface MarkdownContentProps {
