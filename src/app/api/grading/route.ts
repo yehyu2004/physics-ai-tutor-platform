@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     }
 
     const graderId = (session.user as { id: string }).id;
-    const { submissionId, grades, overallScore, overallFeedback, feedbackFileUrl } = await req.json();
+    const { submissionId, grades, overallScore, overallFeedback, feedbackFileUrl, feedbackImages } = await req.json();
 
     const submission = await prisma.submission.findUnique({
       where: { id: submissionId },
@@ -35,6 +35,9 @@ export async function POST(req: Request) {
           data: {
             score: grade.score,
             feedback: grade.feedback,
+            ...(feedbackImages?.[grade.answerId]?.length && {
+              feedbackImageUrls: feedbackImages[grade.answerId],
+            }),
           },
         });
       }

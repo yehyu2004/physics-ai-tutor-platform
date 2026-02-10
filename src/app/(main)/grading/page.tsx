@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { MarkdownContent } from "@/components/ui/markdown-content";
+import { ImageUpload } from "@/components/ui/image-upload";
 import {
   Select,
   SelectContent,
@@ -52,6 +53,7 @@ interface AssignmentInfo {
 interface AppealMessage {
   id: string;
   content: string;
+  imageUrls?: string[];
   createdAt: string;
   user: { id: string; name: string | null; role: string };
 }
@@ -60,6 +62,7 @@ interface Appeal {
   id: string;
   status: string;
   reason: string;
+  imageUrls?: string[];
   createdAt: string;
   student: { id: string; name: string | null };
   messages: AppealMessage[];
@@ -113,10 +116,31 @@ export default function GradingPage() {
   const [feedbackFile, setFeedbackFile] = useState<File | null>(null);
   const [uploadingFeedback, setUploadingFeedback] = useState(false);
   const [feedbackFileUrl, setFeedbackFileUrl] = useState<string | null>(null);
+  const [feedbackImages, setFeedbackImages] = useState<Record<string, string[]>>({});
   const [appealMessages, setAppealMessages] = useState<Record<string, string>>({});
   const [appealNewScores, setAppealNewScores] = useState<Record<string, string>>({});
   const [resolvingAppeal, setResolvingAppeal] = useState<string | null>(null);
   const [expandedAppeals, setExpandedAppeals] = useState<Record<string, boolean>>({});
+  const [appealImages, setAppealImages] = useState<Record<string, string[]>>({});
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  const handleUploadImage = useCallback(async (file: File): Promise<string | null> => {
+    setUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      if (res.ok) {
+        const data = await res.json();
+        return data.url;
+      }
+      return null;
+    } catch {
+      return null;
+    } finally {
+      setUploadingImage(false);
+    }
+  }, []);
 
   // Fetch assignment list
   useEffect(() => {
@@ -240,6 +264,11 @@ export default function GradingPage() {
           score: g.score,
           feedback: g.feedback,
         }));
+        // Include feedback images keyed by answerId
+        const hasAnyImages = Object.values(feedbackImages).some((imgs) => imgs.length > 0);
+        if (hasAnyImages) {
+          body.feedbackImages = feedbackImages;
+        }
       } else {
         body.overallScore = overallScore;
         body.overallFeedback = overallFeedback;
@@ -282,12 +311,17 @@ export default function GradingPage() {
       const res = await fetch("/api/appeals", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ appealId, message }),
+        body: JSON.stringify({
+          appealId,
+          message,
+          imageUrls: appealImages[appealId]?.length ? appealImages[appealId] : undefined,
+        }),
       });
       if (res.ok) {
         const data = await res.json();
         updateAppealInSubmissions(appealId, data.appeal);
         setAppealMessages((prev) => ({ ...prev, [appealId]: "" }));
+        setAppealImages((prev) => ({ ...prev, [appealId]: [] }));
       }
     } catch {
       alert("Failed to send message");
@@ -305,12 +339,19 @@ export default function GradingPage() {
       const res = await fetch("/api/appeals", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ appealId, status, newScore, message: message?.trim() || undefined }),
+        body: JSON.stringify({
+          appealId,
+          status,
+          newScore,
+          message: message?.trim() || undefined,
+          imageUrls: appealImages[appealId]?.length ? appealImages[appealId] : undefined,
+        }),
       });
       if (res.ok) {
         const data = await res.json();
         updateAppealInSubmissions(appealId, data.appeal);
         setAppealMessages((prev) => ({ ...prev, [appealId]: "" }));
+        setAppealImages((prev) => ({ ...prev, [appealId]: [] }));
         setAppealNewScores((prev) => ({ ...prev, [appealId]: "" }));
         // Refresh submissions to get updated scores
         if (status === "RESOLVED" && newScore !== undefined) {
@@ -739,6 +780,13 @@ export default function GradingPage() {
                               rows={2}
                               className="resize-none"
                             />
+                            <ImageUpload
+                              images={feedbackImages[answer.id] || []}
+                              onImagesChange={(imgs) => setFeedbackImages((prev) => ({ ...prev, [answer.id]: imgs }))}
+                              onUpload={handleUploadImage}
+                              uploading={uploadingImage}
+                              maxImages={3}
+                            />
                           </div>
                         )}
 
@@ -797,7 +845,17 @@ export default function GradingPage() {
                                             {formatShortDate(appeal.createdAt)}
                                           </span>
                                         </div>
-                                        <p className="text-xs text-amber-800 dark:text-amber-300">{appeal.reason}</p>
+                                        <MarkdownContent content={appeal.reason} className="text-xs text-amber-800 dark:text-amber-300" />
+                                        {appeal.imageUrls && appeal.imageUrls.length > 0 && (
+                                          <div className="flex gap-2 mt-1.5 flex-wrap">
+                                            {appeal.imageUrls.map((url, i) => (
+                                              <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                <img src={url} alt={`Attachment ${i + 1}`} className="h-16 w-16 object-cover rounded border border-amber-200 dark:border-amber-700 hover:opacity-80 transition-opacity" />
+                                              </a>
+                                            ))}
+                                          </div>
+                                        )}
                                       </div>
 
                                       {/* Messages */}
@@ -825,7 +883,17 @@ export default function GradingPage() {
                                                 {formatShortDate(msg.createdAt)}
                                               </span>
                                             </div>
-                                            <p className="text-xs text-gray-800 dark:text-gray-200">{msg.content}</p>
+                                            <MarkdownContent content={msg.content} className="text-xs text-gray-800 dark:text-gray-200" />
+                                            {msg.imageUrls && msg.imageUrls.length > 0 && (
+                                              <div className="flex gap-2 mt-1.5 flex-wrap">
+                                                {msg.imageUrls.map((url, i) => (
+                                                  <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                    <img src={url} alt={`Attachment ${i + 1}`} className="h-16 w-16 object-cover rounded border border-gray-200 dark:border-gray-700 hover:opacity-80 transition-opacity" />
+                                                  </a>
+                                                ))}
+                                              </div>
+                                            )}
                                           </div>
                                         );
                                       })}
@@ -838,6 +906,13 @@ export default function GradingPage() {
                                           placeholder={appeal.status === "OPEN" ? "Reply or note before resolving..." : "Add a follow-up message..."}
                                           rows={2}
                                           className="text-xs"
+                                        />
+                                        <ImageUpload
+                                          images={appealImages[appeal.id] || []}
+                                          onImagesChange={(imgs) => setAppealImages((prev) => ({ ...prev, [appeal.id]: imgs }))}
+                                          onUpload={handleUploadImage}
+                                          uploading={uploadingImage}
+                                          maxImages={3}
                                         />
                                         {appeal.status === "OPEN" && (
                                           <div className="flex items-center gap-2">
