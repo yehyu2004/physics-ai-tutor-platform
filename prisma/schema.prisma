@@ -52,6 +52,8 @@ model User {
   notifications NotificationRead[]
   createdNotifications Notification[] @relation("NotificationCreatedBy")
   examModeToggles ExamMode[] @relation("ExamModeToggledBy")
+  gradeAppeals    GradeAppeal[]    @relation("AppealStudent")
+  appealMessages  AppealMessage[]  @relation("AppealMessageAuthor")
 }
 
 model Account {
@@ -195,6 +197,7 @@ model SubmissionAnswer {
 
   submission Submission         @relation(fields: [submissionId], references: [id], onDelete: Cascade)
   question   AssignmentQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  appeals    GradeAppeal[]
 }
 
 model Rubric {
@@ -285,4 +288,40 @@ model ExamMode {
   toggledAt   DateTime @default(now())
 
   toggledBy User @relation("ExamModeToggledBy", fields: [toggledById], references: [id])
+}
+
+enum AppealStatus {
+  OPEN
+  RESOLVED
+  REJECTED
+}
+
+model GradeAppeal {
+  id               String       @id @default(cuid())
+  submissionAnswerId String
+  studentId        String
+  reason           String       @db.Text
+  status           AppealStatus @default(OPEN)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  submissionAnswer SubmissionAnswer @relation(fields: [submissionAnswerId], references: [id], onDelete: Cascade)
+  student          User             @relation("AppealStudent", fields: [studentId], references: [id])
+  messages         AppealMessage[]
+
+  @@unique([submissionAnswerId, studentId])
+  @@index([studentId])
+}
+
+model AppealMessage {
+  id        String   @id @default(cuid())
+  appealId  String
+  userId    String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  appeal GradeAppeal @relation(fields: [appealId], references: [id], onDelete: Cascade)
+  user   User        @relation("AppealMessageAuthor", fields: [userId], references: [id])
+
+  @@index([appealId, createdAt])
 }

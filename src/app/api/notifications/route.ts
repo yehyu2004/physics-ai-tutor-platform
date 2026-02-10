@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getEffectiveSession } from "@/lib/impersonate";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
-    const session = await auth();
+    const session = await getEffectiveSession();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -43,7 +43,7 @@ export async function GET() {
 
 export async function PATCH() {
   try {
-    const session = await auth();
+    const session = await getEffectiveSession();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -76,7 +76,7 @@ export async function PATCH() {
 
 export async function POST(req: Request) {
   try {
-    const session = await auth();
+    const session = await getEffectiveSession();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

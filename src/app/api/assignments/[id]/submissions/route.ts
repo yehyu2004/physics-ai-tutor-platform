@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getEffectiveSession } from "@/lib/impersonate";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(
@@ -7,7 +7,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await auth();
+    const session = await getEffectiveSession();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -37,6 +37,17 @@ export async function GET(
                 correctAnswer: true,
               },
             },
+            appeals: {
+              include: {
+                student: { select: { id: true, name: true } },
+                messages: {
+                  include: {
+                    user: { select: { id: true, name: true, role: true } },
+                  },
+                  orderBy: { createdAt: "asc" as const },
+                },
+              },
+            },
           },
         },
       },
@@ -44,26 +55,51 @@ export async function GET(
       take: 200,
     });
 
-    const formattedSubmissions = submissions.map((s) => ({
-      id: s.id,
-      userName: s.user.name || "Unknown",
-      userEmail: s.user.email,
-      submittedAt: s.submittedAt.toISOString(),
-      totalScore: s.totalScore,
-      gradedAt: s.gradedAt?.toISOString() || null,
-      gradedByName: s.gradedBy?.name || null,
-      fileUrl: s.fileUrl,
-      answers: s.answers.map((a) => ({
-        id: a.id,
-        questionText: a.question.questionText,
-        questionType: a.question.questionType,
-        answer: a.answer,
-        score: a.score,
-        feedback: a.feedback,
-        autoGraded: a.autoGraded,
-        maxPoints: a.question.points,
-      })),
-    }));
+    const formattedSubmissions = submissions.map((s) => {
+      const openAppealCount = s.answers.reduce(
+        (count, a) => count + a.appeals.filter((ap) => ap.status === "OPEN").length,
+        0
+      );
+      const totalAppealCount = s.answers.reduce(
+        (count, a) => count + a.appeals.length,
+        0
+      );
+      return {
+        id: s.id,
+        userName: s.user.name || "Unknown",
+        userEmail: s.user.email,
+        submittedAt: s.submittedAt.toISOString(),
+        totalScore: s.totalScore,
+        gradedAt: s.gradedAt?.toISOString() || null,
+        gradedByName: s.gradedBy?.name || null,
+        fileUrl: s.fileUrl,
+        openAppealCount,
+        totalAppealCount,
+        answers: s.answers.map((a) => ({
+          id: a.id,
+          questionText: a.question.questionText,
+          questionType: a.question.questionType,
+          answer: a.answer,
+          score: a.score,
+          feedback: a.feedback,
+          autoGraded: a.autoGraded,
+          maxPoints: a.question.points,
+          appeals: a.appeals.map((ap) => ({
+            id: ap.id,
+            status: ap.status,
+            reason: ap.reason,
+            createdAt: ap.createdAt.toISOString(),
+            student: ap.student,
+            messages: ap.messages.map((m) => ({
+              id: m.id,
+              content: m.content,
+              createdAt: m.createdAt.toISOString(),
+              user: m.user,
+            })),
+          })),
+        })),
+      };
+    });
 
     return NextResponse.json({ assignment, submissions: formattedSubmissions });
   } catch (error) {

@@ -1,11 +1,11 @@
-import { auth } from "@/lib/auth";
+import { getEffectiveSession } from "@/lib/impersonate";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { formatDate } from "@/lib/utils";
 import DashboardClient from "./DashboardClient";
 
 export default async function DashboardPage() {
-  const session = await auth();
+  const session = await getEffectiveSession();
   if (!session?.user) redirect("/login");
 
   const user = session.user as { id: string; name?: string | null; role?: string };

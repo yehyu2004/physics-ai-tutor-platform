@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getEffectiveSession } from "@/lib/impersonate";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
-    const session = await auth();
+    const session = await getEffectiveSession();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -19,21 +19,62 @@ export async function GET() {
       include: {
         createdBy: { select: { name: true } },
         _count: { select: { submissions: true, questions: true } },
-        submissions: {
-          where: { userId },
-          select: { totalScore: true, submittedAt: true },
-          take: 1,
+        submissions: userRole === "STUDENT"
+          ? {
+              where: { userId },
+              select: { totalScore: true, submittedAt: true, gradedAt: true },
+              take: 1,
+            }
+          : {
+              select: { userId: true, totalScore: true, submittedAt: true, gradedAt: true },
+            },
+      },
+    });
+
+    // Fetch open appeal counts per assignment
+    const openAppealCounts = await prisma.gradeAppeal.groupBy({
+      by: ["submissionAnswerId"],
+      where: {
+        status: "OPEN",
+        submissionAnswer: {
+          submission: {
+            assignmentId: { in: assignments.map((a) => a.id) },
+          },
         },
       },
     });
 
+    // Map appeal counts to assignment IDs
+    const appealsBySubmissionAnswer = await prisma.submissionAnswer.findMany({
+      where: {
+        id: { in: openAppealCounts.map((c: { submissionAnswerId: string }) => c.submissionAnswerId) },
+      },
+      select: {
+        id: true,
+        submission: { select: { assignmentId: true } },
+      },
+    });
+
+    const appealCountByAssignment: Record<string, number> = {};
+    for (const sa of appealsBySubmissionAnswer) {
+      const aid = sa.submission.assignmentId;
+      appealCountByAssignment[aid] = (appealCountByAssignment[aid] || 0) + 1;
+    }
+
     const formatted = assignments.map((a) => {
-      const mySubmission = a.submissions[0] || null;
+      const mySubmission = userRole === "STUDENT"
+        ? (a.submissions[0] || null)
+        : ((a.submissions as Array<{ userId?: string; totalScore: number | null }>).find((s) => s.userId === userId) || null);
+      const ungradedCount = userRole !== "STUDENT"
+        ? a.submissions.filter((s) => s.gradedAt === null).length
+        : undefined;
       return {
         ...a,
         submissions: undefined,
         myScore: mySubmission?.totalScore ?? null,
         mySubmitted: !!mySubmission,
+        ungradedCount,
+        openAppealCount: appealCountByAssignment[a.id] || 0,
       };
     });
 
@@ -46,7 +87,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const session = await auth();
+    const session = await getEffectiveSession();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

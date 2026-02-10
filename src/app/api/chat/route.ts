@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { getEffectiveSession } from "@/lib/impersonate";
 import { prisma } from "@/lib/prisma";
 import { streamChat, SOCRATIC_SYSTEM_PROMPT, EXAM_MODE_SYSTEM_PROMPT, type ChatMessage, type AIProvider } from "@/lib/ai";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -6,7 +6,7 @@ import { checkContentFlags, handleContentFlag, trackRateLimitAbuse } from "@/lib
 
 export async function POST(req: Request) {
   try {
-    const session = await auth();
+    const session = await getEffectiveSession();
     if (!session?.user) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
+import { useEffectiveSession } from "@/lib/effective-session-context";
 import {
   ArrowLeft,
   Clock,
@@ -15,6 +15,10 @@ import {
   Pencil,
   Trash2,
   AlertTriangle,
+  MessageSquare,
+  ShieldAlert,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,11 +58,47 @@ interface Assignment {
   _count: { submissions: number };
 }
 
+interface SubmissionAnswer {
+  id: string;
+  questionId: string;
+  answer: string | null;
+  score: number | null;
+  feedback: string | null;
+  autoGraded: boolean;
+}
+
 interface ExistingSubmission {
   id: string;
   fileUrl: string | null;
   submittedAt: string;
   totalScore: number | null;
+  answers: SubmissionAnswer[];
+}
+
+interface AppealMessageData {
+  id: string;
+  userId: string;
+  content: string;
+  createdAt: string;
+  user: { id: string; name: string | null; role: string };
+}
+
+interface GradeAppealData {
+  id: string;
+  submissionAnswerId: string;
+  studentId: string;
+  reason: string;
+  status: "OPEN" | "RESOLVED" | "REJECTED";
+  createdAt: string;
+  student: { id: true; name: string | null };
+  submissionAnswer: {
+    id: string;
+    questionId: string;
+    score: number | null;
+    feedback: string | null;
+    question: { questionText: string; points: number; order: number };
+  };
+  messages: AppealMessageData[];
 }
 
 export default function AssignmentDetailPage({
@@ -67,7 +107,7 @@ export default function AssignmentDetailPage({
   params: { id: string };
 }) {
   const router = useRouter();
-  const { data: session } = useSession();
+  const effectiveSession = useEffectiveSession();
   const [assignment, setAssignment] = useState<Assignment | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -78,8 +118,16 @@ export default function AssignmentDetailPage({
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [existingSubmission, setExistingSubmission] = useState<ExistingSubmission | null>(null);
+  const [appeals, setAppeals] = useState<GradeAppealData[]>([]);
+  const [appealReasons, setAppealReasons] = useState<Record<string, string>>({});
+  const [appealMessages, setAppealMessages] = useState<Record<string, string>>({});
+  const [appealNewScores, setAppealNewScores] = useState<Record<string, string>>({});
+  const [submittingAppeal, setSubmittingAppeal] = useState<string | null>(null);
+  const [expandedAppeals, setExpandedAppeals] = useState<Record<string, boolean>>({});
+  const [resolvingAppeal, setResolvingAppeal] = useState<string | null>(null);
+  const [appealFilter, setAppealFilter] = useState<"ALL" | "OPEN">("OPEN");
 
-  const userRole = (session?.user as { role?: string })?.role || "STUDENT";
+  const userRole = effectiveSession.role;
 
   useEffect(() => {
     fetch(`/api/assignments/${params.id}`)
@@ -96,10 +144,42 @@ export default function AssignmentDetailPage({
         .then((data) => {
           if (data.submission) {
             setExistingSubmission(data.submission);
+            // Fetch appeals for this submission (student view)
+            fetch(`/api/appeals?submissionId=${data.submission.id}`)
+              .then((r) => r.json())
+              .then((d) => {
+                const fetched = d.appeals || [];
+                setAppeals(fetched);
+                // Auto-expand open appeals so students see them immediately
+                const expanded: Record<string, boolean> = {};
+                for (const a of fetched) {
+                  if (a.status === "OPEN") expanded[a.id] = true;
+                }
+                setExpandedAppeals((prev) => ({ ...prev, ...expanded }));
+              })
+              .catch(() => {});
           }
         })
         .catch(() => {});
-  }, [params.id]);
+
+    // TA/Admin: fetch all appeals for this assignment
+    if (userRole === "TA" || userRole === "ADMIN") {
+      fetch(`/api/appeals?assignmentId=${params.id}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.appeals) {
+            setAppeals(data.appeals);
+            // Auto-expand open appeals
+            const expanded: Record<string, boolean> = {};
+            for (const a of data.appeals) {
+              if (a.status === "OPEN") expanded[a.id] = true;
+            }
+            setExpandedAppeals((prev) => ({ ...prev, ...expanded }));
+          }
+        })
+        .catch(() => {});
+    }
+  }, [params.id, userRole]);
 
   const isLate = (submittedAt: string) => {
     if (!assignment?.dueDate) return false;
@@ -165,6 +245,7 @@ export default function AssignmentDetailPage({
           fileUrl: data.submission.fileUrl,
           submittedAt: data.submission.submittedAt,
           totalScore: data.submission.totalScore,
+          answers: data.submission.answers || [],
         });
         setSubmitted(true);
       } else {
@@ -178,8 +259,95 @@ export default function AssignmentDetailPage({
     }
   };
 
+  const handleSubmitAppeal = async (answerId: string) => {
+    const reason = appealReasons[answerId];
+    if (!reason?.trim()) return;
+    setSubmittingAppeal(answerId);
+    try {
+      const res = await fetch("/api/appeals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ submissionAnswerId: answerId, reason: reason.trim() }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAppeals((prev) => [data.appeal, ...prev]);
+        setAppealReasons((prev) => ({ ...prev, [answerId]: "" }));
+        setExpandedAppeals((prev) => ({ ...prev, [data.appeal.id]: true }));
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to submit appeal");
+      }
+    } catch {
+      alert("Failed to submit appeal");
+    } finally {
+      setSubmittingAppeal(null);
+    }
+  };
+
+  const handleAppealMessage = async (appealId: string) => {
+    const message = appealMessages[appealId];
+    if (!message?.trim()) return;
+    try {
+      const res = await fetch("/api/appeals", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ appealId, message: message.trim() }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAppeals((prev) => prev.map((a) => (a.id === appealId ? data.appeal : a)));
+        setAppealMessages((prev) => ({ ...prev, [appealId]: "" }));
+      }
+    } catch {
+      alert("Failed to send message");
+    }
+  };
+
+  const handleResolveAppeal = async (appealId: string, status: "RESOLVED" | "REJECTED" | "OPEN") => {
+    const action = status === "RESOLVED" ? "resolve" : status === "REJECTED" ? "reject" : "reopen";
+    if (!window.confirm(`Are you sure you want to ${action} this appeal?`)) return;
+    const newScoreStr = appealNewScores[appealId];
+    const newScore = status === "RESOLVED" && newScoreStr ? parseFloat(newScoreStr) : undefined;
+    const message = appealMessages[appealId];
+    setResolvingAppeal(appealId);
+    try {
+      const res = await fetch("/api/appeals", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          appealId,
+          status,
+          newScore,
+          message: message?.trim() || undefined,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAppeals((prev) => prev.map((a) => (a.id === appealId ? data.appeal : a)));
+        setAppealMessages((prev) => ({ ...prev, [appealId]: "" }));
+        setAppealNewScores((prev) => ({ ...prev, [appealId]: "" }));
+        // Refresh submission to get updated scores
+        if (status === "RESOLVED" && newScore !== undefined) {
+          fetch(`/api/submissions?assignmentId=${params.id}`)
+            .then((r) => r.json())
+            .then((d) => { if (d.submission) setExistingSubmission(d.submission); })
+            .catch(() => {});
+        }
+      }
+    } catch {
+      alert("Failed to update appeal");
+    } finally {
+      setResolvingAppeal(null);
+    }
+  };
+
+  const getAppealForAnswer = (answerId: string) =>
+    appeals.find((a) => a.submissionAnswerId === answerId);
+
   const handlePublish = async () => {
     if (!assignment) return;
+    if (assignment.published && !window.confirm("Unpublishing will hide this assignment from students. Continue?")) return;
     await fetch(`/api/assignments/${assignment.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -260,6 +428,9 @@ export default function AssignmentDetailPage({
             )}
             <span>{assignment.totalPoints} points</span>
           </div>
+          {assignment.description && (
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{assignment.description}</p>
+          )}
         </div>
         {(userRole === "TA" || userRole === "ADMIN") && (
           <div className="flex gap-2">
@@ -320,7 +491,7 @@ export default function AssignmentDetailPage({
         </Card>
       )}
 
-      {assignment.type === "QUIZ" && (
+      {assignment.type === "QUIZ" && !existingSubmission && (
         <div className="space-y-4">
           {assignment.questions.map((q, index) => (
             <Card key={q.id}>
@@ -417,7 +588,7 @@ export default function AssignmentDetailPage({
         </div>
       )}
 
-      {assignment.type === "QUIZ" && (
+      {assignment.type === "QUIZ" && !existingSubmission && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Attach Your Work (Optional)</CardTitle>
@@ -464,9 +635,14 @@ export default function AssignmentDetailPage({
                   Late Submission
                 </Badge>
               )}
-              {existingSubmission.totalScore !== null && (
+              {existingSubmission.totalScore !== null ? (
                 <Badge variant="secondary">
                   Score: {existingSubmission.totalScore} / {assignment.totalPoints}
+                </Badge>
+              ) : (
+                <Badge className="bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 gap-1">
+                  <Clock className="h-3 w-3" />
+                  Not graded yet
                 </Badge>
               )}
             </div>
@@ -496,6 +672,260 @@ export default function AssignmentDetailPage({
                 Delete & Resubmit
               </Button>
             </div>
+
+            {/* Per-question feedback with appeal support */}
+            {existingSubmission.answers && existingSubmission.answers.length > 0 && existingSubmission.totalScore !== null && (
+              <div className="space-y-3 pt-3 border-t border-gray-100 dark:border-gray-800">
+                <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Grading Details</p>
+                {existingSubmission.answers.map((ans, idx) => {
+                  const question = assignment.questions.find(q => q.id === ans.questionId);
+                  const appeal = getAppealForAnswer(ans.id);
+                  return (
+                    <div key={ans.id} className="rounded-lg border border-gray-100 dark:border-gray-800 p-4 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Question {idx + 1}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          {appeal && (
+                            <Badge className={`text-xs gap-1 ${
+                              appeal.status === "OPEN"
+                                ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-400 dark:border-amber-800"
+                                : appeal.status === "RESOLVED"
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800"
+                                  : "bg-red-50 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-400 dark:border-red-800"
+                            }`}>
+                              {appeal.status === "OPEN" ? (
+                                <><ShieldAlert className="h-3 w-3" /> Appeal Pending</>
+                              ) : appeal.status === "RESOLVED" ? (
+                                <><CheckCircle2 className="h-3 w-3" /> Appeal Accepted</>
+                              ) : (
+                                <><XCircle className="h-3 w-3" /> Appeal Denied</>
+                              )}
+                            </Badge>
+                          )}
+                          <span className={`text-sm font-semibold ${
+                            ans.score !== null && question
+                              ? ans.score >= question.points
+                                ? "text-emerald-600 dark:text-emerald-400"
+                                : "text-gray-700 dark:text-gray-300"
+                              : "text-gray-400 dark:text-gray-500"
+                          }`}>
+                            {ans.score !== null ? `${ans.score}/${question?.points ?? "?"}` : "Not graded"}
+                          </span>
+                        </div>
+                      </div>
+                      {ans.answer && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Your answer: {ans.answer}
+                        </p>
+                      )}
+                      {ans.feedback && (
+                        <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                          <p className="text-xs font-medium text-blue-700 dark:text-blue-400 mb-1">Feedback</p>
+                          <p className="text-sm text-blue-800 dark:text-blue-300">{ans.feedback}</p>
+                        </div>
+                      )}
+
+                      {/* Appeal section */}
+                      {ans.score !== null && !appeal && userRole === "STUDENT" && (
+                        <div className="pt-2 space-y-2">
+                          <button
+                            onClick={() => setExpandedAppeals((prev) => ({ ...prev, [`new-${ans.id}`]: !prev[`new-${ans.id}`] }))}
+                            className="flex items-center gap-1.5 text-xs font-medium text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 transition-colors"
+                          >
+                            <ShieldAlert className="h-3.5 w-3.5" />
+                            Appeal this grade
+                          </button>
+                          {expandedAppeals[`new-${ans.id}`] && (
+                            <div className="space-y-2 pl-5">
+                              <Textarea
+                                value={appealReasons[ans.id] || ""}
+                                onChange={(e) => setAppealReasons((prev) => ({ ...prev, [ans.id]: e.target.value }))}
+                                placeholder="Explain why you believe this grade should be reconsidered..."
+                                rows={3}
+                                className="text-sm"
+                              />
+                              <div className="flex justify-end">
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleSubmitAppeal(ans.id)}
+                                  disabled={submittingAppeal === ans.id || !appealReasons[ans.id]?.trim()}
+                                  className="gap-1.5"
+                                >
+                                  {submittingAppeal === ans.id ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  ) : (
+                                    <Send className="h-3.5 w-3.5" />
+                                  )}
+                                  Submit Appeal
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Existing appeal thread */}
+                      {appeal && (
+                        <div className="pt-2 space-y-2">
+                          <button
+                            onClick={() => setExpandedAppeals((prev) => ({ ...prev, [appeal.id]: !prev[appeal.id] }))}
+                            className="flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+                          >
+                            <MessageSquare className="h-3.5 w-3.5" />
+                            {expandedAppeals[appeal.id] ? "Hide appeal thread" : `View appeal thread (${appeal.messages.length + 1} message${appeal.messages.length > 0 ? "s" : ""})`}
+                          </button>
+                          {expandedAppeals[appeal.id] && (
+                            <div className="space-y-3 pl-5 border-l-2 border-amber-200 dark:border-amber-800">
+                              {/* Original appeal reason */}
+                              <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">
+                                    {appeal.student.name || "Student"}
+                                  </span>
+                                  <span className="text-xs text-amber-500 dark:text-amber-600">
+                                    {formatShortDate(appeal.createdAt)}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-amber-800 dark:text-amber-300">{appeal.reason}</p>
+                              </div>
+
+                              {/* Messages thread */}
+                              {appeal.messages.map((msg) => {
+                                const isStaff = msg.user.role === "TA" || msg.user.role === "ADMIN";
+                                return (
+                                  <div
+                                    key={msg.id}
+                                    className={`rounded-lg p-3 border ${
+                                      isStaff
+                                        ? "bg-indigo-50 dark:bg-indigo-950 border-indigo-200 dark:border-indigo-800"
+                                        : "bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700"
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <span className={`text-xs font-semibold ${
+                                        isStaff ? "text-indigo-700 dark:text-indigo-400" : "text-gray-700 dark:text-gray-300"
+                                      }`}>
+                                        {msg.user.name || "User"}
+                                      </span>
+                                      {isStaff && (
+                                        <Badge className="text-[10px] px-1.5 py-0 bg-indigo-100 text-indigo-600 border-indigo-200 dark:bg-indigo-900 dark:text-indigo-400 dark:border-indigo-700">
+                                          {msg.user.role}
+                                        </Badge>
+                                      )}
+                                      <span className="text-xs text-gray-400 dark:text-gray-500">
+                                        {formatShortDate(msg.createdAt)}
+                                      </span>
+                                    </div>
+                                    <p className="text-sm text-gray-800 dark:text-gray-200">{msg.content}</p>
+                                  </div>
+                                );
+                              })}
+
+                              {/* Reply box */}
+                              <div className="space-y-2">
+                                <Textarea
+                                  value={appealMessages[appeal.id] || ""}
+                                  onChange={(e) => setAppealMessages((prev) => ({ ...prev, [appeal.id]: e.target.value }))}
+                                  placeholder={appeal.status === "OPEN" ? "Write a reply..." : "Add a follow-up message..."}
+                                  rows={2}
+                                  className="text-sm"
+                                />
+
+                                {/* TA/Admin: resolve/reject/reopen controls */}
+                                {(userRole === "TA" || userRole === "ADMIN") && (
+                                  <div className="space-y-2">
+                                    {appeal.status === "OPEN" && (
+                                      <div className="flex items-center gap-2">
+                                        <Input
+                                          type="number"
+                                          step="0.5"
+                                          min="0"
+                                          max={question?.points ?? 100}
+                                          value={appealNewScores[appeal.id] || ""}
+                                          onChange={(e) => setAppealNewScores((prev) => ({ ...prev, [appeal.id]: e.target.value }))}
+                                          placeholder={`New score (max ${question?.points ?? "?"})`}
+                                          className="w-44 text-sm"
+                                        />
+                                      </div>
+                                    )}
+                                    <div className="flex items-center gap-2">
+                                      {appeal.status === "OPEN" ? (
+                                        <>
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => handleResolveAppeal(appeal.id, "RESOLVED")}
+                                            disabled={resolvingAppeal === appeal.id}
+                                            className="gap-1.5 text-emerald-600 border-emerald-200 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-950"
+                                          >
+                                            {resolvingAppeal === appeal.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                                            Accept & Resolve
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => handleResolveAppeal(appeal.id, "REJECTED")}
+                                            disabled={resolvingAppeal === appeal.id}
+                                            className="gap-1.5 text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-950"
+                                          >
+                                            {resolvingAppeal === appeal.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5" />}
+                                            Deny
+                                          </Button>
+                                        </>
+                                      ) : (
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => handleResolveAppeal(appeal.id, "OPEN")}
+                                          disabled={resolvingAppeal === appeal.id}
+                                          className="gap-1.5 text-amber-600 border-amber-200 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-800 dark:hover:bg-amber-950"
+                                        >
+                                          {resolvingAppeal === appeal.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldAlert className="h-3.5 w-3.5" />}
+                                          Reopen
+                                        </Button>
+                                      )}
+                                      <div className="flex-1" />
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => handleAppealMessage(appeal.id)}
+                                        disabled={!appealMessages[appeal.id]?.trim()}
+                                        className="gap-1.5"
+                                      >
+                                        <Send className="h-3.5 w-3.5" />
+                                        Reply
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Student: Send reply button */}
+                                {userRole === "STUDENT" && (
+                                  <div className="flex justify-end">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleAppealMessage(appeal.id)}
+                                      disabled={!appealMessages[appeal.id]?.trim()}
+                                      className="gap-1.5"
+                                    >
+                                      <Send className="h-3.5 w-3.5" />
+                                      Reply
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -543,6 +973,262 @@ export default function AssignmentDetailPage({
           </Button>
         </div>
       )}
+
+      {/* TA/Admin: Grade Appeals Section */}
+      {(userRole === "TA" || userRole === "ADMIN") && appeals.length > 0 && (() => {
+        const openCount = appeals.filter((a) => a.status === "OPEN").length;
+        const filteredAppeals = appealFilter === "OPEN" ? appeals.filter((a) => a.status === "OPEN") : appeals;
+        return (
+          <Card className="border-orange-200 dark:border-orange-800">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-orange-700 dark:text-orange-400">
+                  <ShieldAlert className="h-5 w-5" />
+                  Grade Appeals
+                </CardTitle>
+                <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
+                  <button
+                    onClick={() => setAppealFilter("OPEN")}
+                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                      appealFilter === "OPEN"
+                        ? "bg-white dark:bg-gray-700 text-orange-700 dark:text-orange-400 shadow-sm"
+                        : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                    }`}
+                  >
+                    Open ({openCount})
+                  </button>
+                  <button
+                    onClick={() => setAppealFilter("ALL")}
+                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                      appealFilter === "ALL"
+                        ? "bg-white dark:bg-gray-700 text-orange-700 dark:text-orange-400 shadow-sm"
+                        : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                    }`}
+                  >
+                    All ({appeals.length})
+                  </button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {filteredAppeals.length === 0 && (
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+                  {appealFilter === "OPEN" ? "No open appeals — all caught up!" : "No appeals found."}
+                </p>
+              )}
+              {filteredAppeals.map((appeal) => {
+                const question = assignment.questions.find(
+                  (q) => q.id === appeal.submissionAnswer.questionId
+                );
+                const studentName =
+                  appeal.student.name ||
+                  (appeal.submissionAnswer as unknown as { submission?: { user?: { name?: string } } }).submission?.user?.name ||
+                  "Student";
+                const isExpanded = expandedAppeals[appeal.id];
+                return (
+                  <div
+                    key={appeal.id}
+                    className={`rounded-lg border p-4 space-y-3 transition-colors ${
+                      appeal.status === "OPEN"
+                        ? "border-amber-200 dark:border-amber-800 bg-amber-50/30 dark:bg-amber-950/20"
+                        : "border-gray-200 dark:border-gray-700 opacity-80"
+                    }`}
+                  >
+                    {/* Header row */}
+                    <button
+                      onClick={() => setExpandedAppeals((prev) => ({ ...prev, [appeal.id]: !prev[appeal.id] }))}
+                      className="w-full flex items-center justify-between cursor-pointer group"
+                    >
+                      <div className="flex items-center gap-2">
+                        <MessageSquare className="h-4 w-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors" />
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Q{(appeal.submissionAnswer.question.order ?? 0) + 1} — {studentName}
+                        </span>
+                        <Badge
+                          className={`text-xs gap-1 ${
+                            appeal.status === "OPEN"
+                              ? "bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900 dark:text-amber-400 dark:border-amber-700"
+                              : appeal.status === "RESOLVED"
+                                ? "bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-900 dark:text-emerald-400 dark:border-emerald-700"
+                                : "bg-red-100 text-red-700 border-red-300 dark:bg-red-900 dark:text-red-400 dark:border-red-700"
+                          }`}
+                        >
+                          {appeal.status === "OPEN" ? (
+                            <><ShieldAlert className="h-3 w-3" /> Pending</>
+                          ) : appeal.status === "RESOLVED" ? (
+                            <><CheckCircle2 className="h-3 w-3" /> Accepted</>
+                          ) : (
+                            <><XCircle className="h-3 w-3" /> Denied</>
+                          )}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">
+                          {appeal.submissionAnswer.score ?? "?"}/{question?.points ?? "?"}
+                        </span>
+                        <svg className={`h-4 w-4 text-gray-400 transition-transform ${isExpanded ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                      </div>
+                    </button>
+
+                    {isExpanded && (
+                      <div className="space-y-3 pt-1">
+                        {/* Context: Student answer + grader feedback */}
+                        <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-2">
+                          <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Grading Context</p>
+                          <div className="grid gap-1.5 text-sm">
+                            <div className="flex gap-2">
+                              <span className="text-gray-500 dark:text-gray-400 shrink-0">Question:</span>
+                              <span className="text-gray-700 dark:text-gray-300 line-clamp-2">{appeal.submissionAnswer.question.questionText}</span>
+                            </div>
+                            {appeal.submissionAnswer.feedback && (
+                              <div className="flex gap-2">
+                                <span className="text-gray-500 dark:text-gray-400 shrink-0">Feedback:</span>
+                                <span className="text-gray-700 dark:text-gray-300 line-clamp-3">{appeal.submissionAnswer.feedback}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Original appeal reason */}
+                        <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">
+                              {studentName}
+                            </span>
+                            <span className="text-xs text-amber-500 dark:text-amber-600">
+                              {formatShortDate(appeal.createdAt)}
+                            </span>
+                          </div>
+                          <p className="text-sm text-amber-800 dark:text-amber-300">{appeal.reason}</p>
+                        </div>
+
+                        {/* Messages */}
+                        {appeal.messages.map((msg) => {
+                          const isStaff = msg.user.role === "TA" || msg.user.role === "ADMIN";
+                          return (
+                            <div
+                              key={msg.id}
+                              className={`rounded-lg p-3 border ${
+                                isStaff
+                                  ? "bg-indigo-50 dark:bg-indigo-950 border-indigo-200 dark:border-indigo-800"
+                                  : "bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 mb-1">
+                                <span
+                                  className={`text-xs font-semibold ${
+                                    isStaff
+                                      ? "text-indigo-700 dark:text-indigo-400"
+                                      : "text-gray-700 dark:text-gray-300"
+                                  }`}
+                                >
+                                  {msg.user.name || "User"}
+                                </span>
+                                {isStaff && (
+                                  <Badge className="text-[10px] px-1.5 py-0 bg-indigo-100 text-indigo-600 border-indigo-200 dark:bg-indigo-900 dark:text-indigo-400 dark:border-indigo-700">
+                                    {msg.user.role}
+                                  </Badge>
+                                )}
+                                <span className="text-xs text-gray-400 dark:text-gray-500">
+                                  {formatShortDate(msg.createdAt)}
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-800 dark:text-gray-200">{msg.content}</p>
+                            </div>
+                          );
+                        })}
+
+                        {/* Reply + resolve/reject controls */}
+                        <div className="space-y-3 pt-1 border-t border-gray-200 dark:border-gray-700">
+                          <Textarea
+                            value={appealMessages[appeal.id] || ""}
+                            onChange={(e) =>
+                              setAppealMessages((prev) => ({
+                                ...prev,
+                                [appeal.id]: e.target.value,
+                              }))
+                            }
+                            placeholder={appeal.status === "OPEN" ? "Write a reply or leave a note before resolving..." : "Add a follow-up message..."}
+                            rows={2}
+                            className="text-sm"
+                          />
+                          {appeal.status === "OPEN" && (
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="number"
+                                step="0.5"
+                                min="0"
+                                max={question?.points ?? 100}
+                                value={appealNewScores[appeal.id] || ""}
+                                onChange={(e) =>
+                                  setAppealNewScores((prev) => ({
+                                    ...prev,
+                                    [appeal.id]: e.target.value,
+                                  }))
+                                }
+                                placeholder={`New score (max ${question?.points ?? "?"})`}
+                                className="w-44 text-sm"
+                              />
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2">
+                            {appeal.status === "OPEN" ? (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleResolveAppeal(appeal.id, "RESOLVED")}
+                                  disabled={resolvingAppeal === appeal.id}
+                                  className="gap-1.5 text-emerald-600 border-emerald-200 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-950"
+                                >
+                                  {resolvingAppeal === appeal.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                                  Accept & Resolve
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleResolveAppeal(appeal.id, "REJECTED")}
+                                  disabled={resolvingAppeal === appeal.id}
+                                  className="gap-1.5 text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-950"
+                                >
+                                  {resolvingAppeal === appeal.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5" />}
+                                  Deny
+                                </Button>
+                              </>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleResolveAppeal(appeal.id, "OPEN")}
+                                disabled={resolvingAppeal === appeal.id}
+                                className="gap-1.5 text-amber-600 border-amber-200 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-800 dark:hover:bg-amber-950"
+                              >
+                                {resolvingAppeal === appeal.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldAlert className="h-3.5 w-3.5" />}
+                                Reopen
+                              </Button>
+                            )}
+                            <div className="flex-1" />
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleAppealMessage(appeal.id)}
+                              disabled={!appealMessages[appeal.id]?.trim()}
+                              className="gap-1.5"
+                            >
+                              <Send className="h-3.5 w-3.5" />
+                              Reply
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        );
+      })()}
     </div>
   );
 }

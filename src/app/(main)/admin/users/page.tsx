@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import {
   Loader2,
   ShieldBan,
@@ -14,6 +15,7 @@ import {
   MessageSquare,
   CheckCircle2,
   Circle,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -48,6 +50,7 @@ interface User {
 }
 
 export default function AdminUsersPage() {
+  const router = useRouter();
   const { data: session } = useSession();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,6 +58,7 @@ export default function AdminUsersPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const currentUserId = (session?.user as { id?: string })?.id;
+  const currentUserRole = (session?.user as { role?: string })?.role;
 
   useEffect(() => {
     fetch("/api/admin/users")
@@ -413,6 +417,42 @@ export default function AdminUsersPage() {
                     )}
                     {user.isBanned ? "Unban" : "Ban"}
                   </Button>
+
+                  {/* Impersonate button (admin only) */}
+                  {currentUserRole === "ADMIN" && !isSelf && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={isLoading}
+                      onClick={async () => {
+                        setActionLoading(user.id);
+                        try {
+                          const res = await fetch("/api/admin/impersonate", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ userId: user.id }),
+                          });
+                          if (res.ok) {
+                            router.push("/");
+                            router.refresh();
+                          }
+                        } catch (err) {
+                          console.error(err);
+                        } finally {
+                          setActionLoading(null);
+                        }
+                      }}
+                      className="gap-1.5 text-xs rounded-lg border-indigo-200 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-400 dark:hover:bg-indigo-950"
+                      title={`View the app as ${user.name || user.email}`}
+                    >
+                      {isLoading ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Eye className="h-3.5 w-3.5" />
+                      )}
+                      Impersonate
+                    </Button>
+                  )}
 
                   {/* Delete button */}
                   <Button

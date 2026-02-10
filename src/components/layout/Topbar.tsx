@@ -226,6 +226,8 @@ export default function Topbar({ userName, userEmail, userImage, userRole }: Top
     let currentPath = "";
     for (const segment of segments) {
       currentPath += `/${segment}`;
+      // Skip segments that look like database IDs (cuid, uuid, etc.)
+      if (/^[a-z0-9]{20,}$/i.test(segment) || /^[0-9a-f]{8}-/.test(segment)) continue;
       const label = routeLabels[currentPath] || segment.charAt(0).toUpperCase() + segment.slice(1);
       crumbs.push({ label, href: currentPath });
     }
