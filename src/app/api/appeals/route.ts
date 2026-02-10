@@ -119,7 +119,7 @@ export async function POST(req: Request) {
     }
 
     const userId = (session.user as { id: string }).id;
-    const { submissionAnswerId, reason } = await req.json();
+    const { submissionAnswerId, reason, imageUrls } = await req.json();
 
     if (!submissionAnswerId || !reason) {
       return NextResponse.json({ error: "submissionAnswerId and reason are required" }, { status: 400 });
@@ -162,6 +162,7 @@ export async function POST(req: Request) {
         submissionAnswerId,
         studentId: userId,
         reason,
+        imageUrls: imageUrls || undefined,
       },
       include: {
         student: { select: { id: true, name: true } },
@@ -195,7 +196,7 @@ export async function PATCH(req: Request) {
 
     const userId = (session.user as { id: string }).id;
     const userRole = (session.user as { role?: string }).role;
-    const { appealId, status, message, newScore } = await req.json();
+    const { appealId, status, message, newScore, imageUrls: msgImageUrls } = await req.json();
 
     if (!appealId) {
       return NextResponse.json({ error: "appealId is required" }, { status: 400 });
@@ -225,6 +226,7 @@ export async function PATCH(req: Request) {
           appealId,
           userId,
           content: message,
+          imageUrls: msgImageUrls || undefined,
         },
       });
     }

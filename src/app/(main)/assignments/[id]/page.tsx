@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useEffectiveSession } from "@/lib/effective-session-context";
 import {
   ArrowLeft,
@@ -27,6 +27,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MarkdownContent } from "@/components/ui/markdown-content";
+import { ImageUpload } from "@/components/ui/image-upload";
 import MermaidDiagram from "@/components/chat/MermaidDiagram";
 import { formatShortDate } from "@/lib/utils";
 import Link from "next/link";
@@ -64,6 +65,7 @@ interface SubmissionAnswer {
   answer: string | null;
   score: number | null;
   feedback: string | null;
+  feedbackImageUrls?: string[];
   autoGraded: boolean;
 }
 
@@ -79,6 +81,7 @@ interface AppealMessageData {
   id: string;
   userId: string;
   content: string;
+  imageUrls?: string[];
   createdAt: string;
   user: { id: string; name: string | null; role: string };
 }
@@ -88,6 +91,7 @@ interface GradeAppealData {
   submissionAnswerId: string;
   studentId: string;
   reason: string;
+  imageUrls?: string[];
   status: "OPEN" | "RESOLVED" | "REJECTED";
   createdAt: string;
   student: { id: true; name: string | null };
@@ -126,8 +130,28 @@ export default function AssignmentDetailPage({
   const [expandedAppeals, setExpandedAppeals] = useState<Record<string, boolean>>({});
   const [resolvingAppeal, setResolvingAppeal] = useState<string | null>(null);
   const [appealFilter, setAppealFilter] = useState<"ALL" | "OPEN">("OPEN");
+  const [appealImages, setAppealImages] = useState<Record<string, string[]>>({});
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const userRole = effectiveSession.role;
+
+  const handleUploadImage = useCallback(async (file: File): Promise<string | null> => {
+    setUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      if (res.ok) {
+        const data = await res.json();
+        return data.url;
+      }
+      return null;
+    } catch {
+      return null;
+    } finally {
+      setUploadingImage(false);
+    }
+  }, []);
 
   useEffect(() => {
     fetch(`/api/assignments/${params.id}`)
@@ -267,12 +291,17 @@ export default function AssignmentDetailPage({
       const res = await fetch("/api/appeals", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ submissionAnswerId: answerId, reason: reason.trim() }),
+        body: JSON.stringify({
+          submissionAnswerId: answerId,
+          reason: reason.trim(),
+          imageUrls: appealImages[answerId]?.length ? appealImages[answerId] : undefined,
+        }),
       });
       if (res.ok) {
         const data = await res.json();
         setAppeals((prev) => [data.appeal, ...prev]);
         setAppealReasons((prev) => ({ ...prev, [answerId]: "" }));
+        setAppealImages((prev) => ({ ...prev, [answerId]: [] }));
         setExpandedAppeals((prev) => ({ ...prev, [data.appeal.id]: true }));
       } else {
         const data = await res.json();
@@ -292,12 +321,17 @@ export default function AssignmentDetailPage({
       const res = await fetch("/api/appeals", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ appealId, message: message.trim() }),
+        body: JSON.stringify({
+          appealId,
+          message: message.trim(),
+          imageUrls: appealImages[appealId]?.length ? appealImages[appealId] : undefined,
+        }),
       });
       if (res.ok) {
         const data = await res.json();
         setAppeals((prev) => prev.map((a) => (a.id === appealId ? data.appeal : a)));
         setAppealMessages((prev) => ({ ...prev, [appealId]: "" }));
+        setAppealImages((prev) => ({ ...prev, [appealId]: [] }));
       }
     } catch {
       alert("Failed to send message");
@@ -723,7 +757,17 @@ export default function AssignmentDetailPage({
                       {ans.feedback && (
                         <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
                           <p className="text-xs font-medium text-blue-700 dark:text-blue-400 mb-1">Feedback</p>
-                          <p className="text-sm text-blue-800 dark:text-blue-300">{ans.feedback}</p>
+                          <MarkdownContent content={ans.feedback} className="text-sm text-blue-800 dark:text-blue-300" />
+                          {ans.feedbackImageUrls && ans.feedbackImageUrls.length > 0 && (
+                            <div className="flex gap-2 mt-2 flex-wrap">
+                              {ans.feedbackImageUrls.map((url, i) => (
+                                <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img src={url} alt={`Feedback image ${i + 1}`} className="h-20 w-20 object-cover rounded-lg border border-blue-200 dark:border-blue-700 hover:opacity-80 transition-opacity" />
+                                </a>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       )}
 
@@ -745,6 +789,13 @@ export default function AssignmentDetailPage({
                                 placeholder="Explain why you believe this grade should be reconsidered..."
                                 rows={3}
                                 className="text-sm"
+                              />
+                              <ImageUpload
+                                images={appealImages[ans.id] || []}
+                                onImagesChange={(imgs) => setAppealImages((prev) => ({ ...prev, [ans.id]: imgs }))}
+                                onUpload={handleUploadImage}
+                                uploading={uploadingImage}
+                                maxImages={3}
                               />
                               <div className="flex justify-end">
                                 <Button
@@ -788,7 +839,17 @@ export default function AssignmentDetailPage({
                                     {formatShortDate(appeal.createdAt)}
                                   </span>
                                 </div>
-                                <p className="text-sm text-amber-800 dark:text-amber-300">{appeal.reason}</p>
+                                <MarkdownContent content={appeal.reason} className="text-sm text-amber-800 dark:text-amber-300" />
+                                {appeal.imageUrls && (appeal.imageUrls as string[]).length > 0 && (
+                                  <div className="flex gap-2 mt-2 flex-wrap">
+                                    {(appeal.imageUrls as string[]).map((url, i) => (
+                                      <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img src={url} alt={`Attachment ${i + 1}`} className="h-20 w-20 object-cover rounded-lg border border-amber-200 dark:border-amber-700 hover:opacity-80 transition-opacity" />
+                                      </a>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
 
                               {/* Messages thread */}
@@ -818,7 +879,17 @@ export default function AssignmentDetailPage({
                                         {formatShortDate(msg.createdAt)}
                                       </span>
                                     </div>
-                                    <p className="text-sm text-gray-800 dark:text-gray-200">{msg.content}</p>
+                                    <MarkdownContent content={msg.content} className="text-sm text-gray-800 dark:text-gray-200" />
+                                    {msg.imageUrls && (msg.imageUrls as string[]).length > 0 && (
+                                      <div className="flex gap-2 mt-2 flex-wrap">
+                                        {(msg.imageUrls as string[]).map((url, i) => (
+                                          <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                                            <img src={url} alt={`Attachment ${i + 1}`} className="h-20 w-20 object-cover rounded-lg border border-gray-200 dark:border-gray-700 hover:opacity-80 transition-opacity" />
+                                          </a>
+                                        ))}
+                                      </div>
+                                    )}
                                   </div>
                                 );
                               })}
@@ -831,6 +902,13 @@ export default function AssignmentDetailPage({
                                   placeholder={appeal.status === "OPEN" ? "Write a reply..." : "Add a follow-up message..."}
                                   rows={2}
                                   className="text-sm"
+                                />
+                                <ImageUpload
+                                  images={appealImages[appeal.id] || []}
+                                  onImagesChange={(imgs) => setAppealImages((prev) => ({ ...prev, [appeal.id]: imgs }))}
+                                  onUpload={handleUploadImage}
+                                  uploading={uploadingImage}
+                                  maxImages={3}
                                 />
 
                                 {/* TA/Admin: resolve/reject/reopen controls */}
@@ -1083,7 +1161,7 @@ export default function AssignmentDetailPage({
                             {appeal.submissionAnswer.feedback && (
                               <div className="flex gap-2">
                                 <span className="text-gray-500 dark:text-gray-400 shrink-0">Feedback:</span>
-                                <span className="text-gray-700 dark:text-gray-300 line-clamp-3">{appeal.submissionAnswer.feedback}</span>
+                                <MarkdownContent content={appeal.submissionAnswer.feedback} className="text-gray-700 dark:text-gray-300" />
                               </div>
                             )}
                           </div>
@@ -1099,7 +1177,17 @@ export default function AssignmentDetailPage({
                               {formatShortDate(appeal.createdAt)}
                             </span>
                           </div>
-                          <p className="text-sm text-amber-800 dark:text-amber-300">{appeal.reason}</p>
+                          <MarkdownContent content={appeal.reason} className="text-sm text-amber-800 dark:text-amber-300" />
+                          {appeal.imageUrls && (appeal.imageUrls as string[]).length > 0 && (
+                            <div className="flex gap-2 mt-2 flex-wrap">
+                              {(appeal.imageUrls as string[]).map((url, i) => (
+                                <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img src={url} alt={`Attachment ${i + 1}`} className="h-20 w-20 object-cover rounded-lg border border-amber-200 dark:border-amber-700 hover:opacity-80 transition-opacity" />
+                                </a>
+                              ))}
+                            </div>
+                          )}
                         </div>
 
                         {/* Messages */}
@@ -1133,7 +1221,17 @@ export default function AssignmentDetailPage({
                                   {formatShortDate(msg.createdAt)}
                                 </span>
                               </div>
-                              <p className="text-sm text-gray-800 dark:text-gray-200">{msg.content}</p>
+                              <MarkdownContent content={msg.content} className="text-sm text-gray-800 dark:text-gray-200" />
+                              {msg.imageUrls && (msg.imageUrls as string[]).length > 0 && (
+                                <div className="flex gap-2 mt-2 flex-wrap">
+                                  {(msg.imageUrls as string[]).map((url, i) => (
+                                    <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                      <img src={url} alt={`Attachment ${i + 1}`} className="h-20 w-20 object-cover rounded-lg border border-gray-200 dark:border-gray-700 hover:opacity-80 transition-opacity" />
+                                    </a>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           );
                         })}
@@ -1151,6 +1249,13 @@ export default function AssignmentDetailPage({
                             placeholder={appeal.status === "OPEN" ? "Write a reply or leave a note before resolving..." : "Add a follow-up message..."}
                             rows={2}
                             className="text-sm"
+                          />
+                          <ImageUpload
+                            images={appealImages[appeal.id] || []}
+                            onImagesChange={(imgs) => setAppealImages((prev) => ({ ...prev, [appeal.id]: imgs }))}
+                            onUpload={handleUploadImage}
+                            uploading={uploadingImage}
+                            maxImages={3}
                           />
                           {appeal.status === "OPEN" && (
                             <div className="flex items-center gap-2">

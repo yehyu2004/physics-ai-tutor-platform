@@ -322,7 +322,7 @@ Student Answer: ${studentAnswer}
 
 Provide your response as JSON with:
 - score: number (0 to ${maxPoints})
-- feedback: string (constructive feedback explaining the grade)`;
+- feedback: string (constructive feedback explaining the grade, using LaTeX notation for all math formulas and expressions — use $...$ for inline math and $$...$$ for display math)`;
 
   if (provider === "openai") {
     const response = await openai.responses.create({
