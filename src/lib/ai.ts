@@ -144,7 +144,7 @@ async function streamOpenAI(
   const stream = await openai.responses.create({
     model,
     input,
-    reasoning: { effort: "low" },
+    reasoning: { effort: "low", summary: "detailed" },
     tools: [{ type: "web_search_preview" }],
     stream: true,
   });

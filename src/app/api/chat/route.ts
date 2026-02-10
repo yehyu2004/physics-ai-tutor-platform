@@ -142,7 +142,12 @@ export async function POST(req: Request) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const stream = await streamChat(chatMessages, "openai", model || "gpt-5.2", systemPrompt) as any;
             for await (const event of stream) {
-              if (event.type === "response.output_text.delta") {
+              if (event.type === "response.reasoning_summary_text.delta") {
+                const delta = event.delta || "";
+                if (delta) {
+                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "thinking", content: delta })}\n\n`));
+                }
+              } else if (event.type === "response.output_text.delta") {
                 const delta = event.delta || "";
                 if (delta) {
                   fullContent += delta;
