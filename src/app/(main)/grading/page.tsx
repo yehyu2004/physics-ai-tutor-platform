@@ -423,9 +423,9 @@ export default function GradingPage() {
       </div>
 
       {/* Assignment Selector */}
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
         <Select value={selectedAssignmentId} onValueChange={setSelectedAssignmentId}>
-          <SelectTrigger className="w-80">
+          <SelectTrigger className="w-full sm:w-80">
             <SelectValue placeholder="Select an assignment to grade" />
           </SelectTrigger>
           <SelectContent>
@@ -440,7 +440,7 @@ export default function GradingPage() {
         {selectedAssignmentId && (
           <>
             <Select value={filterMode} onValueChange={(v) => setFilterMode(v as FilterMode)}>
-              <SelectTrigger className="w-44">
+              <SelectTrigger className="w-32 sm:w-44">
                 <Filter className="h-3.5 w-3.5 mr-1.5" />
                 <SelectValue />
               </SelectTrigger>
@@ -453,6 +453,20 @@ export default function GradingPage() {
                 )}
               </SelectContent>
             </Select>
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => {
+                const url = `/api/grading/export?assignmentId=${selectedAssignmentId}`;
+                window.open(url, "_blank");
+              }}
+            >
+              <Download className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Export CSV</span>
+              <span className="sm:hidden">Export</span>
+            </Button>
 
             <div className="flex items-center gap-2 ml-auto">
               <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 bg-emerald-50 dark:bg-emerald-950 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">
@@ -487,9 +501,9 @@ export default function GradingPage() {
           <Loader2 className="h-8 w-8 animate-spin text-gray-400 dark:text-gray-500" />
         </div>
       ) : (
-        <div className="flex gap-6 h-[calc(100vh-16rem)]">
+        <div className="flex flex-col md:flex-row gap-4 md:gap-6 md:h-[calc(100vh-16rem)]">
           {/* Submission List */}
-          <div className="w-80 shrink-0 flex flex-col bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden shadow-sm">
+          <div className="w-full md:w-80 shrink-0 flex flex-col bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden shadow-sm max-h-[40vh] md:max-h-none">
             <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
               <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                 Submissions ({filteredSubmissions.length})
@@ -860,7 +874,7 @@ export default function GradingPage() {
 
                                       {/* Messages */}
                                       {appeal.messages.map((msg) => {
-                                        const isStaff = msg.user.role === "TA" || msg.user.role === "ADMIN";
+                                        const isStaff = msg.user.role === "TA" || msg.user.role === "ADMIN" || msg.user.role === "PROFESSOR";
                                         return (
                                           <div
                                             key={msg.id}
