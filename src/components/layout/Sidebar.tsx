@@ -16,8 +16,6 @@ import {
   ChevronDown,
   ClipboardList,
   BarChart3,
-  Menu,
-  X,
   Atom,
   PanelLeftClose,
   User,
@@ -84,12 +82,13 @@ interface SidebarProps {
   userName: string;
   collapsed?: boolean;
   onToggleCollapse?: () => void;
+  mobileOpen?: boolean;
+  onMobileToggle?: (open: boolean) => void;
 }
 
-export default function Sidebar({ userRole, userName, collapsed = false, onToggleCollapse }: SidebarProps) {
+export default function Sidebar({ userRole, userName, collapsed = false, onToggleCollapse, mobileOpen = false, onMobileToggle }: SidebarProps) {
   const pathname = usePathname();
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
-  const [mobileOpen, setMobileOpen] = useState(false);
 
   const toggleExpand = (label: string) => {
     setExpandedItems((prev) =>
@@ -342,18 +341,6 @@ export default function Sidebar({ userRole, userName, collapsed = false, onToggl
 
   return (
     <>
-      {/* Mobile toggle */}
-      <button
-        className="fixed top-4 left-4 z-50 lg:hidden rounded-lg p-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-        onClick={() => setMobileOpen(!mobileOpen)}
-      >
-        {mobileOpen ? (
-          <X className="h-5 w-5 text-gray-700 dark:text-gray-300" />
-        ) : (
-          <Menu className="h-5 w-5 text-gray-700 dark:text-gray-300" />
-        )}
-      </button>
-
       {/* Mobile overlay */}
       <div
         className={cn(
@@ -362,7 +349,7 @@ export default function Sidebar({ userRole, userName, collapsed = false, onToggl
             ? "opacity-100 pointer-events-auto"
             : "opacity-0 pointer-events-none"
         )}
-        onClick={() => setMobileOpen(false)}
+        onClick={() => onMobileToggle?.(false)}
       />
 
       {/* Sidebar */}

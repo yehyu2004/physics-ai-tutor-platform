@@ -31,6 +31,7 @@ export default function MainLayoutClient({
 }: MainLayoutClientProps) {
   const router = useRouter();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem("sidebar-collapsed");
@@ -79,6 +80,8 @@ export default function MainLayoutClient({
         userName={userName}
         collapsed={sidebarCollapsed}
         onToggleCollapse={toggleSidebar}
+        mobileOpen={mobileSidebarOpen}
+        onMobileToggle={setMobileSidebarOpen}
       />
       <div
         className={`flex flex-col transition-[margin] duration-300 ease-in-out ${
@@ -91,8 +94,9 @@ export default function MainLayoutClient({
           userEmail={userEmail}
           userImage={userImage}
           userRole={userRole}
+          onMobileMenuToggle={() => setMobileSidebarOpen((prev) => !prev)}
         />
-        <main className="flex-1 p-6 bg-gray-50/50 dark:bg-gray-950 overflow-auto">
+        <main className="flex-1 p-3 sm:p-6 bg-gray-50/50 dark:bg-gray-950 overflow-auto">
           <EffectiveSessionProvider
             session={{
               id: userId,

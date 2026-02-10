@@ -362,7 +362,7 @@ export default function ChatPageClient({
   const activeConversation = conversations.find((c) => c.id === activeConversationId);
 
   return (
-    <div className="flex h-[calc(100vh-6.5rem)] overflow-hidden">
+    <div className="flex h-[calc(100vh-5rem)] sm:h-[calc(100vh-6.5rem)] overflow-hidden">
       {/* Mobile sidebar overlay (only on small screens) */}
       {isMobile && (
         <div
@@ -474,12 +474,12 @@ export default function ChatPageClient({
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col min-w-0 bg-white dark:bg-gray-950">
         {/* Chat Header */}
-        <div className="h-14 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between px-4 shrink-0 bg-white dark:bg-gray-950">
-          <div className="flex items-center gap-3">
+        <div className="h-14 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between px-3 sm:px-4 shrink-0 bg-white dark:bg-gray-950">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
             {/* Conversation list toggle */}
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              className="p-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors shrink-0"
             >
               {sidebarOpen ? (
                 <PanelLeftClose className="h-5 w-5 text-gray-500 dark:text-gray-400" />
@@ -487,16 +487,16 @@ export default function ChatPageClient({
                 <PanelLeftOpen className="h-5 w-5 text-gray-500 dark:text-gray-400" />
               )}
             </button>
-            <div>
-              <h2 className="text-sm font-medium text-gray-900 dark:text-gray-100 leading-tight">
+            <div className="min-w-0">
+              <h2 className="text-sm font-medium text-gray-900 dark:text-gray-100 leading-tight truncate">
                 {activeConversation?.title || "New Conversation"}
               </h2>
-              <p className="text-xs text-gray-400 dark:text-gray-500">Physics AI Tutor</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 hidden sm:block">Physics AI Tutor</p>
             </div>
           </div>
 
           {/* Socratic Mode Toggle + Model Selector */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {/* Socratic Mode Toggle — hidden during exam mode */}
             {!examModeActive && (
               <Button
@@ -505,7 +505,7 @@ export default function ChatPageClient({
                 size="sm"
                 onClick={() => setChatMode(chatMode === "socratic" ? "normal" : "socratic")}
                 className={cn(
-                  "h-8 gap-1.5 text-xs",
+                  "h-8 gap-1.5 text-xs px-2 sm:px-3",
                   chatMode === "socratic"
                     ? "bg-amber-100 text-amber-700 border-amber-300 hover:bg-amber-200 hover:text-amber-800"
                     : ""
@@ -513,7 +513,7 @@ export default function ChatPageClient({
                 title="Socratic guided mode"
               >
                 <Lightbulb className="h-3.5 w-3.5" />
-                Socratic
+                <span className="hidden sm:inline">Socratic</span>
               </Button>
             )}
 
@@ -522,7 +522,7 @@ export default function ChatPageClient({
               <button
                 onClick={() => setModel("gpt-5.2")}
                 className={cn(
-                  "flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all",
+                  "flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 rounded-full text-xs font-medium transition-all",
                   model === "gpt-5.2"
                     ? "bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 shadow-sm"
                     : "text-gray-500 dark:text-gray-400 hover:text-gray-700"
@@ -535,7 +535,7 @@ export default function ChatPageClient({
               <button
                 onClick={() => setModel("claude-haiku-4-5-20251001")}
                 className={cn(
-                  "flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all",
+                  "flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 rounded-full text-xs font-medium transition-all",
                   model === "claude-haiku-4-5-20251001"
                     ? "bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 shadow-sm"
                     : "text-gray-500 dark:text-gray-400 hover:text-gray-700"
