@@ -115,7 +115,7 @@ export default function Sidebar({ userRole, userName, collapsed = false, onToggl
   if (userRole === "ADMIN" || userRole === "TA") {
     const staffItems = userRole === "ADMIN"
       ? adminItems
-      : adminItems.filter((item) => item.href === "/admin/qa-history");
+      : adminItems.filter((item) => item.href === "/admin/qa-history" || item.href === "/admin/users");
     sections.push({ label: "ADMIN", items: staffItems });
   }
 

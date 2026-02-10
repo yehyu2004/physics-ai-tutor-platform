@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useEffectiveSession } from "@/lib/effective-session-context";
 import {
   Loader2,
   ShieldBan,
@@ -16,6 +16,8 @@ import {
   CheckCircle2,
   Circle,
   Eye,
+  AlertTriangle,
+  Send,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,6 +36,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { formatShortDate } from "@/lib/utils";
 
 interface User {
@@ -51,14 +56,21 @@ interface User {
 
 export default function AdminUsersPage() {
   const router = useRouter();
-  const { data: session } = useSession();
+  const effectiveSession = useEffectiveSession();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  const currentUserId = (session?.user as { id?: string })?.id;
-  const currentUserRole = (session?.user as { role?: string })?.role;
+  const currentUserId = effectiveSession.id;
+  const currentUserRole = effectiveSession.role;
+  const isAdmin = currentUserRole === "ADMIN";
+
+  const [warningTarget, setWarningTarget] = useState<User | null>(null);
+  const [warningSubject, setWarningSubject] = useState("Warning: Course Policy Violation");
+  const [warningMessage, setWarningMessage] = useState("");
+  const [warningSending, setWarningSending] = useState(false);
+  const [warningSuccess, setWarningSuccess] = useState(false);
 
   useEffect(() => {
     fetch("/api/admin/users")
@@ -190,6 +202,35 @@ export default function AdminUsersPage() {
     } finally {
       setActionLoading(null);
       setDeleteTarget(null);
+    }
+  };
+
+  const sendWarning = async () => {
+    if (!warningTarget || !warningSubject.trim() || !warningMessage.trim()) return;
+    setWarningSending(true);
+    try {
+      const res = await fetch("/api/admin/users/warn", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: warningTarget.id,
+          subject: warningSubject.trim(),
+          message: warningMessage.trim(),
+        }),
+      });
+      if (res.ok) {
+        setWarningSuccess(true);
+        setTimeout(() => {
+          setWarningTarget(null);
+          setWarningSubject("Warning: Course Policy Violation");
+          setWarningMessage("");
+          setWarningSuccess(false);
+        }, 2000);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setWarningSending(false);
     }
   };
 
@@ -334,23 +375,32 @@ export default function AdminUsersPage() {
                     Joined {formatShortDate(user.createdAt)}
                   </span>
 
-                  {/* Role selector */}
-                  <Select
-                    value={user.role}
-                    onValueChange={(value) => updateRole(user.id, value)}
-                    disabled={isSelf}
-                  >
-                    <SelectTrigger className="w-28 h-8 text-xs border-gray-200 dark:border-gray-700 rounded-lg">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="STUDENT">Student</SelectItem>
-                      <SelectItem value="TA">TA</SelectItem>
-                      <SelectItem value="ADMIN">Admin</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  {/* Role selector - Admin only */}
+                  {isAdmin && (
+                    <Select
+                      value={user.role}
+                      onValueChange={(value) => updateRole(user.id, value)}
+                      disabled={isSelf}
+                    >
+                      <SelectTrigger className="w-28 h-8 text-xs border-gray-200 dark:border-gray-700 rounded-lg">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="STUDENT">Student</SelectItem>
+                        <SelectItem value="TA">TA</SelectItem>
+                        <SelectItem value="ADMIN">Admin</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
 
-                  {/* Verify/Unverify button */}
+                  {/* Role badge for TA view */}
+                  {!isAdmin && (
+                    <Badge className="text-[10px] bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700">
+                      {user.role}
+                    </Badge>
+                  )}
+
+                  {/* Verify/Unverify button - both TA and Admin */}
                   <Button
                     variant="outline"
                     size="sm"
@@ -373,53 +423,72 @@ export default function AdminUsersPage() {
                     {user.isVerified ? "Verified" : "Verify"}
                   </Button>
 
-                  {/* Restrict/Unrestrict chat button */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={isSelf || isLoading}
-                    onClick={() => toggleRestrict(user.id, user.isRestricted)}
-                    className={`gap-1.5 text-xs rounded-lg ${
-                      user.isRestricted
-                        ? "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-                        : "border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800"
-                    }`}
-                    title={user.isRestricted ? "Allow AI chat access" : "Block AI chat access (can still submit assignments)"}
-                  >
-                    {isLoading ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : user.isRestricted ? (
-                      <MessageSquare className="h-3.5 w-3.5" />
-                    ) : (
-                      <MessageSquareOff className="h-3.5 w-3.5" />
-                    )}
-                    {user.isRestricted ? "Unrestrict" : "Restrict"}
-                  </Button>
+                  {/* Send Warning button - both TA and Admin */}
+                  {!isSelf && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={isLoading}
+                      onClick={() => setWarningTarget(user)}
+                      className="gap-1.5 text-xs rounded-lg border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950"
+                      title="Send warning email"
+                    >
+                      <AlertTriangle className="h-3.5 w-3.5" />
+                      Warn
+                    </Button>
+                  )}
 
-                  {/* Ban/Unban button */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={isSelf || isLoading}
-                    onClick={() => toggleBan(user.id, user.isBanned)}
-                    className={`gap-1.5 text-xs rounded-lg ${
-                      user.isBanned
-                        ? "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-                        : "border-amber-200 text-amber-700 hover:bg-amber-50"
-                    }`}
-                  >
-                    {isLoading ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : user.isBanned ? (
-                      <ShieldCheck className="h-3.5 w-3.5" />
-                    ) : (
-                      <ShieldBan className="h-3.5 w-3.5" />
-                    )}
-                    {user.isBanned ? "Unban" : "Ban"}
-                  </Button>
+                  {/* Restrict/Unrestrict chat button - Admin only */}
+                  {isAdmin && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={isSelf || isLoading}
+                      onClick={() => toggleRestrict(user.id, user.isRestricted)}
+                      className={`gap-1.5 text-xs rounded-lg ${
+                        user.isRestricted
+                          ? "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                          : "border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800"
+                      }`}
+                      title={user.isRestricted ? "Allow AI chat access" : "Block AI chat access (can still submit assignments)"}
+                    >
+                      {isLoading ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : user.isRestricted ? (
+                        <MessageSquare className="h-3.5 w-3.5" />
+                      ) : (
+                        <MessageSquareOff className="h-3.5 w-3.5" />
+                      )}
+                      {user.isRestricted ? "Unrestrict" : "Restrict"}
+                    </Button>
+                  )}
 
-                  {/* Impersonate button (admin only) */}
-                  {currentUserRole === "ADMIN" && !isSelf && (
+                  {/* Ban/Unban button - Admin only */}
+                  {isAdmin && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={isSelf || isLoading}
+                      onClick={() => toggleBan(user.id, user.isBanned)}
+                      className={`gap-1.5 text-xs rounded-lg ${
+                        user.isBanned
+                          ? "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                          : "border-amber-200 text-amber-700 hover:bg-amber-50"
+                      }`}
+                    >
+                      {isLoading ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : user.isBanned ? (
+                        <ShieldCheck className="h-3.5 w-3.5" />
+                      ) : (
+                        <ShieldBan className="h-3.5 w-3.5" />
+                      )}
+                      {user.isBanned ? "Unban" : "Ban"}
+                    </Button>
+                  )}
+
+                  {/* Impersonate button - Admin only */}
+                  {isAdmin && !isSelf && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -454,17 +523,19 @@ export default function AdminUsersPage() {
                     </Button>
                   )}
 
-                  {/* Delete button */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={isSelf || isLoading}
-                    onClick={() => setDeleteTarget(user)}
-                    className="gap-1.5 text-xs rounded-lg border-red-200 text-red-600 hover:bg-red-50"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    Delete
-                  </Button>
+                  {/* Delete button - Admin only */}
+                  {isAdmin && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={isSelf || isLoading}
+                      onClick={() => setDeleteTarget(user)}
+                      className="gap-1.5 text-xs rounded-lg border-red-200 text-red-600 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Delete
+                    </Button>
+                  )}
                 </div>
               </div>
             );
@@ -510,6 +581,96 @@ export default function AdminUsersPage() {
               Delete Account
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Warning Email Dialog */}
+      <Dialog
+        open={!!warningTarget}
+        onOpenChange={(open) => {
+          if (!open) {
+            setWarningTarget(null);
+            setWarningSubject("Warning: Course Policy Violation");
+            setWarningMessage("");
+            setWarningSuccess(false);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Send Warning Email
+            </DialogTitle>
+            <DialogDescription>
+              Send a warning email to{" "}
+              <span className="font-semibold text-gray-900 dark:text-gray-100">
+                {warningTarget?.name || warningTarget?.email}
+              </span>
+              . This action will be logged.
+            </DialogDescription>
+          </DialogHeader>
+
+          {warningSuccess ? (
+            <div className="flex flex-col items-center py-6 gap-2">
+              <CheckCircle2 className="h-10 w-10 text-emerald-500" />
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                Warning email sent successfully
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label htmlFor="warning-subject" className="text-gray-700 dark:text-gray-300">
+                  Subject
+                </Label>
+                <Input
+                  id="warning-subject"
+                  value={warningSubject}
+                  onChange={(e) => setWarningSubject(e.target.value)}
+                  placeholder="Email subject line"
+                  className="rounded-lg"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="warning-message" className="text-gray-700 dark:text-gray-300">
+                  Message
+                </Label>
+                <Textarea
+                  id="warning-message"
+                  value={warningMessage}
+                  onChange={(e) => setWarningMessage(e.target.value)}
+                  placeholder="Describe the warning reason and any expected corrective action..."
+                  rows={5}
+                  className="rounded-lg resize-none"
+                />
+              </div>
+            </div>
+          )}
+
+          {!warningSuccess && (
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setWarningTarget(null)}
+                className="rounded-lg"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={sendWarning}
+                disabled={warningSending || !warningSubject.trim() || !warningMessage.trim()}
+                className="bg-amber-600 hover:bg-amber-700 text-white rounded-lg gap-1.5"
+              >
+                {warningSending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+                Send Warning
+              </Button>
+            </DialogFooter>
+          )}
         </DialogContent>
       </Dialog>
     </div>

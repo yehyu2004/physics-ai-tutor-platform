@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getEffectiveSession } from "@/lib/impersonate";
 import { prisma } from "@/lib/prisma";
 
 function isAuthorized(role?: string): boolean {
@@ -8,7 +8,7 @@ function isAuthorized(role?: string): boolean {
 
 export async function GET() {
   try {
-    const session = await auth();
+    const session = await getEffectiveSession();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -51,7 +51,7 @@ export async function GET() {
 
 export async function PATCH(req: Request) {
   try {
-    const session = await auth();
+    const session = await getEffectiveSession();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -66,6 +66,16 @@ export async function PATCH(req: Request) {
     // Prevent self-actions
     if (userId === (session.user as { id?: string }).id) {
       return NextResponse.json({ error: "Cannot modify your own account" }, { status: 400 });
+    }
+
+    // TAs can only verify/unverify
+    if (userRole === "TA") {
+      if (action && action !== "verify" && action !== "unverify") {
+        return NextResponse.json({ error: "Forbidden: TAs can only verify/unverify users" }, { status: 403 });
+      }
+      if (role) {
+        return NextResponse.json({ error: "Forbidden: TAs cannot change roles" }, { status: 403 });
+      }
     }
 
     if (action === "ban") {
@@ -142,7 +152,7 @@ export async function PATCH(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
-    const session = await auth();
+    const session = await getEffectiveSession();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -153,6 +163,11 @@ export async function DELETE(req: Request) {
     }
 
     const { userId } = await req.json();
+
+    // TAs cannot delete users
+    if (userRole === "TA") {
+      return NextResponse.json({ error: "Forbidden: TAs cannot delete users" }, { status: 403 });
+    }
 
     // Prevent self-deletion
     if (userId === (session.user as { id?: string }).id) {
