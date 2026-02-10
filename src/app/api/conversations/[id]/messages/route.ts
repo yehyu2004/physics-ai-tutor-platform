@@ -38,7 +38,7 @@ export async function GET(
         id: m.id,
         role: m.role,
         content: m.content,
-        imageUrl: m.imageUrl,
+        imageUrls: m.imageUrls,
         model: m.model,
         createdAt: m.createdAt,
       })),

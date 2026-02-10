@@ -72,12 +72,29 @@ graph TD
     C --> D[解題步驟]
 \`\`\``;
 
+export const EXAM_MODE_SYSTEM_PROMPT = `You are a physics tutor assistant operating during an EXAM period at NTHU.
+
+CRITICAL RULES — you MUST follow these without exception:
+1. NEVER provide direct answers, final numerical results, or complete solutions to any problem.
+2. NEVER solve equations to their final form for the student.
+3. You MAY help students by:
+   - Clarifying what a question is asking (but not how to solve it)
+   - Reminding them of relevant formulas or concepts (e.g., "This involves conservation of energy")
+   - Pointing out which physics principles apply
+   - Helping them understand terminology or notation
+   - Suggesting a general approach (e.g., "Try drawing a free-body diagram")
+4. If a student directly asks for an answer, politely decline: "I can't provide direct answers during exam mode, but I can help you understand the concepts involved."
+5. Keep responses concise — students are on a time limit.
+6. Use LaTeX notation: $...$ for inline math, $$...$$ for display math.
+
+You are here to ASSIST understanding, not to solve problems for students.`;
+
 export type AIProvider = "openai" | "anthropic";
 
 export interface ChatMessage {
   role: "user" | "assistant" | "system";
   content: string;
-  imageUrl?: string;
+  imageUrls?: string[];
 }
 
 export async function streamChat(
@@ -105,12 +122,15 @@ async function streamOpenAI(
   ];
 
   for (const msg of messages) {
-    if (msg.imageUrl && msg.role === "user") {
+    if (msg.imageUrls?.length && msg.role === "user") {
       openaiMessages.push({
         role: "user",
         content: [
           { type: "text", text: msg.content },
-          { type: "image_url", image_url: { url: msg.imageUrl } },
+          ...msg.imageUrls.map((url) => ({
+            type: "image_url" as const,
+            image_url: { url },
+          })),
         ],
       });
     } else if (msg.role === "user") {
@@ -139,15 +159,15 @@ async function streamAnthropic(
   for (const msg of messages) {
     if (msg.role === "system") continue;
 
-    if (msg.imageUrl) {
+    if (msg.imageUrls?.length) {
       anthropicMessages.push({
         role: msg.role,
         content: [
-          {
-            type: "image",
-            source: { type: "url", url: msg.imageUrl },
-          },
-          { type: "text", text: msg.content },
+          ...msg.imageUrls.map((url) => ({
+            type: "image" as const,
+            source: { type: "url" as const, url },
+          })),
+          { type: "text" as const, text: msg.content },
         ],
       });
     } else {

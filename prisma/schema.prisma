@@ -47,6 +47,9 @@ model User {
   createdAssignments Assignment[] @relation("CreatedBy")
   auditLogs     AuditLog[]
   generatedProblemSets ProblemSet[] @relation("GeneratedBy")
+  notifications NotificationRead[]
+  createdNotifications Notification[] @relation("NotificationCreatedBy")
+  examModeToggles ExamMode[] @relation("ExamModeToggledBy")
 }
 
 model Account {
@@ -104,7 +107,7 @@ model Message {
   conversationId String
   role           String   // "user" or "assistant"
   content        String   @db.Text
-  imageUrl       String?
+  imageUrls      String[] @default([])
   model          String?  // "gpt-5-mini" or "claude-haiku-4.5"
   mode           String?  // "normal" or "socratic"
   createdAt      DateTime @default(now())
@@ -246,4 +249,38 @@ model AuditLog {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  title       String
+  message     String   @db.Text
+  createdById String
+  isGlobal    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  createdBy User               @relation("NotificationCreatedBy", fields: [createdById], references: [id])
+  reads     NotificationRead[]
+}
+
+model NotificationRead {
+  id             String   @id @default(cuid())
+  notificationId String
+  userId         String
+  readAt         DateTime @default(now())
+
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([notificationId, userId])
+}
+
+model ExamMode {
+  id          String   @id @default(cuid())
+  isActive    Boolean  @default(false)
+  message     String?
+  toggledById String
+  toggledAt   DateTime @default(now())
+
+  toggledBy User @relation("ExamModeToggledBy", fields: [toggledById], references: [id])
 }

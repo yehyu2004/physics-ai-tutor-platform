@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { streamChat, SOCRATIC_SYSTEM_PROMPT, type ChatMessage, type AIProvider } from "@/lib/ai";
+import { streamChat, SOCRATIC_SYSTEM_PROMPT, EXAM_MODE_SYSTEM_PROMPT, type ChatMessage, type AIProvider } from "@/lib/ai";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { checkContentFlags, handleContentFlag, trackRateLimitAbuse } from "@/lib/abuse-detection";
 
@@ -52,7 +52,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const { conversationId, message, imageUrl, model, mode } = await req.json();
+    const { conversationId, message, imageUrls, model, mode } = await req.json();
 
     // Fire-and-forget: check content for jailbreak/prompt injection patterns
     const contentFlags = checkContentFlags(message);
@@ -77,7 +77,7 @@ export async function POST(req: Request) {
         conversationId: convId,
         role: "user",
         content: message,
-        imageUrl,
+        imageUrls: imageUrls || [],
         mode: mode || "normal",
       },
     });
@@ -94,7 +94,7 @@ export async function POST(req: Request) {
     const chatMessages: ChatMessage[] = previousMessages.map((m: any) => ({
       role: m.role as "user" | "assistant",
       content: m.content,
-      imageUrl: m.imageUrl || undefined,
+      imageUrls: m.imageUrls?.length ? m.imageUrls : undefined,
     }));
 
     const provider: AIProvider = model?.startsWith("claude") ? "anthropic" : "openai";
@@ -103,7 +103,23 @@ export async function POST(req: Request) {
       where: { isActive: true },
     });
 
-    const systemPrompt = mode === "socratic" ? SOCRATIC_SYSTEM_PROMPT : (aiConfig?.systemPrompt || undefined);
+    // Check exam mode — enforced server-side for students
+    const userRole = (session.user as { role?: string }).role;
+    let systemPrompt: string | undefined;
+
+    if (userRole === "STUDENT") {
+      const examMode = await prisma.examMode.findFirst({
+        orderBy: { toggledAt: "desc" },
+        select: { isActive: true },
+      });
+      if (examMode?.isActive) {
+        systemPrompt = EXAM_MODE_SYSTEM_PROMPT;
+      }
+    }
+
+    if (!systemPrompt) {
+      systemPrompt = mode === "socratic" ? SOCRATIC_SYSTEM_PROMPT : (aiConfig?.systemPrompt || undefined);
+    }
 
     // Stream response via SSE
     const encoder = new TextEncoder();

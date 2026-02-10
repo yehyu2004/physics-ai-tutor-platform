@@ -19,6 +19,7 @@ import {
   FlaskConical,
   PanelLeftOpen,
   PanelLeftClose,
+  ShieldAlert,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -30,7 +31,7 @@ interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
-  imageUrl?: string;
+  imageUrls?: string[];
 }
 
 interface Conversation {
@@ -75,12 +76,15 @@ export default function ChatPageClient({
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [imageError, setImageError] = useState<string | null>(null);
   const [model, setModel] = useState("gpt-5-mini");
   const [searchQuery, setSearchQuery] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [chatMode, setChatMode] = useState<"normal" | "socratic">("normal");
+  const [examModeActive, setExamModeActive] = useState(false);
+  const [examBannerDismissed, setExamBannerDismissed] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -96,6 +100,13 @@ export default function ChatPageClient({
       container.scrollTop = container.scrollHeight;
     }
   }, [messages]);
+
+  useEffect(() => {
+    fetch("/api/exam-mode")
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => { if (data) setExamModeActive(data.isActive); })
+      .catch(() => {});
+  }, []);
 
   const filteredConversations = conversations.filter((conv) =>
     conv.title.toLowerCase().includes(searchQuery.toLowerCase())
@@ -131,35 +142,60 @@ export default function ChatPageClient({
     }
   }, []);
 
+  const MAX_IMAGES = 5;
+
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => setImagePreview(reader.result as string);
-      reader.readAsDataURL(file);
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    const totalCount = imageFiles.length + files.length;
+    if (totalCount > MAX_IMAGES) {
+      setImageError(`You can upload at most ${MAX_IMAGES} images at a time.`);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
     }
+
+    setImageError(null);
+    const newFiles = [...imageFiles, ...files];
+    setImageFiles(newFiles);
+
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreviews((prev) => [...prev, reader.result as string]);
+      };
+      reader.readAsDataURL(file);
+    });
+
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const removeImage = () => {
-    setImageFile(null);
-    setImagePreview(null);
+  const removeImage = (index: number) => {
+    setImageFiles((prev) => prev.filter((_, i) => i !== index));
+    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
+    setImageError(null);
+  };
+
+  const clearImages = () => {
+    setImageFiles([]);
+    setImagePreviews([]);
+    setImageError(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const submitMessage = useCallback(async (messageText: string) => {
-    if (!messageText.trim() && !imageFile) return;
+    if (!messageText.trim() && !imageFiles.length) return;
 
-    let uploadedImageUrl: string | undefined;
+    const uploadedUrls: string[] = [];
 
-    if (imageFile) {
+    for (const file of imageFiles) {
       const formData = new FormData();
-      formData.append("file", imageFile);
+      formData.append("file", file);
       try {
         const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
         if (uploadRes.ok) {
           const uploadData = await uploadRes.json();
-          uploadedImageUrl = uploadData.url;
+          uploadedUrls.push(uploadData.url);
         }
       } catch (err) {
         console.error("Upload failed:", err);
@@ -170,12 +206,12 @@ export default function ChatPageClient({
       id: Date.now().toString(),
       role: "user",
       content: messageText,
-      imageUrl: uploadedImageUrl,
+      imageUrls: uploadedUrls.length ? uploadedUrls : undefined,
     };
 
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
-    removeImage();
+    clearImages();
     setLoading(true);
 
     const assistantMsgId = (Date.now() + 1).toString();
@@ -190,7 +226,7 @@ export default function ChatPageClient({
         body: JSON.stringify({
           conversationId: activeConversationId,
           message: messageText,
-          imageUrl: uploadedImageUrl,
+          imageUrls: uploadedUrls.length ? uploadedUrls : undefined,
           model,
           mode: chatMode,
         }),
@@ -257,7 +293,7 @@ export default function ChatPageClient({
     } finally {
       setLoading(false);
     }
-  }, [activeConversationId, imageFile, model, chatMode]);
+  }, [activeConversationId, imageFiles, model, chatMode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -267,7 +303,7 @@ export default function ChatPageClient({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (input.trim() || imageFile) {
+      if (input.trim() || imageFiles.length) {
         submitMessage(input);
       }
     }
@@ -426,23 +462,25 @@ export default function ChatPageClient({
 
           {/* Socratic Mode Toggle + Model Selector */}
           <div className="flex items-center gap-2">
-            {/* Socratic Mode Toggle */}
-            <Button
-              type="button"
-              variant={chatMode === "socratic" ? "outline" : "ghost"}
-              size="sm"
-              onClick={() => setChatMode(chatMode === "socratic" ? "normal" : "socratic")}
-              className={cn(
-                "h-8 gap-1.5 text-xs",
-                chatMode === "socratic"
-                  ? "bg-amber-100 text-amber-700 border-amber-300 hover:bg-amber-200 hover:text-amber-800"
-                  : ""
-              )}
-              title="Socratic guided mode"
-            >
-              <Lightbulb className="h-3.5 w-3.5" />
-              Socratic
-            </Button>
+            {/* Socratic Mode Toggle — hidden during exam mode */}
+            {!examModeActive && (
+              <Button
+                type="button"
+                variant={chatMode === "socratic" ? "outline" : "ghost"}
+                size="sm"
+                onClick={() => setChatMode(chatMode === "socratic" ? "normal" : "socratic")}
+                className={cn(
+                  "h-8 gap-1.5 text-xs",
+                  chatMode === "socratic"
+                    ? "bg-amber-100 text-amber-700 border-amber-300 hover:bg-amber-200 hover:text-amber-800"
+                    : ""
+                )}
+                title="Socratic guided mode"
+              >
+                <Lightbulb className="h-3.5 w-3.5" />
+                Socratic
+              </Button>
+            )}
 
             {/* Model Selector - Minimal Pill */}
             <div className="flex items-center bg-gray-100 rounded-full p-0.5">
@@ -477,9 +515,23 @@ export default function ChatPageClient({
         </div>
 
         {/* Socratic Mode Banner */}
-        {chatMode === "socratic" && (
+        {chatMode === "socratic" && !examModeActive && (
           <div className="px-4 py-2 bg-amber-50 border-b border-amber-200 text-amber-800 text-xs text-center">
             Socratic guided mode: AI will guide your thinking through questions rather than giving direct answers
+          </div>
+        )}
+
+        {/* Exam Mode Banner */}
+        {examModeActive && !examBannerDismissed && (
+          <div className="px-4 py-2 bg-red-50 border-b border-red-200 text-red-700 text-xs flex items-center justify-center gap-1.5 relative">
+            <ShieldAlert className="h-3.5 w-3.5 shrink-0" />
+            Exam Mode: AI will provide guidance and help you understand concepts, but will not give direct answers
+            <button
+              onClick={() => setExamBannerDismissed(true)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-red-100 text-red-400 hover:text-red-600 transition-colors"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
           </div>
         )}
 
@@ -521,7 +573,7 @@ export default function ChatPageClient({
                 {/* Upload hint */}
                 <div className="flex items-center gap-2 mt-10 text-xs text-gray-400">
                   <ImageIcon className="h-3.5 w-3.5" />
-                  Upload an image of a problem for visual analysis
+                  Upload up to 5 images of a problem for visual analysis
                 </div>
               </div>
             )}
@@ -551,12 +603,20 @@ export default function ChatPageClient({
                         : "flex-1 min-w-0 text-gray-900 py-1"
                     )}
                   >
-                    {msg.imageUrl && (
-                      <img
-                        src={msg.imageUrl}
-                        alt="Uploaded"
-                        className="max-w-full rounded-lg mb-3 max-h-60 object-contain"
-                      />
+                    {msg.imageUrls && msg.imageUrls.length > 0 && (
+                      <div className={cn(
+                        "mb-3 gap-2",
+                        msg.imageUrls.length === 1 ? "flex" : "grid grid-cols-2"
+                      )}>
+                        {msg.imageUrls.map((url, idx) => (
+                          <img
+                            key={idx}
+                            src={url}
+                            alt={`Uploaded ${idx + 1}`}
+                            className="max-w-full rounded-lg max-h-60 object-contain"
+                          />
+                        ))}
+                      </div>
                     )}
                     {msg.role === "assistant" && !msg.content ? (
                       <div className="flex items-center gap-1.5 py-1">
@@ -585,23 +645,43 @@ export default function ChatPageClient({
           </div>
         </div>
 
-        {/* Image Preview */}
-        {imagePreview && (
+        {/* Image Error */}
+        {imageError && (
+          <div className="px-4 py-2 border-t border-red-100 bg-red-50">
+            <div className="max-w-3xl mx-auto flex items-center justify-between">
+              <span className="text-sm text-red-600">{imageError}</span>
+              <button
+                onClick={() => setImageError(null)}
+                className="text-red-400 hover:text-red-600 transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Image Previews */}
+        {imagePreviews.length > 0 && (
           <div className="px-4 py-2 border-t border-gray-100">
-            <div className="max-w-3xl mx-auto">
-              <div className="relative inline-block">
-                <img
-                  src={imagePreview}
-                  alt="Preview"
-                  className="h-20 rounded-lg object-contain border border-gray-200"
-                />
-                <button
-                  onClick={removeImage}
-                  className="absolute -top-2 -right-2 bg-gray-900 hover:bg-gray-800 text-white rounded-full p-1 shadow-sm transition-colors"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
+            <div className="max-w-3xl mx-auto flex gap-2 flex-wrap">
+              {imagePreviews.map((preview, idx) => (
+                <div key={idx} className="relative inline-block">
+                  <img
+                    src={preview}
+                    alt={`Preview ${idx + 1}`}
+                    className="h-20 rounded-lg object-contain border border-gray-200"
+                  />
+                  <button
+                    onClick={() => removeImage(idx)}
+                    className="absolute -top-2 -right-2 bg-gray-900 hover:bg-gray-800 text-white rounded-full p-1 shadow-sm transition-colors"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+              <span className="self-end text-xs text-gray-400 pb-1">
+                {imagePreviews.length}/{MAX_IMAGES}
+              </span>
             </div>
           </div>
         )}
@@ -614,6 +694,7 @@ export default function ChatPageClient({
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
+                multiple
                 onChange={handleImageSelect}
                 className="hidden"
               />
@@ -640,10 +721,10 @@ export default function ChatPageClient({
               />
               <button
                 type="submit"
-                disabled={loading || (!input.trim() && !imageFile)}
+                disabled={loading || (!input.trim() && !imageFiles.length)}
                 className={cn(
                   "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-all",
-                  loading || (!input.trim() && !imageFile)
+                  loading || (!input.trim() && !imageFiles.length)
                     ? "bg-gray-50 text-gray-300 cursor-not-allowed"
                     : "bg-gray-900 hover:bg-gray-800 text-white"
                 )}
