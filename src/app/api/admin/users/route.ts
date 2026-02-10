@@ -3,7 +3,7 @@ import { getEffectiveSession } from "@/lib/impersonate";
 import { prisma } from "@/lib/prisma";
 
 function isAuthorized(role?: string): boolean {
-  return role === "ADMIN" || role === "TA";
+  return role === "ADMIN" || role === "PROFESSOR" || role === "TA";
 }
 
 export async function GET() {
@@ -68,10 +68,11 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "Cannot modify your own account" }, { status: 400 });
     }
 
-    // TAs can only verify/unverify
+    // TAs can verify/unverify and ban/unban/restrict/unrestrict
     if (userRole === "TA") {
-      if (action && action !== "verify" && action !== "unverify") {
-        return NextResponse.json({ error: "Forbidden: TAs can only verify/unverify users" }, { status: 403 });
+      const taAllowedActions = ["verify", "unverify", "ban", "unban", "restrict", "unrestrict"];
+      if (action && !taAllowedActions.includes(action)) {
+        return NextResponse.json({ error: "Forbidden: TAs cannot perform this action" }, { status: 403 });
       }
       if (role) {
         return NextResponse.json({ error: "Forbidden: TAs cannot change roles" }, { status: 403 });
@@ -128,12 +129,12 @@ export async function PATCH(req: Request) {
 
     // Role change (existing functionality)
     if (role) {
-      if (!["STUDENT", "TA", "ADMIN"].includes(role)) {
+      if (!["STUDENT", "TA", "PROFESSOR", "ADMIN"].includes(role)) {
         return NextResponse.json({ error: "Invalid role" }, { status: 400 });
       }
-      const data: { role: "STUDENT" | "TA" | "ADMIN"; isVerified?: boolean } = { role };
-      // Auto-verify when promoting to TA or ADMIN
-      if (role === "TA" || role === "ADMIN") {
+      const data: { role: "STUDENT" | "TA" | "PROFESSOR" | "ADMIN"; isVerified?: boolean } = { role };
+      // Auto-verify when promoting to TA, PROFESSOR or ADMIN
+      if (role === "TA" || role === "PROFESSOR" || role === "ADMIN") {
         data.isVerified = true;
       }
       await prisma.user.update({

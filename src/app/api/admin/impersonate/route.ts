@@ -13,7 +13,7 @@ export async function POST(req: Request) {
     }
 
     const userRole = (session.user as { role?: string }).role;
-    if (userRole !== "ADMIN") {
+    if (userRole !== "ADMIN" && userRole !== "PROFESSOR") {
       return NextResponse.json({ error: "Only admins can impersonate" }, { status: 403 });
     }
 

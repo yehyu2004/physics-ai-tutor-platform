@@ -34,7 +34,7 @@ export async function PATCH(req: Request) {
     }
 
     const userRole = (session.user as { role?: string }).role;
-    if (userRole !== "TA" && userRole !== "ADMIN") {
+    if (userRole !== "TA" && userRole !== "PROFESSOR" && userRole !== "ADMIN") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

@@ -17,6 +17,7 @@ import {
   Trash2,
   ShieldAlert,
   Menu,
+  Mail,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -65,6 +66,7 @@ const routeLabels: Record<string, string> = {
   "/problems/generate": "Problem Generator",
   "/grading": "Grading",
   "/admin/users": "Users",
+  "/admin/email-records": "Email Records",
   "/admin/qa-history": "Q&A History",
   "/admin/settings": "Settings",
   "/profile": "Profile",
@@ -92,13 +94,15 @@ export default function Topbar({ userName, userEmail, userImage, userRole, onMob
   const [sending, setSending] = useState(false);
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
+  const [alsoEmail, setAlsoEmail] = useState(false);
+  const [emailRoles, setEmailRoles] = useState<Set<string>>(new Set(["STUDENT"]));
 
   const [examModeActive, setExamModeActive] = useState(false);
   const [examModeMessage, setExamModeMessage] = useState<string | null>(null);
   const [examTooltipOpen, setExamTooltipOpen] = useState(false);
   const [examToggling, setExamToggling] = useState(false);
 
-  const isStaff = userRole === "TA" || userRole === "ADMIN";
+  const isStaff = userRole === "TA" || userRole === "PROFESSOR" || userRole === "ADMIN";
 
   const fetchExamMode = useCallback(async () => {
     try {
@@ -177,6 +181,8 @@ export default function Topbar({ userName, userEmail, userImage, userRole, onMob
     setEditingId(null);
     setTitle("");
     setMessage("");
+    setAlsoEmail(false);
+    setEmailRoles(new Set(["STUDENT"]));
     setNotifOpen(false);
     setDialogOpen(true);
   };
@@ -185,6 +191,8 @@ export default function Topbar({ userName, userEmail, userImage, userRole, onMob
     setEditingId(n.id);
     setTitle(n.title);
     setMessage(n.message);
+    setAlsoEmail(false);
+    setEmailRoles(new Set(["STUDENT"]));
     setNotifOpen(false);
     setDialogOpen(true);
   };
@@ -203,8 +211,35 @@ export default function Topbar({ userName, userEmail, userImage, userRole, onMob
         body: JSON.stringify({ title: title.trim(), message: message.trim() }),
       });
       if (res.ok) {
+        // Also send email to selected roles if checked
+        if (alsoEmail && emailRoles.size > 0) {
+          try {
+            const usersRes = await fetch("/api/admin/users");
+            if (usersRes.ok) {
+              const usersData = await usersRes.json();
+              const targetIds = (usersData.users || [])
+                .filter((u: { role: string; isBanned: boolean }) => emailRoles.has(u.role) && !u.isBanned)
+                .map((u: { id: string }) => u.id);
+              if (targetIds.length > 0) {
+                await fetch("/api/admin/email", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    userIds: targetIds,
+                    subject: title.trim(),
+                    message: message.trim(),
+                  }),
+                });
+              }
+            }
+          } catch {
+            // Email sending failure shouldn't block notification creation
+          }
+        }
+
         setTitle("");
         setMessage("");
+        setAlsoEmail(false);
         setEditingId(null);
         setDialogOpen(false);
         fetchNotifications();
@@ -534,6 +569,46 @@ export default function Topbar({ userName, userEmail, userImage, userRole, onMob
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
               />
+            </div>
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={alsoEmail}
+                  onChange={(e) => setAlsoEmail(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800"
+                />
+                <div className="flex items-center gap-1.5">
+                  <Mail className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Also send as email</span>
+                </div>
+              </label>
+              {alsoEmail && (
+                <div className="flex items-center gap-1.5 ml-6">
+                  <span className="text-xs text-gray-500 dark:text-gray-400">To:</span>
+                  {(["STUDENT", "TA", "PROFESSOR", "ADMIN"] as const).map((role) => (
+                    <button
+                      key={role}
+                      type="button"
+                      onClick={() => {
+                        setEmailRoles((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(role)) next.delete(role);
+                          else next.add(role);
+                          return next;
+                        });
+                      }}
+                      className={`text-[11px] px-2 py-0.5 rounded-md border transition-colors ${
+                        emailRoles.has(role)
+                          ? "bg-indigo-100 border-indigo-300 text-indigo-700 dark:bg-indigo-950 dark:border-indigo-700 dark:text-indigo-300"
+                          : "bg-white border-gray-200 text-gray-400 hover:text-gray-600 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-500"
+                      }`}
+                    >
+                      {role === "STUDENT" ? "Students" : role === "TA" ? "TAs" : role === "PROFESSOR" ? "Professors" : "Admins"}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
           <DialogFooter>

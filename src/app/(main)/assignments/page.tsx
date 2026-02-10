@@ -87,7 +87,7 @@ export default function AssignmentsPage() {
               : "Manage assignments and view submissions"}
           </p>
         </div>
-        {(userRole === "TA" || userRole === "ADMIN") && (
+        {(userRole === "TA" || userRole === "ADMIN" || userRole === "PROFESSOR") && (
           <Link href="/assignments/create" className="shrink-0">
             <Button className="gap-2 bg-gray-900 dark:bg-gray-100 hover:bg-gray-800 dark:hover:bg-gray-200 text-white dark:text-gray-900 rounded-lg shadow-sm w-full sm:w-auto">
               <Plus className="h-4 w-4" />
@@ -181,7 +181,7 @@ export default function AssignmentsPage() {
                         <Users className="h-3.5 w-3.5" />
                         {assignment._count.submissions} submissions
                       </span>
-                      {(userRole === "TA" || userRole === "ADMIN") && assignment.ungradedCount !== undefined && assignment.ungradedCount > 0 && (
+                      {(userRole === "TA" || userRole === "ADMIN" || userRole === "PROFESSOR") && assignment.ungradedCount !== undefined && assignment.ungradedCount > 0 && (
                         <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-800">
                           <Clock className="h-3 w-3" />
                           {assignment.ungradedCount} ungraded
@@ -202,7 +202,7 @@ export default function AssignmentsPage() {
                     </div>
                   </div>
                   <div className="text-right ml-4 shrink-0">
-                    {(userRole === "TA" || userRole === "ADMIN") && !assignment.mySubmitted ? (
+                    {(userRole === "TA" || userRole === "ADMIN" || userRole === "PROFESSOR") && !assignment.mySubmitted ? (
                       <>
                         <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                           {assignment._count.submissions}

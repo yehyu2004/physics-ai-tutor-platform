@@ -16,7 +16,35 @@ export async function GET(req: Request) {
     const submissionId = searchParams.get("submissionId");
     const assignmentId = searchParams.get("assignmentId");
 
+    // Staff can fetch all open appeals without params (for dashboard)
     if (!submissionId && !assignmentId) {
+      if (userRole === "TA" || userRole === "PROFESSOR" || userRole === "ADMIN") {
+        const appeals = await prisma.gradeAppeal.findMany({
+          where: { status: "OPEN" },
+          include: {
+            student: { select: { id: true, name: true } },
+            submissionAnswer: {
+              select: {
+                id: true,
+                questionId: true,
+                score: true,
+                feedback: true,
+                question: { select: { questionText: true, points: true, order: true } },
+                submission: {
+                  select: {
+                    assignment: { select: { id: true, title: true } },
+                    user: { select: { name: true } },
+                  },
+                },
+              },
+            },
+          },
+          orderBy: { createdAt: "desc" },
+          take: 10,
+        });
+
+        return NextResponse.json({ appeals });
+      }
       return NextResponse.json({ error: "submissionId or assignmentId required" }, { status: 400 });
     }
 
@@ -58,7 +86,7 @@ export async function GET(req: Request) {
 
     // Fetch appeals per assignment (for TA/ADMIN)
     if (assignmentId) {
-      if (userRole === "TA" || userRole === "ADMIN") {
+      if (userRole === "TA" || userRole === "PROFESSOR" || userRole === "ADMIN") {
         const appeals = await prisma.gradeAppeal.findMany({
           where: {
             submissionAnswer: {
@@ -213,7 +241,7 @@ export async function PATCH(req: Request) {
 
     // Students can add messages to their own appeals; TA/ADMIN can do anything
     const isOwner = appeal.studentId === userId;
-    const isStaff = userRole === "TA" || userRole === "ADMIN";
+    const isStaff = userRole === "TA" || userRole === "PROFESSOR" || userRole === "ADMIN";
 
     if (!isOwner && !isStaff) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });

@@ -20,7 +20,7 @@ export default async function MainLayout({
       userName={user.name || "User"}
       userEmail={user.email || ""}
       userImage={user.image || undefined}
-      userRole={(user.role as "STUDENT" | "TA" | "ADMIN") || "STUDENT"}
+      userRole={(user.role as "STUDENT" | "TA" | "PROFESSOR" | "ADMIN") || "STUDENT"}
       userId={user.id}
       isImpersonating={session.isImpersonating}
       realAdminName={session.realAdmin?.name || undefined}

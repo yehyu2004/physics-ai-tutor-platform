@@ -43,7 +43,7 @@ export async function getEffectiveSession() {
 
   // Only admins can impersonate
   const realRole = (session.user as { role?: string }).role;
-  if (realRole !== "ADMIN") {
+  if (realRole !== "ADMIN" && realRole !== "PROFESSOR") {
     return { ...session, isImpersonating: false, realAdmin: null };
   }
 

@@ -19,6 +19,7 @@ import {
   Atom,
   PanelLeftClose,
   User,
+  Mail,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -60,18 +61,19 @@ const toolItems: NavItem[] = [
     label: "Problem Generator",
     href: "/problems/generate",
     icon: Sparkles,
-    roles: ["TA", "ADMIN"],
+    roles: ["TA", "PROFESSOR", "ADMIN"],
   },
   {
     label: "Grading",
     href: "/grading",
     icon: ClipboardList,
-    roles: ["TA", "ADMIN"],
+    roles: ["TA", "PROFESSOR", "ADMIN"],
   },
 ];
 
 const adminItems: NavItem[] = [
   { label: "Users", href: "/admin/users", icon: Users },
+  { label: "Email Records", href: "/admin/email-records", icon: Mail },
   { label: "Analytics", href: "/admin/analytics", icon: BarChart3 },
   { label: "Q&A History", href: "/admin/qa-history", icon: BarChart3 },
   { label: "Settings", href: "/admin/settings", icon: Settings },
@@ -111,10 +113,10 @@ export default function Sidebar({ userRole, userName, collapsed = false, onToggl
     { label: "TOOLS", items: filterByRole(toolItems) },
   ];
 
-  if (userRole === "ADMIN" || userRole === "TA") {
-    const staffItems = userRole === "ADMIN"
+  if (userRole === "ADMIN" || userRole === "PROFESSOR" || userRole === "TA") {
+    const staffItems = userRole === "ADMIN" || userRole === "PROFESSOR"
       ? adminItems
-      : adminItems.filter((item) => item.href === "/admin/qa-history" || item.href === "/admin/users");
+      : adminItems.filter((item) => item.href === "/admin/qa-history" || item.href === "/admin/users" || item.href === "/admin/email-records");
     sections.push({ label: "ADMIN", items: staffItems });
   }
 
@@ -155,7 +157,7 @@ export default function Sidebar({ userRole, userName, collapsed = false, onToggl
               {item.children
                 .filter((child) => {
                   if (child.href === "/assignments/create") {
-                    return userRole === "TA" || userRole === "ADMIN";
+                    return userRole === "TA" || userRole === "PROFESSOR" || userRole === "ADMIN";
                   }
                   return true;
                 })

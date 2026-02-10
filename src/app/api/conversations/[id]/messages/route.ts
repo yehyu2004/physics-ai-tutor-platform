@@ -29,7 +29,7 @@ export async function GET(
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    if (conversation.userId !== userId && userRole !== "ADMIN" && userRole !== "TA") {
+    if (conversation.userId !== userId && userRole !== "ADMIN" && userRole !== "PROFESSOR" && userRole !== "TA") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

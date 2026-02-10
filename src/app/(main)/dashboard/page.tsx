@@ -50,14 +50,45 @@ export default async function DashboardPage() {
   }
 
   let taStats = null;
-  if (role === "TA" || role === "ADMIN") {
-    const pendingGrading = await prisma.submission.count({
-      where: { totalScore: null },
-    });
-    const createdAssignments = await prisma.assignment.count({
-      where: { createdById: userId },
-    });
-    taStats = { pendingGrading, createdAssignments };
+  let openAppeals: { id: string; studentName: string; assignmentTitle: string; assignmentId: string; status: string; createdAt: string }[] = [];
+  if (role === "TA" || role === "PROFESSOR" || role === "ADMIN") {
+    const [pendingGrading, createdAssignments, openAppealCount, recentAppeals] = await Promise.all([
+      prisma.submission.count({
+        where: { totalScore: null },
+      }),
+      prisma.assignment.count({
+        where: { createdById: userId },
+      }),
+      prisma.gradeAppeal.count({
+        where: { status: "OPEN" },
+      }),
+      prisma.gradeAppeal.findMany({
+        where: { status: "OPEN" },
+        include: {
+          student: { select: { name: true } },
+          submissionAnswer: {
+            select: {
+              submission: {
+                select: {
+                  assignment: { select: { id: true, title: true } },
+                },
+              },
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+      }),
+    ]);
+    taStats = { pendingGrading, createdAssignments, openAppealCount };
+    openAppeals = recentAppeals.map((a) => ({
+      id: a.id,
+      studentName: a.student.name || "Unknown",
+      assignmentTitle: a.submissionAnswer.submission.assignment.title,
+      assignmentId: a.submissionAnswer.submission.assignment.id,
+      status: a.status,
+      createdAt: a.createdAt.toISOString(),
+    }));
   }
 
   return (
@@ -84,6 +115,7 @@ export default async function DashboardPage() {
         dueDate: a.dueDate?.toISOString() || null,
         type: a.type,
       }))}
+      openAppeals={openAppeals}
     />
   );
 }

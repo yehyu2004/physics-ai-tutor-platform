@@ -76,9 +76,10 @@ export async function GET(req: NextRequest) {
     let filename = "grades-all.csv";
     if (assignmentId && submissions.length > 0) {
       const title = submissions[0].assignment.title
-        .replace(/[^a-zA-Z0-9_-]/g, "_")
-        .substring(0, 50);
-      filename = `grades-${title}.csv`;
+        .replace(/[^a-zA-Z0-9_\- ]/g, "_")
+        .trim()
+        .substring(0, 80);
+      filename = `${title}.csv`;
     }
 
     return new Response(csv, {

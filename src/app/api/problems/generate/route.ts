@@ -58,7 +58,7 @@ export async function GET() {
     }
 
     const userRole = (session.user as { role?: string }).role;
-    if (userRole !== "TA" && userRole !== "ADMIN") {
+    if (userRole !== "TA" && userRole !== "PROFESSOR" && userRole !== "ADMIN") {
       return Response.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -98,7 +98,7 @@ export async function DELETE(req: Request) {
 
     const userId = (session.user as { id: string }).id;
     const userRole = (session.user as { role?: string }).role;
-    if (userRole !== "TA" && userRole !== "ADMIN") {
+    if (userRole !== "TA" && userRole !== "PROFESSOR" && userRole !== "ADMIN") {
       return Response.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -112,8 +112,8 @@ export async function DELETE(req: Request) {
       return Response.json({ error: "Problem set not found" }, { status: 404 });
     }
 
-    // ADMIN can delete any; TA can only delete their own
-    if (userRole !== "ADMIN" && problemSet.createdById !== userId) {
+    // ADMIN/PROFESSOR can delete any; TA can only delete their own
+    if (userRole !== "ADMIN" && userRole !== "PROFESSOR" && problemSet.createdById !== userId) {
       return Response.json({ error: "Forbidden: you can only delete your own problem sets" }, { status: 403 });
     }
 
@@ -136,7 +136,7 @@ export async function POST(req: Request) {
 
     const userId = (session.user as { id: string }).id;
     const userRole = (session.user as { role?: string }).role;
-    if (userRole !== "TA" && userRole !== "ADMIN") {
+    if (userRole !== "TA" && userRole !== "PROFESSOR" && userRole !== "ADMIN") {
       return Response.json({ error: "Forbidden" }, { status: 403 });
     }
 

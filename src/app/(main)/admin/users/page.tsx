@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useEffectiveSession } from "@/lib/effective-session-context";
 import {
@@ -16,8 +16,9 @@ import {
   CheckCircle2,
   Circle,
   Eye,
-  AlertTriangle,
   Send,
+  Mail,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -46,7 +47,7 @@ interface User {
   name: string | null;
   email: string;
   studentId: string | null;
-  role: "STUDENT" | "TA" | "ADMIN";
+  role: "STUDENT" | "TA" | "PROFESSOR" | "ADMIN";
   isBanned: boolean;
   bannedAt: string | null;
   isRestricted: boolean;
@@ -64,13 +65,17 @@ export default function AdminUsersPage() {
 
   const currentUserId = effectiveSession.id;
   const currentUserRole = effectiveSession.role;
-  const isAdmin = currentUserRole === "ADMIN";
+  const isAdmin = currentUserRole === "ADMIN" || currentUserRole === "PROFESSOR";
+  const isStaff = isAdmin || currentUserRole === "TA";
 
-  const [warningTarget, setWarningTarget] = useState<User | null>(null);
-  const [warningSubject, setWarningSubject] = useState("Warning: Course Policy Violation");
-  const [warningMessage, setWarningMessage] = useState("");
-  const [warningSending, setWarningSending] = useState(false);
-  const [warningSuccess, setWarningSuccess] = useState(false);
+  // Bulk email state
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailMessage, setEmailMessage] = useState("");
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailSuccess, setEmailSuccess] = useState(false);
+  const selectAllRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch("/api/admin/users")
@@ -97,7 +102,7 @@ export default function AdminUsersPage() {
                   ...u,
                   role: newRole as User["role"],
                   // Auto-verify when promoting to TA/ADMIN
-                  isVerified: newRole === "TA" || newRole === "ADMIN" ? true : u.isVerified,
+                  isVerified: newRole === "TA" || newRole === "PROFESSOR" || newRole === "ADMIN" ? true : u.isVerified,
                 }
               : u
           )
@@ -205,34 +210,62 @@ export default function AdminUsersPage() {
     }
   };
 
-  const sendWarning = async () => {
-    if (!warningTarget || !warningSubject.trim() || !warningMessage.trim()) return;
-    setWarningSending(true);
+  const toggleSelectUser = (userId: string) => {
+    setSelectedUsers((prev) => {
+      const next = new Set(prev);
+      if (next.has(userId)) next.delete(userId);
+      else next.add(userId);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedUsers.size === users.length) {
+      setSelectedUsers(new Set());
+    } else {
+      setSelectedUsers(new Set(users.map((u) => u.id)));
+    }
+  };
+
+  // Update indeterminate state on the "select all" checkbox
+  useEffect(() => {
+    if (selectAllRef.current) {
+      selectAllRef.current.indeterminate =
+        selectedUsers.size > 0 && selectedUsers.size < users.length;
+    }
+  }, [selectedUsers.size, users.length]);
+
+  const sendBulkEmail = async () => {
+    if (selectedUsers.size === 0 || !emailSubject.trim() || !emailMessage.trim()) return;
+    setEmailSending(true);
     try {
-      const res = await fetch("/api/admin/users/warn", {
+      const res = await fetch("/api/admin/email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: warningTarget.id,
-          subject: warningSubject.trim(),
-          message: warningMessage.trim(),
+          userIds: Array.from(selectedUsers),
+          subject: emailSubject.trim(),
+          message: emailMessage.trim(),
         }),
       });
       if (res.ok) {
-        setWarningSuccess(true);
+        setEmailSuccess(true);
         setTimeout(() => {
-          setWarningTarget(null);
-          setWarningSubject("Warning: Course Policy Violation");
-          setWarningMessage("");
-          setWarningSuccess(false);
+          setEmailDialogOpen(false);
+          setEmailSubject("");
+          setEmailMessage("");
+          setEmailSuccess(false);
+          setSelectedUsers(new Set());
         }, 2000);
       }
     } catch (err) {
       console.error(err);
     } finally {
-      setWarningSending(false);
+      setEmailSending(false);
     }
   };
+
+  const selectedUsersList = users.filter((u) => selectedUsers.has(u.id));
 
   if (loading) {
     return (
@@ -308,9 +341,77 @@ export default function AdminUsersPage() {
         </div>
       </div>
 
+      {/* Selection Toolbar */}
+      <div className="flex items-center gap-2 flex-wrap bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl px-4 sm:px-6 py-3 shadow-sm">
+        <span className="text-xs font-medium text-gray-500 dark:text-gray-400 mr-1">Select by role:</span>
+        {(["STUDENT", "TA", "PROFESSOR", "ADMIN"] as const).map((role) => {
+          const roleUsers = users.filter((u) => u.role === role);
+          const allSelected = roleUsers.length > 0 && roleUsers.every((u) => selectedUsers.has(u.id));
+          return (
+            <Button
+              key={role}
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setSelectedUsers((prev) => {
+                  const next = new Set(prev);
+                  if (allSelected) {
+                    roleUsers.forEach((u) => next.delete(u.id));
+                  } else {
+                    roleUsers.forEach((u) => next.add(u.id));
+                  }
+                  return next;
+                });
+              }}
+              className={`text-xs rounded-lg h-7 px-2.5 gap-1 ${
+                allSelected
+                  ? "bg-indigo-100 border-indigo-300 text-indigo-700 hover:bg-indigo-200 dark:bg-indigo-950 dark:border-indigo-700 dark:text-indigo-300"
+                  : "border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800"
+              }`}
+            >
+              {role === "STUDENT" ? "Students" : role === "TA" ? "TAs" : role === "PROFESSOR" ? "Professors" : "Admins"}
+              <span className="text-[10px] opacity-60">({roleUsers.length})</span>
+            </Button>
+          );
+        })}
+
+        {selectedUsers.size > 0 && (
+          <>
+            <div className="w-px h-5 bg-gray-200 dark:bg-gray-700 mx-1" />
+            <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
+              {selectedUsers.size} selected
+            </span>
+            <Button
+              size="sm"
+              onClick={() => setEmailDialogOpen(true)}
+              className="gap-1.5 text-xs rounded-lg h-7 bg-indigo-600 hover:bg-indigo-700 text-white"
+            >
+              <Mail className="h-3.5 w-3.5" />
+              Send Email
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedUsers(new Set())}
+              className="gap-1.5 text-xs rounded-lg h-7 text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+            >
+              <X className="h-3.5 w-3.5" />
+              Clear
+            </Button>
+          </>
+        )}
+      </div>
+
       {/* User List */}
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden shadow-sm">
-        <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+        <div className="px-4 sm:px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center gap-3">
+          <input
+            ref={selectAllRef}
+            type="checkbox"
+            checked={users.length > 0 && selectedUsers.size === users.length}
+            onChange={toggleSelectAll}
+            className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 cursor-pointer"
+          />
           <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">All Users</h2>
         </div>
         <div className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -326,6 +427,12 @@ export default function AdminUsersPage() {
                 }`}
               >
                 <div className="flex items-center gap-3 min-w-0">
+                  <input
+                    type="checkbox"
+                    checked={selectedUsers.has(user.id)}
+                    onChange={() => toggleSelectUser(user.id)}
+                    className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 cursor-pointer shrink-0"
+                  />
                   <div
                     className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
                       user.isBanned
@@ -388,6 +495,7 @@ export default function AdminUsersPage() {
                       <SelectContent>
                         <SelectItem value="STUDENT">Student</SelectItem>
                         <SelectItem value="TA">TA</SelectItem>
+                        <SelectItem value="PROFESSOR">Professor</SelectItem>
                         <SelectItem value="ADMIN">Admin</SelectItem>
                       </SelectContent>
                     </Select>
@@ -423,23 +531,8 @@ export default function AdminUsersPage() {
                     <span className="hidden sm:inline">{user.isVerified ? "Verified" : "Verify"}</span>
                   </Button>
 
-                  {/* Send Warning button - both TA and Admin */}
-                  {!isSelf && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={isLoading}
-                      onClick={() => setWarningTarget(user)}
-                      className="gap-1.5 text-xs rounded-lg border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950"
-                      title="Send warning email"
-                    >
-                      <AlertTriangle className="h-3.5 w-3.5" />
-                      <span className="hidden sm:inline">Warn</span>
-                    </Button>
-                  )}
-
-                  {/* Restrict/Unrestrict chat button - Admin only */}
-                  {isAdmin && (
+                  {/* Restrict/Unrestrict chat button - Staff (TA+) */}
+                  {isStaff && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -463,8 +556,8 @@ export default function AdminUsersPage() {
                     </Button>
                   )}
 
-                  {/* Ban/Unban button - Admin only */}
-                  {isAdmin && (
+                  {/* Ban/Unban button - Staff (TA+) */}
+                  {isStaff && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -586,63 +679,75 @@ export default function AdminUsersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Warning Email Dialog */}
+      {/* Bulk Email Dialog */}
       <Dialog
-        open={!!warningTarget}
+        open={emailDialogOpen}
         onOpenChange={(open) => {
           if (!open) {
-            setWarningTarget(null);
-            setWarningSubject("Warning: Course Policy Violation");
-            setWarningMessage("");
-            setWarningSuccess(false);
+            setEmailDialogOpen(false);
+            setEmailSubject("");
+            setEmailMessage("");
+            setEmailSuccess(false);
           }
         }}
       >
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[550px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-amber-500" />
-              Send Warning Email
+              <Mail className="h-5 w-5 text-indigo-500" />
+              Send Email to {selectedUsers.size} User{selectedUsers.size !== 1 ? "s" : ""}
             </DialogTitle>
             <DialogDescription>
-              Send a warning email to{" "}
-              <span className="font-semibold text-gray-900 dark:text-gray-100">
-                {warningTarget?.name || warningTarget?.email}
-              </span>
-              . This action will be logged.
+              Send a notification email to the selected users. This action will be logged.
             </DialogDescription>
           </DialogHeader>
 
-          {warningSuccess ? (
+          {emailSuccess ? (
             <div className="flex flex-col items-center py-6 gap-2">
               <CheckCircle2 className="h-10 w-10 text-emerald-500" />
               <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                Warning email sent successfully
+                Email sent successfully
               </p>
             </div>
           ) : (
             <div className="space-y-4 py-2">
+              {/* Recipient list */}
               <div className="space-y-2">
-                <Label htmlFor="warning-subject" className="text-gray-700 dark:text-gray-300">
+                <Label className="text-gray-700 dark:text-gray-300">
+                  Recipients ({selectedUsersList.length})
+                </Label>
+                <div className="max-h-32 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 p-2 space-y-1">
+                  {selectedUsersList.map((u) => (
+                    <div key={u.id} className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                      <span className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                        {u.name || "No name"}
+                      </span>
+                      <span className="text-gray-400 dark:text-gray-500 truncate">{u.email}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email-subject" className="text-gray-700 dark:text-gray-300">
                   Subject
                 </Label>
                 <Input
-                  id="warning-subject"
-                  value={warningSubject}
-                  onChange={(e) => setWarningSubject(e.target.value)}
+                  id="email-subject"
+                  value={emailSubject}
+                  onChange={(e) => setEmailSubject(e.target.value)}
                   placeholder="Email subject line"
                   className="rounded-lg"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="warning-message" className="text-gray-700 dark:text-gray-300">
+                <Label htmlFor="email-message" className="text-gray-700 dark:text-gray-300">
                   Message
                 </Label>
                 <Textarea
-                  id="warning-message"
-                  value={warningMessage}
-                  onChange={(e) => setWarningMessage(e.target.value)}
-                  placeholder="Describe the warning reason and any expected corrective action..."
+                  id="email-message"
+                  value={emailMessage}
+                  onChange={(e) => setEmailMessage(e.target.value)}
+                  placeholder="Type your message to the selected users..."
                   rows={5}
                   className="rounded-lg resize-none"
                 />
@@ -650,26 +755,26 @@ export default function AdminUsersPage() {
             </div>
           )}
 
-          {!warningSuccess && (
+          {!emailSuccess && (
             <DialogFooter>
               <Button
                 variant="outline"
-                onClick={() => setWarningTarget(null)}
+                onClick={() => setEmailDialogOpen(false)}
                 className="rounded-lg"
               >
                 Cancel
               </Button>
               <Button
-                onClick={sendWarning}
-                disabled={warningSending || !warningSubject.trim() || !warningMessage.trim()}
-                className="bg-amber-600 hover:bg-amber-700 text-white rounded-lg gap-1.5"
+                onClick={sendBulkEmail}
+                disabled={emailSending || !emailSubject.trim() || !emailMessage.trim()}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg gap-1.5"
               >
-                {warningSending ? (
+                {emailSending ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <Send className="h-4 w-4" />
                 )}
-                Send Warning
+                Send Email
               </Button>
             </DialogFooter>
           )}

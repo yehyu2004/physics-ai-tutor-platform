@@ -205,7 +205,7 @@ export default function AssignmentDetailPage({
         .catch(() => {});
 
     // TA/Admin: fetch all appeals for this assignment
-    if (userRole === "TA" || userRole === "ADMIN") {
+    if (userRole === "TA" || userRole === "ADMIN" || userRole === "PROFESSOR") {
       fetch(`/api/appeals?assignmentId=${params.id}`)
         .then((res) => res.json())
         .then((data) => {
@@ -484,7 +484,7 @@ export default function AssignmentDetailPage({
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{assignment.description}</p>
           )}
         </div>
-        {(userRole === "TA" || userRole === "ADMIN") && (
+        {(userRole === "TA" || userRole === "ADMIN" || userRole === "PROFESSOR") && (
           <div className="flex gap-2">
             <Link href={`/assignments/${assignment.id}/edit`}>
               <Button variant="outline" size="sm">
@@ -876,7 +876,7 @@ export default function AssignmentDetailPage({
 
                               {/* Messages thread */}
                               {appeal.messages.map((msg) => {
-                                const isStaff = msg.user.role === "TA" || msg.user.role === "ADMIN";
+                                const isStaff = msg.user.role === "TA" || msg.user.role === "ADMIN" || msg.user.role === "PROFESSOR";
                                 return (
                                   <div
                                     key={msg.id}
@@ -934,7 +934,7 @@ export default function AssignmentDetailPage({
                                 />
 
                                 {/* TA/Admin: resolve/reject/reopen controls */}
-                                {(userRole === "TA" || userRole === "ADMIN") && (
+                                {(userRole === "TA" || userRole === "ADMIN" || userRole === "PROFESSOR") && (
                                   <div className="space-y-2">
                                     {appeal.status === "OPEN" && (
                                       <div className="flex items-center gap-2">
@@ -1075,7 +1075,7 @@ export default function AssignmentDetailPage({
       )}
 
       {/* TA/Admin: Grade Appeals Section */}
-      {(userRole === "TA" || userRole === "ADMIN") && appeals.length > 0 && (() => {
+      {(userRole === "TA" || userRole === "ADMIN" || userRole === "PROFESSOR") && appeals.length > 0 && (() => {
         const openCount = appeals.filter((a) => a.status === "OPEN").length;
         const filteredAppeals = appealFilter === "OPEN" ? appeals.filter((a) => a.status === "OPEN") : appeals;
         return (
@@ -1214,7 +1214,7 @@ export default function AssignmentDetailPage({
 
                         {/* Messages */}
                         {appeal.messages.map((msg) => {
-                          const isStaff = msg.user.role === "TA" || msg.user.role === "ADMIN";
+                          const isStaff = msg.user.role === "TA" || msg.user.role === "ADMIN" || msg.user.role === "PROFESSOR";
                           return (
                             <div
                               key={msg.id}

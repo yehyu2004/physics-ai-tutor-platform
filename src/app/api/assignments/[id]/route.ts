@@ -44,7 +44,7 @@ export async function PATCH(
     }
 
     const userRole = (session.user as { role?: string }).role;
-    if (userRole !== "TA" && userRole !== "ADMIN") {
+    if (userRole !== "TA" && userRole !== "PROFESSOR" && userRole !== "ADMIN") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -103,7 +103,7 @@ export async function DELETE(
     }
 
     const userRole = (session.user as { role?: string }).role;
-    if (userRole !== "TA" && userRole !== "ADMIN") {
+    if (userRole !== "TA" && userRole !== "PROFESSOR" && userRole !== "ADMIN") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

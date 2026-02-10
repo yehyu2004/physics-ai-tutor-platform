@@ -10,6 +10,10 @@ import {
   ImagePlus,
   X,
   FileText,
+  Mail,
+  Send,
+  CheckCircle2,
+  SkipForward,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +27,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import Link from "next/link";
 
 interface Question {
@@ -47,6 +59,23 @@ export default function CreateAssignmentPage() {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Reminder dialog state
+  interface ReminderUser {
+    id: string;
+    name: string | null;
+    email: string;
+    role: string;
+    isBanned: boolean;
+  }
+  const [reminderOpen, setReminderOpen] = useState(false);
+  const [reminderSubject, setReminderSubject] = useState("");
+  const [reminderMessage, setReminderMessage] = useState("");
+  const [reminderSending, setReminderSending] = useState(false);
+  const [reminderSuccess, setReminderSuccess] = useState(false);
+  const [allUsers, setAllUsers] = useState<ReminderUser[]>([]);
+  const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
+  const [loadingStudents, setLoadingStudents] = useState(false);
 
   const addQuestion = () => {
     setQuestions((prev) => [
@@ -180,8 +209,44 @@ export default function CreateAssignmentPage() {
         });
       }
 
-      router.push("/assignments");
-      router.refresh();
+      // Show reminder dialog instead of immediate redirect
+      const dueDateStr = dueDate
+        ? new Date(dueDate).toLocaleString("en-US", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+          })
+        : "No due date set";
+      setReminderSubject(`New Assignment: ${title}`);
+      setReminderMessage(
+        `A new assignment has been posted on PhysTutor.\n\nTitle: ${title}${description ? `\nDescription: ${description}` : ""}\nDue: ${dueDateStr}\nPoints: ${totalPoints}\n\nPlease log in to PhysTutor to view the full assignment details.`
+      );
+
+      // Fetch all users for reminder
+      setLoadingStudents(true);
+      try {
+        const usersRes = await fetch("/api/admin/users");
+        if (usersRes.ok) {
+          const usersData = await usersRes.json();
+          const eligible = (usersData.users || []).filter(
+            (u: ReminderUser) => !u.isBanned
+          );
+          setAllUsers(eligible);
+          // Default: select only students
+          setSelectedStudents(new Set(
+            eligible.filter((u: ReminderUser) => u.role === "STUDENT").map((u: ReminderUser) => u.id)
+          ));
+        }
+      } catch {
+        // If fetching users fails, still show dialog
+      } finally {
+        setLoadingStudents(false);
+      }
+
+      setReminderOpen(true);
     } catch (err) {
       console.error(err);
     } finally {
@@ -475,6 +540,213 @@ export default function CreateAssignmentPage() {
           Publish
         </Button>
       </div>
+
+      {/* Assignment Reminder Dialog */}
+      <Dialog
+        open={reminderOpen}
+        onOpenChange={(open) => {
+          if (!open && !reminderSending) {
+            router.push("/assignments");
+            router.refresh();
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[550px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-indigo-500" />
+              Notify Users
+            </DialogTitle>
+            <DialogDescription>
+              Send a reminder email about the new assignment. Select recipients by role or individually.
+            </DialogDescription>
+          </DialogHeader>
+
+          {reminderSuccess ? (
+            <div className="flex flex-col items-center py-6 gap-2">
+              <CheckCircle2 className="h-10 w-10 text-emerald-500" />
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                Reminder sent successfully
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4 py-2">
+              {/* Recipients with role toggles */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-gray-700 dark:text-gray-300">
+                    Recipients ({selectedStudents.size} of {allUsers.length} selected)
+                  </Label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs h-7"
+                    onClick={() => {
+                      if (selectedStudents.size === allUsers.length) {
+                        setSelectedStudents(new Set());
+                      } else {
+                        setSelectedStudents(new Set(allUsers.map((s) => s.id)));
+                      }
+                    }}
+                  >
+                    {selectedStudents.size === allUsers.length ? "Deselect All" : "Select All"}
+                  </Button>
+                </div>
+                {/* Role filter buttons */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {(["STUDENT", "TA", "PROFESSOR", "ADMIN"] as const).map((role) => {
+                    const roleUsers = allUsers.filter((u) => u.role === role);
+                    const allRoleSelected = roleUsers.length > 0 && roleUsers.every((u) => selectedStudents.has(u.id));
+                    return (
+                      <button
+                        key={role}
+                        type="button"
+                        onClick={() => {
+                          setSelectedStudents((prev) => {
+                            const next = new Set(prev);
+                            if (allRoleSelected) {
+                              roleUsers.forEach((u) => next.delete(u.id));
+                            } else {
+                              roleUsers.forEach((u) => next.add(u.id));
+                            }
+                            return next;
+                          });
+                        }}
+                        className={`text-[11px] px-2 py-0.5 rounded-md border transition-colors ${
+                          allRoleSelected
+                            ? "bg-indigo-100 border-indigo-300 text-indigo-700 dark:bg-indigo-950 dark:border-indigo-700 dark:text-indigo-300"
+                            : "bg-white border-gray-200 text-gray-500 hover:bg-gray-50 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-400"
+                        }`}
+                      >
+                        {role === "STUDENT" ? "Students" : role === "TA" ? "TAs" : role === "PROFESSOR" ? "Professors" : "Admins"} ({roleUsers.length})
+                      </button>
+                    );
+                  })}
+                </div>
+                {loadingStudents ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                  </div>
+                ) : (
+                  <div className="max-h-32 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 p-2 space-y-1">
+                    {allUsers.map((s) => (
+                      <label key={s.id} className="flex items-center gap-2 text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded px-1 py-0.5">
+                        <input
+                          type="checkbox"
+                          checked={selectedStudents.has(s.id)}
+                          onChange={() => {
+                            setSelectedStudents((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(s.id)) next.delete(s.id);
+                              else next.add(s.id);
+                              return next;
+                            });
+                          }}
+                          className="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800"
+                        />
+                        <span className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                          {s.name || "No name"}
+                        </span>
+                        <span className={`text-[10px] px-1 py-px rounded ${
+                          s.role === "ADMIN" || s.role === "PROFESSOR" ? "bg-purple-100 text-purple-600 dark:bg-purple-950 dark:text-purple-400"
+                          : s.role === "TA" ? "bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-400"
+                          : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+                        }`}>
+                          {s.role}
+                        </span>
+                        <span className="text-gray-400 dark:text-gray-500 truncate">{s.email}</span>
+                      </label>
+                    ))}
+                    {allUsers.length === 0 && (
+                      <p className="text-xs text-gray-400 py-2 text-center">No eligible users found</p>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="reminder-subject" className="text-gray-700 dark:text-gray-300">
+                  Subject
+                </Label>
+                <Input
+                  id="reminder-subject"
+                  value={reminderSubject}
+                  onChange={(e) => setReminderSubject(e.target.value)}
+                  placeholder="Email subject line"
+                  className="rounded-lg"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="reminder-message" className="text-gray-700 dark:text-gray-300">
+                  Message
+                </Label>
+                <Textarea
+                  id="reminder-message"
+                  value={reminderMessage}
+                  onChange={(e) => setReminderMessage(e.target.value)}
+                  placeholder="Notification message..."
+                  rows={6}
+                  className="rounded-lg resize-none"
+                />
+              </div>
+            </div>
+          )}
+
+          {!reminderSuccess && (
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setReminderOpen(false);
+                  router.push("/assignments");
+                  router.refresh();
+                }}
+                className="rounded-lg gap-1.5"
+              >
+                <SkipForward className="h-4 w-4" />
+                Skip
+              </Button>
+              <Button
+                onClick={async () => {
+                  if (selectedStudents.size === 0 || !reminderSubject.trim() || !reminderMessage.trim()) return;
+                  setReminderSending(true);
+                  try {
+                    const res = await fetch("/api/admin/email", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        userIds: Array.from(selectedStudents),
+                        subject: reminderSubject.trim(),
+                        message: reminderMessage.trim(),
+                      }),
+                    });
+                    if (res.ok) {
+                      setReminderSuccess(true);
+                      setTimeout(() => {
+                        setReminderOpen(false);
+                        router.push("/assignments");
+                        router.refresh();
+                      }, 2000);
+                    }
+                  } catch (err) {
+                    console.error(err);
+                  } finally {
+                    setReminderSending(false);
+                  }
+                }}
+                disabled={reminderSending || selectedStudents.size === 0 || !reminderSubject.trim() || !reminderMessage.trim()}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg gap-1.5"
+              >
+                {reminderSending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+                Send Reminder
+              </Button>
+            </DialogFooter>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
