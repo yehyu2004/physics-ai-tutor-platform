@@ -70,11 +70,13 @@ export async function POST(req: Request) {
           if (provider === "openai") {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const stream = await streamGenerateProblems(topic, difficulty, count, questionType, "openai") as any;
-            for await (const chunk of stream) {
-              const delta = chunk.choices?.[0]?.delta?.content || "";
-              if (delta) {
-                fullContent += delta;
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "delta", content: delta })}\n\n`));
+            for await (const event of stream) {
+              if (event.type === "response.output_text.delta") {
+                const delta = event.delta || "";
+                if (delta) {
+                  fullContent += delta;
+                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "delta", content: delta })}\n\n`));
+                }
               }
             }
           } else {

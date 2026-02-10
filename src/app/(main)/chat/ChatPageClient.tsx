@@ -79,7 +79,7 @@ export default function ChatPageClient({
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [imageError, setImageError] = useState<string | null>(null);
-  const [model, setModel] = useState("gpt-5-mini");
+  const [model, setModel] = useState("gpt-5.2");
   const [searchQuery, setSearchQuery] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [chatMode, setChatMode] = useState<"normal" | "socratic">("normal");
@@ -485,16 +485,16 @@ export default function ChatPageClient({
             {/* Model Selector - Minimal Pill */}
             <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-full p-0.5">
               <button
-                onClick={() => setModel("gpt-5-mini")}
+                onClick={() => setModel("gpt-5.2")}
                 className={cn(
                   "flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all",
-                  model === "gpt-5-mini"
+                  model === "gpt-5.2"
                     ? "bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 shadow-sm"
                     : "text-gray-500 dark:text-gray-400 hover:text-gray-700"
                 )}
               >
                 <Sparkles className="h-3 w-3" />
-                <span className="hidden sm:inline">GPT-5 Mini</span>
+                <span className="hidden sm:inline">GPT-5.2</span>
                 <span className="sm:hidden">GPT</span>
               </button>
               <button
