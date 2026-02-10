@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
+import { getEffectiveSession } from "@/lib/impersonate";
 import MainLayoutClient from "./MainLayoutClient";
 
 export default async function MainLayout({
@@ -7,7 +7,7 @@ export default async function MainLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth();
+  const session = await getEffectiveSession();
 
   if (!session?.user) {
     redirect("/login");
@@ -21,6 +21,9 @@ export default async function MainLayout({
       userEmail={user.email || ""}
       userImage={user.image || undefined}
       userRole={(user.role as "STUDENT" | "TA" | "ADMIN") || "STUDENT"}
+      userId={user.id}
+      isImpersonating={session.isImpersonating}
+      realAdminName={session.realAdmin?.name || undefined}
     >
       {children}
     </MainLayoutClient>

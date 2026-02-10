@@ -1,8 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { EyeOff } from "lucide-react";
 import Sidebar from "@/components/layout/Sidebar";
 import Topbar from "@/components/layout/Topbar";
+import { EffectiveSessionProvider } from "@/lib/effective-session-context";
 import type { UserRole } from "@/types";
 
 interface MainLayoutClientProps {
@@ -11,6 +14,9 @@ interface MainLayoutClientProps {
   userEmail: string;
   userImage?: string;
   userRole: UserRole;
+  userId: string;
+  isImpersonating?: boolean;
+  realAdminName?: string;
 }
 
 export default function MainLayoutClient({
@@ -19,11 +25,42 @@ export default function MainLayoutClient({
   userEmail,
   userImage,
   userRole,
+  userId,
+  isImpersonating,
+  realAdminName,
 }: MainLayoutClientProps) {
+  const router = useRouter();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [stopping, setStopping] = useState(false);
+
+  const handleStopImpersonating = async () => {
+    setStopping(true);
+    try {
+      await fetch("/api/admin/impersonate", { method: "DELETE" });
+      router.refresh();
+    } catch {
+      setStopping(false);
+    }
+  };
 
   return (
     <div className="h-screen bg-white dark:bg-gray-950 overflow-hidden">
+      {isImpersonating && (
+        <div className="bg-amber-500 text-white px-4 py-2 text-center text-sm font-medium flex items-center justify-center gap-3 z-50">
+          <EyeOff className="h-4 w-4" />
+          <span>
+            Impersonating <strong>{userName}</strong> ({userRole})
+            {realAdminName && <> — logged in as {realAdminName}</>}
+          </span>
+          <button
+            onClick={handleStopImpersonating}
+            disabled={stopping}
+            className="ml-2 px-3 py-0.5 bg-white text-amber-700 rounded-md text-xs font-semibold hover:bg-amber-50 transition-colors disabled:opacity-50"
+          >
+            {stopping ? "Stopping..." : "Stop Impersonating"}
+          </button>
+        </div>
+      )}
       <Sidebar
         userRole={userRole}
         userName={userName}
@@ -31,9 +68,10 @@ export default function MainLayoutClient({
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
       <div
-        className={`h-screen flex flex-col transition-[margin] duration-300 ease-in-out ${
+        className={`flex flex-col transition-[margin] duration-300 ease-in-out ${
           sidebarCollapsed ? "lg:ml-[68px]" : "lg:ml-64"
         }`}
+        style={{ height: isImpersonating ? "calc(100vh - 40px)" : "100vh" }}
       >
         <Topbar
           userName={userName}
@@ -41,7 +79,20 @@ export default function MainLayoutClient({
           userImage={userImage}
           userRole={userRole}
         />
-        <main className="flex-1 p-6 bg-gray-50/50 dark:bg-gray-950 overflow-auto">{children}</main>
+        <main className="flex-1 p-6 bg-gray-50/50 dark:bg-gray-950 overflow-auto">
+          <EffectiveSessionProvider
+            session={{
+              id: userId,
+              name: userName,
+              email: userEmail,
+              role: userRole,
+              image: userImage,
+              isImpersonating: !!isImpersonating,
+            }}
+          >
+            {children}
+          </EffectiveSessionProvider>
+        </main>
       </div>
     </div>
   );

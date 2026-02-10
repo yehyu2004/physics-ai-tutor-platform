@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { getEffectiveSession } from "@/lib/impersonate";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import ChatPageClient from "../ChatPageClient";
@@ -9,7 +9,7 @@ export default async function ChatConversationPage({
 }: {
   params: { id: string };
 }) {
-  const session = await auth();
+  const session = await getEffectiveSession();
   if (!session?.user) redirect("/login");
 
   const user = session.user as { id: string };

@@ -16,6 +16,9 @@ import {
   X,
   Filter,
   Download,
+  ShieldAlert,
+  Send,
+  XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +49,22 @@ interface AssignmentInfo {
   dueDate: string | null;
 }
 
+interface AppealMessage {
+  id: string;
+  content: string;
+  createdAt: string;
+  user: { id: string; name: string | null; role: string };
+}
+
+interface Appeal {
+  id: string;
+  status: string;
+  reason: string;
+  createdAt: string;
+  student: { id: string; name: string | null };
+  messages: AppealMessage[];
+}
+
 interface SubmissionForGrading {
   id: string;
   userName: string;
@@ -55,6 +74,8 @@ interface SubmissionForGrading {
   gradedAt: string | null;
   gradedByName: string | null;
   fileUrl: string | null;
+  openAppealCount: number;
+  totalAppealCount: number;
   answers: {
     id: string;
     questionText: string;
@@ -64,11 +85,12 @@ interface SubmissionForGrading {
     feedback: string | null;
     autoGraded: boolean;
     maxPoints: number;
+    appeals: Appeal[];
   }[];
 }
 
 type GradingMode = "per-question" | "overall";
-type FilterMode = "all" | "ungraded" | "graded";
+type FilterMode = "all" | "ungraded" | "graded" | "appeals";
 
 export default function GradingPage() {
   const searchParams = useSearchParams();
@@ -91,6 +113,10 @@ export default function GradingPage() {
   const [feedbackFile, setFeedbackFile] = useState<File | null>(null);
   const [uploadingFeedback, setUploadingFeedback] = useState(false);
   const [feedbackFileUrl, setFeedbackFileUrl] = useState<string | null>(null);
+  const [appealMessages, setAppealMessages] = useState<Record<string, string>>({});
+  const [appealNewScores, setAppealNewScores] = useState<Record<string, string>>({});
+  const [resolvingAppeal, setResolvingAppeal] = useState<string | null>(null);
+  const [expandedAppeals, setExpandedAppeals] = useState<Record<string, boolean>>({});
 
   // Fetch assignment list
   useEffect(() => {
@@ -249,14 +275,91 @@ export default function GradingPage() {
     }
   };
 
+  const handleAppealMessage = async (appealId: string) => {
+    const message = appealMessages[appealId]?.trim();
+    if (!message) return;
+    try {
+      const res = await fetch("/api/appeals", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ appealId, message }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        updateAppealInSubmissions(appealId, data.appeal);
+        setAppealMessages((prev) => ({ ...prev, [appealId]: "" }));
+      }
+    } catch {
+      alert("Failed to send message");
+    }
+  };
+
+  const handleResolveAppeal = async (appealId: string, status: "RESOLVED" | "REJECTED" | "OPEN") => {
+    const action = status === "RESOLVED" ? "resolve" : status === "REJECTED" ? "reject" : "reopen";
+    if (!window.confirm(`Are you sure you want to ${action} this appeal?`)) return;
+    const newScoreStr = appealNewScores[appealId];
+    const newScore = status === "RESOLVED" && newScoreStr ? parseFloat(newScoreStr) : undefined;
+    const message = appealMessages[appealId];
+    setResolvingAppeal(appealId);
+    try {
+      const res = await fetch("/api/appeals", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ appealId, status, newScore, message: message?.trim() || undefined }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        updateAppealInSubmissions(appealId, data.appeal);
+        setAppealMessages((prev) => ({ ...prev, [appealId]: "" }));
+        setAppealNewScores((prev) => ({ ...prev, [appealId]: "" }));
+        // Refresh submissions to get updated scores
+        if (status === "RESOLVED" && newScore !== undefined) {
+          fetchSubmissions(selectedAssignmentId);
+        }
+      }
+    } catch {
+      alert("Failed to update appeal");
+    } finally {
+      setResolvingAppeal(null);
+    }
+  };
+
+  const updateAppealInSubmissions = (appealId: string, updatedAppeal: Appeal) => {
+    setSubmissions((prev) =>
+      prev.map((sub) => ({
+        ...sub,
+        openAppealCount: sub.answers.reduce(
+          (count, a) => count + a.appeals.filter((ap) => ap.id === appealId ? updatedAppeal.status === "OPEN" : ap.status === "OPEN").length,
+          0
+        ),
+        answers: sub.answers.map((a) => ({
+          ...a,
+          appeals: a.appeals.map((ap) => ap.id === appealId ? updatedAppeal : ap),
+        })),
+      }))
+    );
+    setSelectedSubmission((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        answers: prev.answers.map((a) => ({
+          ...a,
+          appeals: a.appeals.map((ap) => ap.id === appealId ? updatedAppeal : ap),
+        })),
+      };
+    });
+  };
+
   const filteredSubmissions = submissions.filter((s) => {
     if (filterMode === "ungraded") return s.totalScore === null;
     if (filterMode === "graded") return s.totalScore !== null;
+    if (filterMode === "appeals") return s.openAppealCount > 0;
     return true;
   });
 
   const gradedCount = submissions.filter((s) => s.totalScore !== null).length;
   const ungradedCount = submissions.length - gradedCount;
+  const appealsCount = submissions.filter((s) => s.openAppealCount > 0).length;
   const allAutoGraded = (selectedSubmission?.answers.length ?? 0) > 0 && (selectedSubmission?.answers.every((a) => a.autoGraded) ?? false);
 
   if (loading) {
@@ -304,6 +407,9 @@ export default function GradingPage() {
                 <SelectItem value="all">All ({submissions.length})</SelectItem>
                 <SelectItem value="ungraded">Ungraded ({ungradedCount})</SelectItem>
                 <SelectItem value="graded">Graded ({gradedCount})</SelectItem>
+                {appealsCount > 0 && (
+                  <SelectItem value="appeals">Has Appeals ({appealsCount})</SelectItem>
+                )}
               </SelectContent>
             </Select>
 
@@ -316,6 +422,12 @@ export default function GradingPage() {
                 <Clock className="h-3 w-3" />
                 {ungradedCount} Pending
               </span>
+              {appealsCount > 0 && (
+                <span className="flex items-center gap-1.5 text-xs font-medium text-orange-600 bg-orange-50 dark:bg-orange-950 px-2.5 py-1 rounded-full border border-orange-200 dark:border-orange-800">
+                  <ShieldAlert className="h-3 w-3" />
+                  {appealsCount} Appeals
+                </span>
+              )}
             </div>
           </>
         )}
@@ -395,6 +507,12 @@ export default function GradingPage() {
                           <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-800">
                             <Clock className="h-3 w-3" />
                             Needs Grading
+                          </span>
+                        )}
+                        {sub.openAppealCount > 0 && (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-950 px-2 py-0.5 rounded-full border border-orange-200 dark:border-orange-800">
+                            <ShieldAlert className="h-3 w-3" />
+                            {sub.openAppealCount} open appeal{sub.openAppealCount !== 1 ? "s" : ""}
                           </span>
                         )}
                         {sub.gradedByName && (
@@ -621,6 +739,174 @@ export default function GradingPage() {
                               rows={2}
                               className="resize-none"
                             />
+                          </div>
+                        )}
+
+                        {/* Appeals for this question */}
+                        {answer.appeals.length > 0 && (
+                          <div className="space-y-2">
+                            {answer.appeals.map((appeal) => {
+                              const isExpanded = expandedAppeals[appeal.id];
+                              return (
+                                <div
+                                  key={appeal.id}
+                                  className={`rounded-lg border p-3 space-y-2 ${
+                                    appeal.status === "OPEN"
+                                      ? "border-orange-200 dark:border-orange-800 bg-orange-50/50 dark:bg-orange-950/30"
+                                      : "border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50"
+                                  }`}
+                                >
+                                  <button
+                                    onClick={() => setExpandedAppeals((prev) => ({ ...prev, [appeal.id]: !prev[appeal.id] }))}
+                                    className="w-full flex items-center justify-between cursor-pointer group"
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <ShieldAlert className="h-3.5 w-3.5 text-orange-500 dark:text-orange-400" />
+                                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                                        Appeal by {appeal.student.name || "Student"}
+                                      </span>
+                                      <Badge
+                                        className={`text-[10px] px-1.5 py-0 gap-0.5 ${
+                                          appeal.status === "OPEN"
+                                            ? "bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900 dark:text-amber-400 dark:border-amber-700"
+                                            : appeal.status === "RESOLVED"
+                                              ? "bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-900 dark:text-emerald-400 dark:border-emerald-700"
+                                              : "bg-red-100 text-red-700 border-red-300 dark:bg-red-900 dark:text-red-400 dark:border-red-700"
+                                        }`}
+                                      >
+                                        {appeal.status === "OPEN" ? "Pending" : appeal.status === "RESOLVED" ? "Accepted" : "Denied"}
+                                      </Badge>
+                                      {appeal.messages.length > 0 && (
+                                        <span className="text-[10px] text-gray-400 dark:text-gray-500">
+                                          {appeal.messages.length} message{appeal.messages.length !== 1 ? "s" : ""}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <svg className={`h-3.5 w-3.5 text-gray-400 transition-transform ${isExpanded ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                                  </button>
+
+                                  {isExpanded && (
+                                    <div className="space-y-2 pt-1">
+                                      {/* Original reason */}
+                                      <div className="bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 rounded-md p-2.5">
+                                        <div className="flex items-center gap-2 mb-0.5">
+                                          <span className="text-[10px] font-semibold text-amber-700 dark:text-amber-400">
+                                            {appeal.student.name || "Student"}
+                                          </span>
+                                          <span className="text-[10px] text-amber-500 dark:text-amber-600">
+                                            {formatShortDate(appeal.createdAt)}
+                                          </span>
+                                        </div>
+                                        <p className="text-xs text-amber-800 dark:text-amber-300">{appeal.reason}</p>
+                                      </div>
+
+                                      {/* Messages */}
+                                      {appeal.messages.map((msg) => {
+                                        const isStaff = msg.user.role === "TA" || msg.user.role === "ADMIN";
+                                        return (
+                                          <div
+                                            key={msg.id}
+                                            className={`rounded-md p-2.5 border ${
+                                              isStaff
+                                                ? "bg-indigo-50 dark:bg-indigo-950/50 border-indigo-200 dark:border-indigo-800"
+                                                : "bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700"
+                                            }`}
+                                          >
+                                            <div className="flex items-center gap-1.5 mb-0.5">
+                                              <span className={`text-[10px] font-semibold ${isStaff ? "text-indigo-700 dark:text-indigo-400" : "text-gray-700 dark:text-gray-300"}`}>
+                                                {msg.user.name || "User"}
+                                              </span>
+                                              {isStaff && (
+                                                <Badge className="text-[9px] px-1 py-0 bg-indigo-100 text-indigo-600 border-indigo-200 dark:bg-indigo-900 dark:text-indigo-400 dark:border-indigo-700">
+                                                  {msg.user.role}
+                                                </Badge>
+                                              )}
+                                              <span className="text-[10px] text-gray-400 dark:text-gray-500">
+                                                {formatShortDate(msg.createdAt)}
+                                              </span>
+                                            </div>
+                                            <p className="text-xs text-gray-800 dark:text-gray-200">{msg.content}</p>
+                                          </div>
+                                        );
+                                      })}
+
+                                      {/* Reply + action controls */}
+                                      <div className="space-y-2 pt-1 border-t border-gray-200 dark:border-gray-700">
+                                        <Textarea
+                                          value={appealMessages[appeal.id] || ""}
+                                          onChange={(e) => setAppealMessages((prev) => ({ ...prev, [appeal.id]: e.target.value }))}
+                                          placeholder={appeal.status === "OPEN" ? "Reply or note before resolving..." : "Add a follow-up message..."}
+                                          rows={2}
+                                          className="text-xs"
+                                        />
+                                        {appeal.status === "OPEN" && (
+                                          <div className="flex items-center gap-2">
+                                            <Input
+                                              type="number"
+                                              step="0.5"
+                                              min="0"
+                                              max={answer.maxPoints}
+                                              value={appealNewScores[appeal.id] || ""}
+                                              onChange={(e) => setAppealNewScores((prev) => ({ ...prev, [appeal.id]: e.target.value }))}
+                                              placeholder={`New score (max ${answer.maxPoints})`}
+                                              className="w-40 text-xs"
+                                            />
+                                          </div>
+                                        )}
+                                        <div className="flex items-center gap-1.5">
+                                          {appeal.status === "OPEN" ? (
+                                            <>
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => handleResolveAppeal(appeal.id, "RESOLVED")}
+                                                disabled={resolvingAppeal === appeal.id}
+                                                className="gap-1 text-xs h-7 text-emerald-600 border-emerald-200 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-950"
+                                              >
+                                                {resolvingAppeal === appeal.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
+                                                Accept
+                                              </Button>
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => handleResolveAppeal(appeal.id, "REJECTED")}
+                                                disabled={resolvingAppeal === appeal.id}
+                                                className="gap-1 text-xs h-7 text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-950"
+                                              >
+                                                {resolvingAppeal === appeal.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <XCircle className="h-3 w-3" />}
+                                                Deny
+                                              </Button>
+                                            </>
+                                          ) : (
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              onClick={() => handleResolveAppeal(appeal.id, "OPEN")}
+                                              disabled={resolvingAppeal === appeal.id}
+                                              className="gap-1 text-xs h-7 text-amber-600 border-amber-200 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-800 dark:hover:bg-amber-950"
+                                            >
+                                              {resolvingAppeal === appeal.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <ShieldAlert className="h-3 w-3" />}
+                                              Reopen
+                                            </Button>
+                                          )}
+                                          <div className="flex-1" />
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => handleAppealMessage(appeal.id)}
+                                            disabled={!appealMessages[appeal.id]?.trim()}
+                                            className="gap-1 text-xs h-7"
+                                          >
+                                            <Send className="h-3 w-3" />
+                                            Reply
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
                         )}
                       </div>

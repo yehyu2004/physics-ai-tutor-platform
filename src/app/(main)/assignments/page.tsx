@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { useSession } from "next-auth/react";
+import { useEffectiveSession } from "@/lib/effective-session-context";
 import {
   FileText,
   Plus,
@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   BookOpen,
   Upload,
+  ShieldAlert,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,15 +31,17 @@ interface Assignment {
   _count: { submissions: number; questions: number };
   myScore: number | null;
   mySubmitted: boolean;
+  ungradedCount?: number;
+  openAppealCount?: number;
 }
 
 export default function AssignmentsPage() {
-  const { data: session } = useSession();
+  const effectiveSession = useEffectiveSession();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"ALL" | "QUIZ" | "FILE_UPLOAD">("ALL");
 
-  const userRole = (session?.user as { role?: string })?.role || "STUDENT";
+  const userRole = effectiveSession.role;
 
   useEffect(() => {
     fetch("/api/assignments")
@@ -178,6 +181,18 @@ export default function AssignmentsPage() {
                         <Users className="h-3.5 w-3.5" />
                         {assignment._count.submissions} submissions
                       </span>
+                      {(userRole === "TA" || userRole === "ADMIN") && assignment.ungradedCount !== undefined && assignment.ungradedCount > 0 && (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-800">
+                          <Clock className="h-3 w-3" />
+                          {assignment.ungradedCount} ungraded
+                        </span>
+                      )}
+                      {assignment.openAppealCount !== undefined && assignment.openAppealCount > 0 && (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-950 px-2 py-0.5 rounded-full border border-orange-200 dark:border-orange-800">
+                          <ShieldAlert className="h-3 w-3" />
+                          {assignment.openAppealCount} open appeal{assignment.openAppealCount !== 1 ? "s" : ""}
+                        </span>
+                      )}
                       {assignment.dueDate && (
                         <span className="flex items-center gap-1">
                           <Clock className="h-3.5 w-3.5" />
@@ -187,20 +202,33 @@ export default function AssignmentsPage() {
                     </div>
                   </div>
                   <div className="text-right ml-4 shrink-0">
-                    <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                      <span className={assignment.myScore !== null ? "text-emerald-600 dark:text-emerald-400" : "text-gray-400 dark:text-gray-500"}>
-                        {assignment.myScore !== null ? assignment.myScore : "_"}
-                      </span>
-                      <span className="text-gray-300 dark:text-gray-600">/</span>
-                      {assignment.totalPoints}
-                    </p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">
-                      {assignment.myScore !== null
-                        ? "graded"
-                        : assignment.mySubmitted
-                          ? "submitted"
-                          : "points"}
-                    </p>
+                    {(userRole === "TA" || userRole === "ADMIN") && !assignment.mySubmitted ? (
+                      <>
+                        <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                          {assignment._count.submissions}
+                        </p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">
+                          submission{assignment._count.submissions !== 1 ? "s" : ""}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                          <span className={assignment.myScore !== null ? "text-emerald-600 dark:text-emerald-400" : "text-gray-400 dark:text-gray-500"}>
+                            {assignment.myScore !== null ? assignment.myScore : "_"}
+                          </span>
+                          <span className="text-gray-300 dark:text-gray-600">/</span>
+                          {assignment.totalPoints}
+                        </p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">
+                          {assignment.myScore !== null
+                            ? "graded"
+                            : assignment.mySubmitted
+                              ? "submitted"
+                              : "points"}
+                        </p>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
