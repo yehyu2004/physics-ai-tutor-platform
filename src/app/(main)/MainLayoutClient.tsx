@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { EyeOff } from "lucide-react";
 import Sidebar from "@/components/layout/Sidebar";
@@ -30,7 +30,20 @@ export default function MainLayoutClient({
   realAdminName,
 }: MainLayoutClientProps) {
   const router = useRouter();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("sidebar-collapsed") === "true";
+    }
+    return false;
+  });
+
+  const toggleSidebar = useCallback(() => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem("sidebar-collapsed", String(next));
+      return next;
+    });
+  }, []);
   const [stopping, setStopping] = useState(false);
 
   const handleStopImpersonating = async () => {
@@ -65,7 +78,7 @@ export default function MainLayoutClient({
         userRole={userRole}
         userName={userName}
         collapsed={sidebarCollapsed}
-        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+        onToggleCollapse={toggleSidebar}
       />
       <div
         className={`flex flex-col transition-[margin] duration-300 ease-in-out ${

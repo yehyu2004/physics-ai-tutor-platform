@@ -82,7 +82,20 @@ export default function ChatPageClient({
   const [imageError, setImageError] = useState<string | null>(null);
   const [model, setModel] = useState("gpt-5.2");
   const [searchQuery, setSearchQuery] = useState("");
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpenRaw] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("chat-sidebar-open");
+      return saved !== null ? saved === "true" : true;
+    }
+    return true;
+  });
+  const setSidebarOpen = useCallback((value: boolean | ((prev: boolean) => boolean)) => {
+    setSidebarOpenRaw((prev) => {
+      const next = typeof value === "function" ? value(prev) : value;
+      localStorage.setItem("chat-sidebar-open", String(next));
+      return next;
+    });
+  }, []);
   const [chatMode, setChatMode] = useState<"normal" | "socratic">("normal");
   const [examModeActive, setExamModeActive] = useState(false);
   const [examBannerDismissed, setExamBannerDismissed] = useState(false);
