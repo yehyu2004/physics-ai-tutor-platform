@@ -1,3 +1,6 @@
+-- CreateSchema
+CREATE SCHEMA IF NOT EXISTS "public";
+
 -- CreateEnum
 CREATE TYPE "Role" AS ENUM ('STUDENT', 'TA', 'ADMIN');
 
@@ -12,10 +15,17 @@ CREATE TABLE "User" (
     "id" TEXT NOT NULL,
     "name" TEXT,
     "email" TEXT NOT NULL,
+    "studentId" TEXT,
     "emailVerified" TIMESTAMP(3),
     "image" TEXT,
     "passwordHash" TEXT,
     "role" "Role" NOT NULL DEFAULT 'STUDENT',
+    "isBanned" BOOLEAN NOT NULL DEFAULT false,
+    "isRestricted" BOOLEAN NOT NULL DEFAULT false,
+    "isVerified" BOOLEAN NOT NULL DEFAULT false,
+    "bannedAt" TIMESTAMP(3),
+    "isDeleted" BOOLEAN NOT NULL DEFAULT false,
+    "deletedAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -62,6 +72,8 @@ CREATE TABLE "Conversation" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "title" TEXT NOT NULL DEFAULT 'New Chat',
+    "isDeleted" BOOLEAN NOT NULL DEFAULT false,
+    "deletedAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -74,8 +86,9 @@ CREATE TABLE "Message" (
     "conversationId" TEXT NOT NULL,
     "role" TEXT NOT NULL,
     "content" TEXT NOT NULL,
-    "imageUrl" TEXT,
+    "imageUrls" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "model" TEXT,
+    "mode" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Message_pkey" PRIMARY KEY ("id")
@@ -103,6 +116,7 @@ CREATE TABLE "Assignment" (
     "totalPoints" DOUBLE PRECISION NOT NULL DEFAULT 100,
     "published" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "pdfUrl" TEXT,
     "createdById" TEXT NOT NULL,
 
     CONSTRAINT "Assignment_pkey" PRIMARY KEY ("id")
@@ -118,6 +132,8 @@ CREATE TABLE "AssignmentQuestion" (
     "correctAnswer" TEXT,
     "points" DOUBLE PRECISION NOT NULL DEFAULT 10,
     "order" INTEGER NOT NULL DEFAULT 0,
+    "diagram" JSONB,
+    "imageUrl" TEXT,
 
     CONSTRAINT "AssignmentQuestion_pkey" PRIMARY KEY ("id")
 );
@@ -163,7 +179,7 @@ CREATE TABLE "Rubric" (
 CREATE TABLE "AIConfig" (
     "id" TEXT NOT NULL,
     "provider" TEXT NOT NULL DEFAULT 'openai',
-    "model" TEXT NOT NULL DEFAULT 'gpt-4o',
+    "model" TEXT NOT NULL DEFAULT 'gpt-5-mini',
     "systemPrompt" TEXT,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -171,8 +187,95 @@ CREATE TABLE "AIConfig" (
     CONSTRAINT "AIConfig_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "ProblemSet" (
+    "id" TEXT NOT NULL,
+    "topic" TEXT NOT NULL,
+    "difficulty" INTEGER NOT NULL,
+    "questionType" TEXT NOT NULL,
+    "createdById" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "ProblemSet_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "GeneratedProblem" (
+    "id" TEXT NOT NULL,
+    "problemSetId" TEXT NOT NULL,
+    "questionText" TEXT NOT NULL,
+    "questionType" TEXT NOT NULL,
+    "options" JSONB,
+    "correctAnswer" TEXT NOT NULL,
+    "solution" TEXT NOT NULL,
+    "points" DOUBLE PRECISION NOT NULL DEFAULT 10,
+    "diagram" JSONB,
+
+    CONSTRAINT "GeneratedProblem_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "AuditLog" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "action" TEXT NOT NULL,
+    "details" JSONB,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "AuditLog_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Notification" (
+    "id" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "message" TEXT NOT NULL,
+    "createdById" TEXT NOT NULL,
+    "isGlobal" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Notification_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "NotificationRead" (
+    "id" TEXT NOT NULL,
+    "notificationId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "readAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "NotificationRead_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ExamMode" (
+    "id" TEXT NOT NULL,
+    "isActive" BOOLEAN NOT NULL DEFAULT false,
+    "message" TEXT,
+    "toggledById" TEXT NOT NULL,
+    "toggledAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "ExamMode_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "GradeAppeal" (
+    "id" TEXT NOT NULL,
+    "submissionId" TEXT NOT NULL,
+    "questionId" TEXT,
+    "userId" TEXT NOT NULL,
+    "message" TEXT NOT NULL,
+    "resolved" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "GradeAppeal_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "User_studentId_key" ON "User"("studentId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Account_provider_providerAccountId_key" ON "Account"("provider", "providerAccountId");
@@ -185,6 +288,27 @@ CREATE UNIQUE INDEX "VerificationToken_token_key" ON "VerificationToken"("token"
 
 -- CreateIndex
 CREATE UNIQUE INDEX "VerificationToken_identifier_token_key" ON "VerificationToken"("identifier", "token");
+
+-- CreateIndex
+CREATE INDEX "Conversation_userId_isDeleted_updatedAt_idx" ON "Conversation"("userId", "isDeleted", "updatedAt");
+
+-- CreateIndex
+CREATE INDEX "Message_conversationId_createdAt_idx" ON "Message"("conversationId", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "Submission_userId_submittedAt_idx" ON "Submission"("userId", "submittedAt");
+
+-- CreateIndex
+CREATE INDEX "Submission_assignmentId_idx" ON "Submission"("assignmentId");
+
+-- CreateIndex
+CREATE INDEX "AuditLog_userId_createdAt_idx" ON "AuditLog"("userId", "createdAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "NotificationRead_notificationId_userId_key" ON "NotificationRead"("notificationId", "userId");
+
+-- CreateIndex
+CREATE INDEX "GradeAppeal_submissionId_questionId_idx" ON "GradeAppeal"("submissionId", "questionId");
 
 -- AddForeignKey
 ALTER TABLE "Account" ADD CONSTRAINT "Account_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -224,3 +348,34 @@ ALTER TABLE "SubmissionAnswer" ADD CONSTRAINT "SubmissionAnswer_questionId_fkey"
 
 -- AddForeignKey
 ALTER TABLE "Rubric" ADD CONSTRAINT "Rubric_questionId_fkey" FOREIGN KEY ("questionId") REFERENCES "AssignmentQuestion"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ProblemSet" ADD CONSTRAINT "ProblemSet_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "GeneratedProblem" ADD CONSTRAINT "GeneratedProblem_problemSetId_fkey" FOREIGN KEY ("problemSetId") REFERENCES "ProblemSet"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "AuditLog" ADD CONSTRAINT "AuditLog_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Notification" ADD CONSTRAINT "Notification_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "NotificationRead" ADD CONSTRAINT "NotificationRead_notificationId_fkey" FOREIGN KEY ("notificationId") REFERENCES "Notification"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "NotificationRead" ADD CONSTRAINT "NotificationRead_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ExamMode" ADD CONSTRAINT "ExamMode_toggledById_fkey" FOREIGN KEY ("toggledById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "GradeAppeal" ADD CONSTRAINT "GradeAppeal_submissionId_fkey" FOREIGN KEY ("submissionId") REFERENCES "Submission"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "GradeAppeal" ADD CONSTRAINT "GradeAppeal_questionId_fkey" FOREIGN KEY ("questionId") REFERENCES "AssignmentQuestion"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "GradeAppeal" ADD CONSTRAINT "GradeAppeal_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+

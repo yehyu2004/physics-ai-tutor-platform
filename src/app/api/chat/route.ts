@@ -19,6 +19,13 @@ export async function POST(req: Request) {
       select: { isBanned: true, isRestricted: true },
     });
 
+    if (!user) {
+      return Response.json(
+        { error: "User not found. Please sign out and sign back in." },
+        { status: 401 }
+      );
+    }
+
     if (user?.isBanned) {
       return Response.json(
         { error: "Your account has been suspended. Please contact an administrator." },
