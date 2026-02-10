@@ -264,18 +264,19 @@ export default function CreateAssignmentPage() {
         </CardContent>
       </Card>
 
-      {type === "QUIZ" && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Quiz PDF (Optional)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-neutral-500 mb-3">
-              Upload a PDF with quiz content. Students will see it inline above the questions.
-            </p>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            {type === "QUIZ" ? "Quiz PDF (Optional)" : "Assignment PDF (Optional)"}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-neutral-500 mb-3">
+            {type === "QUIZ"
+              ? "Upload a PDF with quiz content. Students will see it inline above the questions."
+              : "Upload a PDF with assignment instructions. Students will see it when viewing the assignment."}
+          </p>
             {pdfUrl ? (
               <div className="flex items-center gap-3 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
                 <FileText className="h-5 w-5 text-emerald-600 shrink-0" />
@@ -309,7 +310,6 @@ export default function CreateAssignmentPage() {
             )}
           </CardContent>
         </Card>
-      )}
 
       {type === "QUIZ" && (
         <div className="space-y-4">

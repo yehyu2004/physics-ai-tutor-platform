@@ -24,10 +24,12 @@ export async function GET() {
         id: true,
         name: true,
         email: true,
+        studentId: true,
         role: true,
         isBanned: true,
         bannedAt: true,
         isRestricted: true,
+        isVerified: true,
         createdAt: true,
       },
       orderBy: { createdAt: "desc" },
@@ -98,14 +100,35 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ success: true });
     }
 
+    if (action === "verify") {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { isVerified: true },
+      });
+      return NextResponse.json({ success: true });
+    }
+
+    if (action === "unverify") {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { isVerified: false },
+      });
+      return NextResponse.json({ success: true });
+    }
+
     // Role change (existing functionality)
     if (role) {
       if (!["STUDENT", "TA", "ADMIN"].includes(role)) {
         return NextResponse.json({ error: "Invalid role" }, { status: 400 });
       }
+      const data: { role: "STUDENT" | "TA" | "ADMIN"; isVerified?: boolean } = { role };
+      // Auto-verify when promoting to TA or ADMIN
+      if (role === "TA" || role === "ADMIN") {
+        data.isVerified = true;
+      }
       await prisma.user.update({
         where: { id: userId },
-        data: { role },
+        data,
       });
       return NextResponse.json({ success: true });
     }

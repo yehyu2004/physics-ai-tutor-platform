@@ -34,6 +34,7 @@ model User {
   role          Role      @default(STUDENT)
   isBanned      Boolean   @default(false)
   isRestricted  Boolean   @default(false)
+  isVerified    Boolean   @default(false)
   bannedAt      DateTime?
   isDeleted     Boolean   @default(false)
   deletedAt     DateTime?

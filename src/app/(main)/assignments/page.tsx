@@ -28,6 +28,8 @@ interface Assignment {
   createdAt: string;
   createdBy: { name: string | null };
   _count: { submissions: number; questions: number };
+  myScore: number | null;
+  mySubmitted: boolean;
 }
 
 export default function AssignmentsPage() {
@@ -186,9 +188,19 @@ export default function AssignmentsPage() {
                   </div>
                   <div className="text-right ml-4 shrink-0">
                     <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                      <span className={assignment.myScore !== null ? "text-emerald-600 dark:text-emerald-400" : "text-gray-400 dark:text-gray-500"}>
+                        {assignment.myScore !== null ? assignment.myScore : "_"}
+                      </span>
+                      <span className="text-gray-300 dark:text-gray-600">/</span>
                       {assignment.totalPoints}
                     </p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">points</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">
+                      {assignment.myScore !== null
+                        ? "graded"
+                        : assignment.mySubmitted
+                          ? "submitted"
+                          : "points"}
+                    </p>
                   </div>
                 </div>
               </div>

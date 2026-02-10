@@ -14,13 +14,13 @@ import {
   Search,
   Plus,
   ChevronDown,
-  ChevronRight,
   ClipboardList,
   BarChart3,
   Menu,
   X,
   Atom,
   PanelLeftClose,
+  User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -276,16 +276,19 @@ export default function Sidebar({ userRole, userName, collapsed = false, onToggl
 
       {/* User profile */}
       <div className={cn("border-t border-gray-200 dark:border-gray-800", collapsed ? "p-2" : "p-4")}>
-        <div className={cn(
-          "flex items-center rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer",
-          collapsed ? "justify-center p-2" : "gap-3 p-2"
-        )}>
+        <button
+          onClick={() => !collapsed && toggleExpand("__user_menu__")}
+          className={cn(
+            "flex w-full items-center rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer",
+            collapsed ? "justify-center p-2" : "gap-3 p-2"
+          )}
+        >
           <div className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-sm font-medium text-gray-600 dark:text-gray-300 shrink-0">
             {userName?.[0]?.toUpperCase() || "U"}
           </div>
           {!collapsed && (
             <>
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 text-left">
                 <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                   {userName}
                 </p>
@@ -293,10 +296,46 @@ export default function Sidebar({ userRole, userName, collapsed = false, onToggl
                   {userRole.toLowerCase()}
                 </p>
               </div>
-              <ChevronRight className="h-4 w-4 text-gray-400" />
+              <ChevronDown className={cn(
+                "h-4 w-4 text-gray-400 transition-transform duration-200",
+                expandedItems.includes("__user_menu__") ? "rotate-180" : ""
+              )} />
             </>
           )}
-        </div>
+        </button>
+        {!collapsed && (
+          <div className={cn(
+            "overflow-hidden transition-all duration-200",
+            expandedItems.includes("__user_menu__") ? "max-h-24 opacity-100 mt-1" : "max-h-0 opacity-0"
+          )}>
+            <div className="space-y-0.5 pl-2">
+              <Link
+                href="/profile"
+                className={cn(
+                  "flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-sm transition-colors",
+                  pathname === "/profile"
+                    ? "bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-medium"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800"
+                )}
+              >
+                <User className="h-4 w-4" />
+                Profile
+              </Link>
+              <Link
+                href="/settings"
+                className={cn(
+                  "flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-sm transition-colors",
+                  pathname === "/settings"
+                    ? "bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-medium"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800"
+                )}
+              >
+                <Settings className="h-4 w-4" />
+                Settings
+              </Link>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

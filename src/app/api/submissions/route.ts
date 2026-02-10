@@ -2,6 +2,33 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+export async function GET(req: Request) {
+  try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userId = (session.user as { id: string }).id;
+    const { searchParams } = new URL(req.url);
+    const assignmentId = searchParams.get("assignmentId");
+
+    if (!assignmentId) {
+      return NextResponse.json({ error: "assignmentId required" }, { status: 400 });
+    }
+
+    const submission = await prisma.submission.findFirst({
+      where: { assignmentId, userId },
+      include: { answers: true },
+    });
+
+    return NextResponse.json({ submission });
+  } catch (error) {
+    console.error("Get submission error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const session = await auth();
@@ -21,12 +48,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Assignment not found" }, { status: 404 });
     }
 
+    // Delete existing submission if resubmitting
     const existingSubmission = await prisma.submission.findFirst({
       where: { assignmentId, userId },
     });
 
     if (existingSubmission) {
-      return NextResponse.json({ error: "Already submitted" }, { status: 400 });
+      await prisma.submission.delete({
+        where: { id: existingSubmission.id },
+      });
     }
 
     const submission = await prisma.submission.create({

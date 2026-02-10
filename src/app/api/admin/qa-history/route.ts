@@ -20,7 +20,7 @@ export async function GET(req: Request) {
     const conversations = await prisma.conversation.findMany({
       where: userId ? { userId } : {},
       include: {
-        user: { select: { name: true, email: true } },
+        user: { select: { name: true, email: true, isVerified: true } },
         _count: { select: { messages: true } },
       },
       orderBy: { updatedAt: "desc" },
@@ -33,6 +33,7 @@ export async function GET(req: Request) {
         title: c.title,
         userName: c.user.name || "Unknown",
         userEmail: c.user.email,
+        userVerified: c.user.isVerified,
         messageCount: c._count.messages,
         updatedAt: c.updatedAt.toISOString(),
       })),

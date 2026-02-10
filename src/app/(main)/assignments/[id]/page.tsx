@@ -14,6 +14,7 @@ import {
   Download,
   Pencil,
   Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,6 +54,13 @@ interface Assignment {
   _count: { submissions: number };
 }
 
+interface ExistingSubmission {
+  id: string;
+  fileUrl: string | null;
+  submittedAt: string;
+  totalScore: number | null;
+}
+
 export default function AssignmentDetailPage({
   params,
 }: {
@@ -64,10 +72,12 @@ export default function AssignmentDetailPage({
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deletingSubmission, setDeletingSubmission] = useState(false);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [file, setFile] = useState<File | null>(null);
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [existingSubmission, setExistingSubmission] = useState<ExistingSubmission | null>(null);
 
   const userRole = (session?.user as { role?: string })?.role || "STUDENT";
 
@@ -79,7 +89,38 @@ export default function AssignmentDetailPage({
         setLoading(false);
       })
       .catch(() => setLoading(false));
+
+    // Fetch existing submission
+    fetch(`/api/submissions?assignmentId=${params.id}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.submission) {
+            setExistingSubmission(data.submission);
+          }
+        })
+        .catch(() => {});
   }, [params.id]);
+
+  const isLate = (submittedAt: string) => {
+    if (!assignment?.dueDate) return false;
+    return new Date(submittedAt) > new Date(assignment.dueDate);
+  };
+
+  const handleDeleteSubmission = async () => {
+    if (!existingSubmission) return;
+    if (!window.confirm("Are you sure you want to delete your submission? You can resubmit afterward.")) return;
+    setDeletingSubmission(true);
+    try {
+      const res = await fetch(`/api/submissions/${existingSubmission.id}`, { method: "DELETE" });
+      if (res.ok) {
+        setExistingSubmission(null);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setDeletingSubmission(false);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!assignment) return;
@@ -118,6 +159,13 @@ export default function AssignmentDetailPage({
       });
 
       if (res.ok) {
+        const data = await res.json();
+        setExistingSubmission({
+          id: data.submission.id,
+          fileUrl: data.submission.fileUrl,
+          submittedAt: data.submission.submittedAt,
+          totalScore: data.submission.totalScore,
+        });
         setSubmitted(true);
       } else {
         const data = await res.json();
@@ -369,7 +417,7 @@ export default function AssignmentDetailPage({
         </div>
       )}
 
-      {assignment.type === "QUIZ" && userRole === "STUDENT" && (
+      {assignment.type === "QUIZ" && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Attach Your Work (Optional)</CardTitle>
@@ -396,7 +444,63 @@ export default function AssignmentDetailPage({
         </Card>
       )}
 
-      {assignment.type === "FILE_UPLOAD" && (
+      {/* Existing submission display */}
+      {existingSubmission && !submitted && (
+        <Card className="border-emerald-200 dark:border-emerald-800">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
+              <CheckCircle className="h-5 w-5" />
+              Submission Recorded
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+                Submitted: {formatShortDate(existingSubmission.submittedAt)}
+              </span>
+              {isLate(existingSubmission.submittedAt) && (
+                <Badge className="bg-red-100 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-400 dark:border-red-800 gap-1">
+                  <AlertTriangle className="h-3 w-3" />
+                  Late Submission
+                </Badge>
+              )}
+              {existingSubmission.totalScore !== null && (
+                <Badge variant="secondary">
+                  Score: {existingSubmission.totalScore} / {assignment.totalPoints}
+                </Badge>
+              )}
+            </div>
+            {existingSubmission.fileUrl && (
+              <a
+                href={existingSubmission.fileUrl}
+                download
+                className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+              >
+                <Download className="h-4 w-4" />
+                Download your submission
+              </a>
+            )}
+            <div className="flex gap-2 pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDeleteSubmission}
+                disabled={deletingSubmission}
+                className="gap-1.5 text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-950"
+              >
+                {deletingSubmission ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="h-3.5 w-3.5" />
+                )}
+                Delete & Resubmit
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {assignment.type === "FILE_UPLOAD" && !existingSubmission && (
         <Card>
           <CardHeader>
             <CardTitle>Upload Your Submission</CardTitle>
@@ -423,7 +527,7 @@ export default function AssignmentDetailPage({
         </Card>
       )}
 
-      {userRole === "STUDENT" && (
+      {!existingSubmission && (
         <div className="flex justify-end pb-8">
           <Button
             onClick={handleSubmit}

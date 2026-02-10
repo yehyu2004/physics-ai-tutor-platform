@@ -17,6 +17,7 @@ export async function GET() {
         assignment: {
           select: { title: true, type: true, totalPoints: true },
         },
+        gradedBy: { select: { name: true } },
       },
       orderBy: { submittedAt: "desc" },
       take: 100,
@@ -29,6 +30,7 @@ export async function GET() {
       totalPoints: s.assignment.totalPoints,
       score: s.totalScore,
       gradedAt: s.gradedAt?.toISOString() || null,
+      gradedByName: s.gradedBy?.name || null,
       submittedAt: s.submittedAt.toISOString(),
     }));
 

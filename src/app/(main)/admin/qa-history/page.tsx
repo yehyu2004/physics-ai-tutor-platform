@@ -26,6 +26,7 @@ interface ConversationEntry {
   title: string;
   userName: string;
   userEmail: string;
+  userVerified: boolean;
   messageCount: number;
   updatedAt: string;
   messages?: {
@@ -50,6 +51,7 @@ export default function QAHistoryPage() {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [users, setUsers] = useState<UserOption[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>("all");
+  const [verifiedFilter, setVerifiedFilter] = useState<"all" | "verified" | "unverified">("all");
 
   const fetchConversations = useCallback((userId?: string) => {
     setLoading(true);
@@ -115,12 +117,17 @@ export default function QAHistoryPage() {
     }
   };
 
-  const filtered = conversations.filter(
-    (c) =>
+  const filtered = conversations.filter((c) => {
+    const matchesSearch =
       c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.userEmail.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+      c.userEmail.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesVerified =
+      verifiedFilter === "all" ||
+      (verifiedFilter === "verified" && c.userVerified) ||
+      (verifiedFilter === "unverified" && !c.userVerified);
+    return matchesSearch && matchesVerified;
+  });
 
   if (loading && conversations.length === 0) {
     return (
@@ -151,6 +158,17 @@ export default function QAHistoryPage() {
                 {user.name} ({user.email})
               </SelectItem>
             ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={verifiedFilter} onValueChange={(v) => setVerifiedFilter(v as "all" | "verified" | "unverified")}>
+          <SelectTrigger className="w-44">
+            <SelectValue placeholder="All Students" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Students</SelectItem>
+            <SelectItem value="verified">Verified Only</SelectItem>
+            <SelectItem value="unverified">Unverified Only</SelectItem>
           </SelectContent>
         </Select>
 

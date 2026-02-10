@@ -10,6 +10,7 @@ export async function GET() {
     }
 
     const userRole = (session.user as { role?: string }).role;
+    const userId = (session.user as { id: string }).id;
 
     const assignments = await prisma.assignment.findMany({
       where: userRole === "STUDENT" ? { published: true } : {},
@@ -18,10 +19,25 @@ export async function GET() {
       include: {
         createdBy: { select: { name: true } },
         _count: { select: { submissions: true, questions: true } },
+        submissions: {
+          where: { userId },
+          select: { totalScore: true, submittedAt: true },
+          take: 1,
+        },
       },
     });
 
-    return NextResponse.json({ assignments });
+    const formatted = assignments.map((a) => {
+      const mySubmission = a.submissions[0] || null;
+      return {
+        ...a,
+        submissions: undefined,
+        myScore: mySubmission?.totalScore ?? null,
+        mySubmitted: !!mySubmission,
+      };
+    });
+
+    return NextResponse.json({ assignments: formatted });
   } catch (error) {
     console.error("Assignments error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

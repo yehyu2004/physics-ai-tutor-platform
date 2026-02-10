@@ -20,6 +20,7 @@ interface GradeEntry {
   totalPoints: number;
   score: number | null;
   gradedAt: string | null;
+  gradedByName: string | null;
   submittedAt: string;
 }
 
@@ -176,6 +177,11 @@ export default function GradesPage() {
                       <span className="text-xs text-gray-400 dark:text-gray-500">
                         Submitted {formatShortDate(grade.submittedAt)}
                       </span>
+                      {grade.gradedByName && (
+                        <span className="text-xs text-gray-400 dark:text-gray-500">
+                          Graded by {grade.gradedByName}
+                        </span>
+                      )}
                     </div>
                   </div>
 

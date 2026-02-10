@@ -1,5 +1,6 @@
 import type { Config } from "tailwindcss";
 import tailwindcssAnimate from "tailwindcss-animate";
+import colors from "tailwindcss/colors";
 
 const config: Config = {
   darkMode: "class",
@@ -13,6 +14,7 @@ const config: Config = {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+        gray: colors.neutral,
         accent: {
           DEFAULT: "#a855f7",
           light: "#f3e8ff",

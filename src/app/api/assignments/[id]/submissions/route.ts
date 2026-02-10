@@ -17,10 +17,16 @@ export async function GET(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    const assignment = await prisma.assignment.findUnique({
+      where: { id: params.id },
+      select: { title: true, type: true, totalPoints: true, dueDate: true },
+    });
+
     const submissions = await prisma.submission.findMany({
       where: { assignmentId: params.id },
       include: {
         user: { select: { name: true, email: true } },
+        gradedBy: { select: { name: true } },
         answers: {
           include: {
             question: {
@@ -44,6 +50,8 @@ export async function GET(
       userEmail: s.user.email,
       submittedAt: s.submittedAt.toISOString(),
       totalScore: s.totalScore,
+      gradedAt: s.gradedAt?.toISOString() || null,
+      gradedByName: s.gradedBy?.name || null,
       fileUrl: s.fileUrl,
       answers: s.answers.map((a) => ({
         id: a.id,
@@ -57,7 +65,7 @@ export async function GET(
       })),
     }));
 
-    return NextResponse.json({ submissions: formattedSubmissions });
+    return NextResponse.json({ assignment, submissions: formattedSubmissions });
   } catch (error) {
     console.error("Submissions error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

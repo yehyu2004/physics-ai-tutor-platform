@@ -12,6 +12,8 @@ import {
   Shield,
   MessageSquareOff,
   MessageSquare,
+  CheckCircle2,
+  Circle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,10 +38,12 @@ interface User {
   id: string;
   name: string | null;
   email: string;
+  studentId: string | null;
   role: "STUDENT" | "TA" | "ADMIN";
   isBanned: boolean;
   bannedAt: string | null;
   isRestricted: boolean;
+  isVerified: boolean;
   createdAt: string;
 }
 
@@ -72,7 +76,14 @@ export default function AdminUsersPage() {
       if (res.ok) {
         setUsers((prev) =>
           prev.map((u) =>
-            u.id === userId ? { ...u, role: newRole as User["role"] } : u
+            u.id === userId
+              ? {
+                  ...u,
+                  role: newRole as User["role"],
+                  // Auto-verify when promoting to TA/ADMIN
+                  isVerified: newRole === "TA" || newRole === "ADMIN" ? true : u.isVerified,
+                }
+              : u
           )
         );
       }
@@ -124,6 +135,31 @@ export default function AdminUsersPage() {
         setUsers((prev) =>
           prev.map((u) =>
             u.id === userId ? { ...u, isRestricted: !isRestricted } : u
+          )
+        );
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const toggleVerify = async (userId: string, isVerified: boolean) => {
+    setActionLoading(userId);
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          action: isVerified ? "unverify" : "verify",
+        }),
+      });
+      if (res.ok) {
+        setUsers((prev) =>
+          prev.map((u) =>
+            u.id === userId ? { ...u, isVerified: !isVerified } : u
           )
         );
       }
@@ -274,8 +310,18 @@ export default function AdminUsersPage() {
                           Restricted
                         </Badge>
                       )}
+                      {user.isVerified && (
+                        <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800 text-[10px]">
+                          Verified
+                        </Badge>
+                      )}
                     </div>
-                    <p className="text-xs text-gray-400 dark:text-gray-500">{user.email}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">
+                      {user.email}
+                      {user.studentId && (
+                        <span className="ml-2 text-gray-400 dark:text-gray-500">· ID: {user.studentId}</span>
+                      )}
+                    </p>
                   </div>
                 </div>
 
@@ -299,6 +345,29 @@ export default function AdminUsersPage() {
                       <SelectItem value="ADMIN">Admin</SelectItem>
                     </SelectContent>
                   </Select>
+
+                  {/* Verify/Unverify button */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={isSelf || isLoading}
+                    onClick={() => toggleVerify(user.id, user.isVerified)}
+                    className={`gap-1.5 text-xs rounded-lg ${
+                      user.isVerified
+                        ? "border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950"
+                        : "border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800"
+                    }`}
+                    title={user.isVerified ? "Remove verified status" : "Mark as verified course student"}
+                  >
+                    {isLoading ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : user.isVerified ? (
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                    ) : (
+                      <Circle className="h-3.5 w-3.5" />
+                    )}
+                    {user.isVerified ? "Verified" : "Verify"}
+                  </Button>
 
                   {/* Restrict/Unrestrict chat button */}
                   <Button
