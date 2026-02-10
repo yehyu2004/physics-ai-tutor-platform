@@ -230,7 +230,7 @@ export default function AssignmentDetailPage({
                 Grade ({assignment._count.submissions})
               </Button>
             </Link>
-            <Button variant="outline" size="sm" onClick={handleDelete} disabled={deleting} className="text-red-600 hover:text-red-700 hover:bg-red-50">
+            <Button variant="outline" size="sm" onClick={handleDelete} disabled={deleting} className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950">
               <Trash2 className="h-4 w-4 mr-2" />
               {deleting ? "Deleting..." : "Delete"}
             </Button>
@@ -291,7 +291,7 @@ export default function AssignmentDetailPage({
                   <div className="my-3 flex justify-center">
                     {q.diagram.type === "svg" ? (
                       <div
-                        className="rounded-lg border border-gray-200 bg-white p-4 overflow-auto max-w-full"
+                        className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 overflow-auto max-w-full"
                         dangerouslySetInnerHTML={{ __html: q.diagram.content }}
                       />
                     ) : (
@@ -305,7 +305,7 @@ export default function AssignmentDetailPage({
                     <img
                       src={q.imageUrl}
                       alt="Question diagram"
-                      className="rounded-lg max-w-full border border-gray-200"
+                      className="rounded-lg max-w-full border border-gray-200 dark:border-gray-700"
                     />
                   </div>
                 )}

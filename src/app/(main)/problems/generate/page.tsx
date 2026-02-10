@@ -269,24 +269,24 @@ export default function ProblemGeneratorPage() {
           <div className="p-2.5 rounded-xl bg-gray-900 shadow-sm">
             <Sparkles className="h-5 w-5 text-white" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
             Problem Generator
           </h1>
         </div>
-        <p className="text-sm text-gray-500 mt-2 ml-[52px]">
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 ml-[52px]">
           Generate physics problems using AI for assignments and practice
         </p>
       </div>
 
       {/* Configuration */}
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-        <div className="px-6 py-4 border-b border-gray-100">
-          <h2 className="text-sm font-semibold text-gray-700">Configuration</h2>
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden shadow-sm">
+        <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Configuration</h2>
         </div>
         <div className="p-6 space-y-6">
           {/* Topic Selection */}
           <div className="space-y-3">
-            <Label className="text-sm font-semibold text-gray-700">Physics Topic</Label>
+            <Label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Physics Topic</Label>
             <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
               {topics.map((t) => (
                 <button
@@ -294,11 +294,11 @@ export default function ProblemGeneratorPage() {
                   onClick={() => setTopic(t)}
                   className={`flex items-center gap-2 px-3 py-2.5 text-xs font-medium rounded-lg border transition-colors ${
                     topic === t
-                      ? "bg-gray-900 border-gray-900 text-white shadow-sm"
-                      : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300"
+                      ? "bg-gray-900 dark:bg-gray-100 border-gray-900 dark:border-gray-100 text-white dark:text-gray-900 shadow-sm"
+                      : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600"
                   }`}
                 >
-                  <span className={topic === t ? "text-gray-300" : "text-gray-400"}>
+                  <span className={topic === t ? "text-gray-300 dark:text-gray-600" : "text-gray-400 dark:text-gray-500"}>
                     {topicIcons[t] || <Atom className="h-4 w-4" />}
                   </span>
                   <span className="truncate">{t}</span>
@@ -309,7 +309,7 @@ export default function ProblemGeneratorPage() {
 
           {/* Difficulty Selection */}
           <div className="space-y-3">
-            <Label className="text-sm font-semibold text-gray-700">Difficulty Level</Label>
+            <Label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Difficulty Level</Label>
             <div className="flex gap-2">
               {difficultyConfig.map((d) => (
                 <button
@@ -318,7 +318,7 @@ export default function ProblemGeneratorPage() {
                   className={`flex-1 py-2.5 text-xs font-semibold rounded-lg border transition-colors ${
                     difficulty === d.value
                       ? d.color + " shadow-sm"
-                      : "bg-white border-gray-200 text-gray-500 hover:bg-gray-50"
+                      : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
                   }`}
                 >
                   {d.label}
@@ -330,9 +330,9 @@ export default function ProblemGeneratorPage() {
           {/* Type + Count Row */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="text-sm font-semibold text-gray-700">Question Type</Label>
+              <Label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Question Type</Label>
               <Select value={questionType} onValueChange={setQuestionType}>
-                <SelectTrigger className="border-gray-200 rounded-lg focus:ring-1 focus:ring-gray-300">
+                <SelectTrigger className="border-gray-200 dark:border-gray-700 rounded-lg focus:ring-1 focus:ring-gray-300 dark:focus:ring-gray-600">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -344,14 +344,14 @@ export default function ProblemGeneratorPage() {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-semibold text-gray-700">Number of Questions</Label>
+              <Label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Number of Questions</Label>
               <Input
                 type="number"
                 min={1}
                 max={10}
                 value={count}
                 onChange={(e) => setCount(Number(e.target.value))}
-                className="border-gray-200 rounded-lg focus-visible:ring-1 focus-visible:ring-gray-300"
+                className="border-gray-200 dark:border-gray-700 rounded-lg focus-visible:ring-1 focus-visible:ring-gray-300 dark:focus-visible:ring-gray-600"
               />
             </div>
           </div>
@@ -373,19 +373,19 @@ export default function ProblemGeneratorPage() {
 
       {/* Loading State with streaming preview */}
       {loading && (
-        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-          <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-3">
-            <Loader2 className="h-4 w-4 animate-spin text-gray-500" />
-            <p className="text-sm font-medium text-gray-700">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden shadow-sm">
+          <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center gap-3">
+            <Loader2 className="h-4 w-4 animate-spin text-gray-500 dark:text-gray-400" />
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Generating {count} {topic} problems...
             </p>
           </div>
           {hasStreamText ? (
-            <pre ref={streamRef} className="p-6 text-xs font-mono text-gray-500 whitespace-pre-wrap max-h-80 overflow-y-auto leading-relaxed" />
+            <pre ref={streamRef} className="p-6 text-xs font-mono text-gray-500 dark:text-gray-400 whitespace-pre-wrap max-h-80 overflow-y-auto leading-relaxed" />
           ) : (
             <div className="p-10 text-center">
               <Sparkles className="h-7 w-7 text-gray-300 animate-pulse mx-auto mb-2" />
-              <p className="text-xs text-gray-400">Waiting for AI response...</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">Waiting for AI response...</p>
             </div>
           )}
         </div>
@@ -395,9 +395,9 @@ export default function ProblemGeneratorPage() {
       {problems.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               Generated Problems
-              <span className="ml-2 text-sm font-normal text-gray-400">
+              <span className="ml-2 text-sm font-normal text-gray-400 dark:text-gray-500">
                 ({problems.length})
               </span>
             </h2>
@@ -424,19 +424,19 @@ export default function ProblemGeneratorPage() {
           {problems.map((problem, index) => (
             <div
               key={problem.id || index}
-              className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm"
+              className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden shadow-sm"
               style={{ animationDelay: `${index * 100}ms` }}
             >
               {/* Problem Header */}
-              <div className="flex items-center justify-between px-6 py-3 bg-gray-50 border-b border-gray-100">
+              <div className="flex items-center justify-between px-6 py-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-800">
                 <div className="flex items-center gap-2.5">
-                  <span className="flex items-center justify-center w-7 h-7 rounded-full bg-gray-200 text-gray-700 text-xs font-bold">
+                  <span className="flex items-center justify-center w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-bold">
                     {index + 1}
                   </span>
-                  <span className="text-sm font-medium text-gray-600">
+                  <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
                     Problem {index + 1}
                   </span>
-                  <span className="text-xs text-gray-400">
+                  <span className="text-xs text-gray-400 dark:text-gray-500">
                     {problem.points} pts
                   </span>
                 </div>
@@ -447,7 +447,7 @@ export default function ProblemGeneratorPage() {
                   className={`gap-1.5 text-xs ${
                     copied === index
                       ? "text-emerald-600"
-                      : "text-gray-500 hover:text-gray-700"
+                      : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                   }`}
                 >
                   {copied === index ? (
@@ -463,14 +463,14 @@ export default function ProblemGeneratorPage() {
               <div className="p-6 space-y-4">
                 <MarkdownContent
                   content={problem.questionText}
-                  className="text-sm text-gray-800 leading-relaxed"
+                  className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed"
                 />
 
                 {problem.diagram && (
                   <div className="my-3 flex justify-center">
                     {problem.diagram.type === "svg" ? (
                       <div
-                        className="rounded-lg border border-gray-200 bg-white p-4 overflow-auto max-w-full"
+                        className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 overflow-auto max-w-full"
                         dangerouslySetInnerHTML={{ __html: problem.diagram.content }}
                       />
                     ) : (
@@ -484,12 +484,12 @@ export default function ProblemGeneratorPage() {
                     {problem.options.map((opt, i) => (
                       <div
                         key={i}
-                        className="flex items-start gap-2.5 px-4 py-2.5 rounded-lg bg-gray-50 border border-gray-100"
+                        className="flex items-start gap-2.5 px-4 py-2.5 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-800"
                       >
-                        <span className="flex items-center justify-center w-5 h-5 rounded-full bg-gray-200 text-gray-700 text-xs font-bold shrink-0 mt-0.5">
+                        <span className="flex items-center justify-center w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-bold shrink-0 mt-0.5">
                           {String.fromCharCode(65 + i)}
                         </span>
-                        <MarkdownContent content={opt} className="text-sm text-gray-700" />
+                        <MarkdownContent content={opt} className="text-sm text-gray-700 dark:text-gray-300" />
                       </div>
                     ))}
                   </div>
@@ -502,11 +502,11 @@ export default function ProblemGeneratorPage() {
                   <MarkdownContent content={problem.correctAnswer} className="text-sm text-emerald-800 font-medium" />
                 </div>
 
-                <div className="rounded-lg p-4 bg-gray-50 border border-gray-200">
-                  <p className="text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wider">
+                <div className="rounded-lg p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                  <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 uppercase tracking-wider">
                     Solution
                   </p>
-                  <MarkdownContent content={problem.solution} className="text-sm text-gray-700 leading-relaxed" />
+                  <MarkdownContent content={problem.solution} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed" />
                 </div>
               </div>
             </div>
@@ -515,49 +515,49 @@ export default function ProblemGeneratorPage() {
       )}
 
       {/* Problem Bank */}
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden shadow-sm">
         <button
           onClick={loadPastSets}
-          className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+          className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
         >
           <div className="flex items-center gap-2.5">
-            <Sparkles className="h-4 w-4 text-gray-500" />
-            <h2 className="text-sm font-semibold text-gray-700">Problem Bank</h2>
+            <Sparkles className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Problem Bank</h2>
             {pastSets.length > 0 && (
-              <span className="text-xs text-gray-400">({pastSets.length} sets)</span>
+              <span className="text-xs text-gray-400 dark:text-gray-500">({pastSets.length} sets)</span>
             )}
           </div>
-          <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${showPast ? "rotate-180" : ""}`} />
+          <ChevronDown className={`h-4 w-4 text-gray-400 dark:text-gray-500 transition-transform duration-200 ${showPast ? "rotate-180" : ""}`} />
         </button>
 
         {loadingPast && (
           <div className="px-6 py-8 text-center">
-            <Loader2 className="h-5 w-5 animate-spin text-gray-400 mx-auto" />
+            <Loader2 className="h-5 w-5 animate-spin text-gray-400 dark:text-gray-500 mx-auto" />
           </div>
         )}
 
         {showPast && pastSets.length === 0 && !loadingPast && (
           <div className="px-6 py-8 text-center">
-            <p className="text-sm text-gray-400">No saved problem sets yet. Generate some problems above!</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500">No saved problem sets yet. Generate some problems above!</p>
           </div>
         )}
 
         {showPast && pastSets.length > 0 && (
-          <div className="border-t border-gray-100">
+          <div className="border-t border-gray-100 dark:border-gray-800">
             {pastSets.map((ps) => (
               <button
                 key={ps.id}
                 onClick={() => loadProblemSet(ps)}
-                className="w-full px-6 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-b-0 text-left"
+                className="w-full px-6 py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-b border-gray-50 dark:border-gray-800 last:border-b-0 text-left"
               >
                 <div>
-                  <p className="text-sm font-medium text-gray-800">{ps.topic}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">
+                  <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{ps.topic}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
                     {ps.problems.length} problems &middot; {ps.questionType} &middot; Difficulty {ps.difficulty}/5
                     {ps.createdBy && ` &middot; by ${ps.createdBy}`}
                   </p>
                 </div>
-                <span className="text-xs text-gray-400 shrink-0 ml-4">
+                <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0 ml-4">
                   {new Date(ps.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                 </span>
               </button>

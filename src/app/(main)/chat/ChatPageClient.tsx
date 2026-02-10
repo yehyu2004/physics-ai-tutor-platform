@@ -343,7 +343,7 @@ export default function ChatPageClient({
       {/* Conversation Sidebar */}
       <div
         className={cn(
-          "bg-white border-r border-gray-100 flex flex-col transition-all duration-300",
+          "bg-white dark:bg-gray-950 border-r border-gray-100 dark:border-gray-800 flex flex-col transition-all duration-300",
           "fixed inset-y-0 left-0 z-40 md:relative md:z-0",
           sidebarOpen ? "translate-x-0 w-72" : "-translate-x-full w-72 md:translate-x-0 md:w-0 md:border-r-0 md:overflow-hidden"
         )}
@@ -351,7 +351,7 @@ export default function ChatPageClient({
         {/* Sidebar Header */}
         <div className="p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-medium text-gray-900">Conversations</h2>
+            <h2 className="text-sm font-medium text-gray-900 dark:text-gray-100">Conversations</h2>
             <Button
               onClick={createNewChat}
               size="sm"
@@ -363,12 +363,12 @@ export default function ChatPageClient({
           </div>
           {/* Search Bar */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 dark:text-gray-500" />
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search..."
-              className="pl-9 h-8 bg-gray-50 border-gray-100 rounded-lg text-sm focus-visible:ring-gray-300"
+              className="pl-9 h-8 bg-gray-50 dark:bg-gray-800 border-gray-100 dark:border-gray-800 rounded-lg text-sm focus-visible:ring-gray-300"
             />
           </div>
         </div>
@@ -386,8 +386,8 @@ export default function ChatPageClient({
                 className={cn(
                   "w-full text-left rounded-lg px-3 py-2 transition-all group cursor-pointer",
                   activeConversationId === conv.id
-                    ? "bg-gray-50 font-semibold"
-                    : "hover:bg-gray-50/50"
+                    ? "bg-gray-50 dark:bg-gray-800 font-semibold"
+                    : "hover:bg-gray-50/50 dark:hover:bg-gray-800/50"
                 )}
               >
                 <div className="flex items-start justify-between gap-2">
@@ -397,19 +397,19 @@ export default function ChatPageClient({
                       className={cn(
                         "text-sm truncate leading-tight",
                         activeConversationId === conv.id
-                          ? "font-semibold text-gray-900"
-                          : "font-normal text-gray-600"
+                          ? "font-semibold text-gray-900 dark:text-gray-100"
+                          : "font-normal text-gray-600 dark:text-gray-400"
                       )}
                     >
                       {conv.title}
                     </p>
-                    <p className="text-xs text-gray-400 mt-0.5">
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
                       {formatRelativeDate(conv.updatedAt)}
                     </p>
                   </div>
                   <button
                     onClick={(e) => deleteConversation(conv.id, e)}
-                    className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-gray-200 text-gray-400 hover:text-gray-600 transition-all shrink-0"
+                    className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-all shrink-0"
                   >
                     <Trash2 className="h-3 w-3" />
                   </button>
@@ -419,13 +419,13 @@ export default function ChatPageClient({
             {filteredConversations.length === 0 && (
               <div className="text-center py-8 px-4">
                 <MessageSquare className="h-6 w-6 text-gray-300 mx-auto mb-2" />
-                <p className="text-sm text-gray-400">
+                <p className="text-sm text-gray-400 dark:text-gray-500">
                   {searchQuery ? "No matching conversations" : "No conversations yet"}
                 </p>
                 {searchQuery && (
                   <button
                     onClick={() => setSearchQuery("")}
-                    className="text-xs text-gray-500 hover:text-gray-700 mt-1 underline"
+                    className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 mt-1 underline"
                   >
                     Clear search
                   </button>
@@ -437,26 +437,26 @@ export default function ChatPageClient({
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col min-w-0 bg-white">
+      <div className="flex-1 flex flex-col min-w-0 bg-white dark:bg-gray-950">
         {/* Chat Header */}
-        <div className="h-14 border-b border-gray-100 flex items-center justify-between px-4 shrink-0 bg-white">
+        <div className="h-14 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between px-4 shrink-0 bg-white dark:bg-gray-950">
           <div className="flex items-center gap-3">
             {/* Conversation list toggle */}
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-1.5 rounded-lg hover:bg-gray-50 transition-colors"
+              className="p-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
             >
               {sidebarOpen ? (
-                <PanelLeftClose className="h-5 w-5 text-gray-500" />
+                <PanelLeftClose className="h-5 w-5 text-gray-500 dark:text-gray-400" />
               ) : (
-                <PanelLeftOpen className="h-5 w-5 text-gray-500" />
+                <PanelLeftOpen className="h-5 w-5 text-gray-500 dark:text-gray-400" />
               )}
             </button>
             <div>
-              <h2 className="text-sm font-medium text-gray-900 leading-tight">
+              <h2 className="text-sm font-medium text-gray-900 dark:text-gray-100 leading-tight">
                 {activeConversation?.title || "New Conversation"}
               </h2>
-              <p className="text-xs text-gray-400">Physics AI Tutor</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">Physics AI Tutor</p>
             </div>
           </div>
 
@@ -483,14 +483,14 @@ export default function ChatPageClient({
             )}
 
             {/* Model Selector - Minimal Pill */}
-            <div className="flex items-center bg-gray-100 rounded-full p-0.5">
+            <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-full p-0.5">
               <button
                 onClick={() => setModel("gpt-5-mini")}
                 className={cn(
                   "flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all",
                   model === "gpt-5-mini"
-                    ? "bg-white text-gray-900 shadow-sm"
-                    : "text-gray-500 hover:text-gray-700"
+                    ? "bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 shadow-sm"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700"
                 )}
               >
                 <Sparkles className="h-3 w-3" />
@@ -502,8 +502,8 @@ export default function ChatPageClient({
                 className={cn(
                   "flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all",
                   model === "claude-haiku-4-5-20251001"
-                    ? "bg-white text-gray-900 shadow-sm"
-                    : "text-gray-500 hover:text-gray-700"
+                    ? "bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 shadow-sm"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700"
                 )}
               >
                 <Atom className="h-3 w-3" />
@@ -541,13 +541,13 @@ export default function ChatPageClient({
             {/* Empty State */}
             {messages.length === 0 && (
               <div className="flex flex-col items-center justify-center py-20 px-4">
-                <div className="h-16 w-16 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center mb-6">
-                  <Atom className="h-8 w-8 text-gray-400" />
+                <div className="h-16 w-16 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-800 flex items-center justify-center mb-6">
+                  <Atom className="h-8 w-8 text-gray-400 dark:text-gray-500" />
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-1">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1">
                   Start a Conversation
                 </h3>
-                <p className="text-sm text-gray-400 text-center max-w-sm mb-10 leading-relaxed">
+                <p className="text-sm text-gray-400 dark:text-gray-500 text-center max-w-sm mb-10 leading-relaxed">
                   Ask me anything about physics -- mechanics, electromagnetism,
                   thermodynamics, optics, quantum mechanics, and more.
                 </p>
@@ -558,12 +558,12 @@ export default function ChatPageClient({
                     <button
                       key={topic.label}
                       onClick={() => handleSuggestedTopic(topic.label)}
-                      className="flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-100 hover:border-gray-200 hover:bg-gray-50 transition-all text-left group"
+                      className="flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all text-left group"
                     >
-                      <div className="h-8 w-8 rounded-lg bg-gray-50 flex items-center justify-center shrink-0">
-                        <topic.icon className="h-4 w-4 text-gray-400" />
+                      <div className="h-8 w-8 rounded-lg bg-gray-50 dark:bg-gray-800 flex items-center justify-center shrink-0">
+                        <topic.icon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                       </div>
-                      <span className="text-sm text-gray-600 group-hover:text-gray-900 transition-colors">
+                      <span className="text-sm text-gray-600 dark:text-gray-400 group-hover:text-gray-900 transition-colors">
                         {topic.label}
                       </span>
                     </button>
@@ -571,7 +571,7 @@ export default function ChatPageClient({
                 </div>
 
                 {/* Upload hint */}
-                <div className="flex items-center gap-2 mt-10 text-xs text-gray-400">
+                <div className="flex items-center gap-2 mt-10 text-xs text-gray-400 dark:text-gray-500">
                   <ImageIcon className="h-3.5 w-3.5" />
                   Upload up to 5 images of a problem for visual analysis
                 </div>
@@ -590,8 +590,8 @@ export default function ChatPageClient({
                 >
                   {/* AI Avatar */}
                   {msg.role === "assistant" && (
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100 self-end">
-                      <Bot className="h-3.5 w-3.5 text-gray-500" />
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 self-end">
+                      <Bot className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
                     </div>
                   )}
 
@@ -599,8 +599,8 @@ export default function ChatPageClient({
                     className={cn(
                       "text-sm leading-relaxed overflow-hidden",
                       msg.role === "user"
-                        ? "max-w-[75%] bg-gray-100 text-gray-900 rounded-2xl rounded-br-md px-4 py-3"
-                        : "flex-1 min-w-0 text-gray-900 py-1"
+                        ? "max-w-[75%] bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-2xl rounded-br-md px-4 py-3"
+                        : "flex-1 min-w-0 text-gray-900 dark:text-gray-100 py-1"
                     )}
                   >
                     {msg.imageUrls && msg.imageUrls.length > 0 && (
@@ -662,14 +662,14 @@ export default function ChatPageClient({
 
         {/* Image Previews */}
         {imagePreviews.length > 0 && (
-          <div className="px-4 py-2 border-t border-gray-100">
+          <div className="px-4 py-2 border-t border-gray-100 dark:border-gray-800">
             <div className="max-w-3xl mx-auto flex gap-2 flex-wrap">
               {imagePreviews.map((preview, idx) => (
                 <div key={idx} className="relative inline-block">
                   <img
                     src={preview}
                     alt={`Preview ${idx + 1}`}
-                    className="h-20 rounded-lg object-contain border border-gray-200"
+                    className="h-20 rounded-lg object-contain border border-gray-200 dark:border-gray-700"
                   />
                   <button
                     onClick={() => removeImage(idx)}
@@ -679,7 +679,7 @@ export default function ChatPageClient({
                   </button>
                 </div>
               ))}
-              <span className="self-end text-xs text-gray-400 pb-1">
+              <span className="self-end text-xs text-gray-400 dark:text-gray-500 pb-1">
                 {imagePreviews.length}/{MAX_IMAGES}
               </span>
             </div>
@@ -689,7 +689,7 @@ export default function ChatPageClient({
         {/* Input Area - Clean Card */}
         <div className="p-4">
           <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-2 flex items-end gap-2">
+            <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-2 flex items-end gap-2">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -701,7 +701,7 @@ export default function ChatPageClient({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg hover:bg-gray-50 text-gray-400 hover:text-gray-600 transition-colors"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
               >
                 <ImageIcon className="h-4 w-4" />
               </button>
@@ -716,7 +716,7 @@ export default function ChatPageClient({
                 placeholder="Ask a physics question..."
                 disabled={loading}
                 rows={1}
-                className="flex-1 resize-none bg-transparent text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none py-2 px-1 max-h-32 leading-relaxed disabled:opacity-50"
+                className="flex-1 resize-none bg-transparent text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none py-2 px-1 max-h-32 leading-relaxed disabled:opacity-50"
                 style={{ minHeight: "36px" }}
               />
               <button
@@ -725,14 +725,14 @@ export default function ChatPageClient({
                 className={cn(
                   "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-all",
                   loading || (!input.trim() && !imageFiles.length)
-                    ? "bg-gray-50 text-gray-300 cursor-not-allowed"
+                    ? "bg-gray-50 dark:bg-gray-800 text-gray-300 cursor-not-allowed"
                     : "bg-gray-900 hover:bg-gray-800 text-white"
                 )}
               >
                 <Send className="h-4 w-4" />
               </button>
             </div>
-            <p className="text-center text-xs text-gray-400 mt-2">
+            <p className="text-center text-xs text-gray-400 dark:text-gray-500 mt-2">
               Press Enter to send, Shift+Enter for new line
             </p>
           </form>

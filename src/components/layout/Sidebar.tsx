@@ -131,8 +131,8 @@ export default function Sidebar({ userRole, userName, collapsed = false, onToggl
             className={cn(
               "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
               active
-                ? "bg-gray-50 text-gray-900 font-semibold"
-                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                ? "bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-semibold"
+                : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100"
             )}
           >
             <item.icon className="h-5 w-5 shrink-0" />
@@ -152,7 +152,7 @@ export default function Sidebar({ userRole, userName, collapsed = false, onToggl
               expanded ? "max-h-40 opacity-100" : "max-h-0 opacity-0"
             )}
           >
-            <div className="ml-8 mt-1 space-y-0.5 border-l border-gray-200 pl-3">
+            <div className="ml-8 mt-1 space-y-0.5 border-l border-gray-200 dark:border-gray-700 pl-3">
               {item.children
                 .filter((child) => {
                   if (child.href === "/assignments/create") {
@@ -167,8 +167,8 @@ export default function Sidebar({ userRole, userName, collapsed = false, onToggl
                     className={cn(
                       "block rounded-lg px-3 py-1.5 text-sm transition-colors",
                       pathname === child.href
-                        ? "text-gray-900 font-medium"
-                        : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
+                        ? "text-gray-900 dark:text-gray-100 font-medium"
+                        : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800"
                     )}
                   >
                     {child.label}
@@ -188,8 +188,8 @@ export default function Sidebar({ userRole, userName, collapsed = false, onToggl
         className={cn(
           "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
           active
-            ? "bg-gray-50 text-gray-900 font-semibold"
-            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
+            ? "bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-semibold"
+            : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100",
           collapsed && "justify-center px-2"
         )}
       >
@@ -200,23 +200,23 @@ export default function Sidebar({ userRole, userName, collapsed = false, onToggl
   };
 
   const sidebarContent = (
-    <div className="flex h-full flex-col bg-white">
+    <div className="flex h-full flex-col bg-white dark:bg-gray-950">
       {/* Logo and collapse */}
       <div className={cn("flex items-center justify-between pt-5 pb-4", collapsed ? "px-3" : "px-5")}>
         <Link
           href="/dashboard"
           className="flex items-center gap-2.5"
         >
-          <Atom className="h-6 w-6 text-gray-900 shrink-0" />
+          <Atom className="h-6 w-6 text-gray-900 dark:text-gray-100 shrink-0" />
           {!collapsed && (
-            <span className="text-lg font-semibold text-gray-900 tracking-tight">
+            <span className="text-lg font-semibold text-gray-900 dark:text-gray-100 tracking-tight">
               PhysTutor
             </span>
           )}
         </Link>
         <button
           onClick={onToggleCollapse}
-          className="hidden lg:flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition-colors"
+          className="hidden lg:flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           <PanelLeftClose className={cn("h-4 w-4 transition-transform duration-300", collapsed && "rotate-180")} />
@@ -229,7 +229,7 @@ export default function Sidebar({ userRole, userName, collapsed = false, onToggl
           <Button
             variant="outline"
             className={cn(
-              "w-full justify-center gap-2 rounded-lg border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900 h-9 text-sm font-medium",
+              "w-full justify-center gap-2 rounded-lg border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 h-9 text-sm font-medium",
               collapsed && "px-0"
             )}
             title="New Conversation"
@@ -247,9 +247,9 @@ export default function Sidebar({ userRole, userName, collapsed = false, onToggl
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
             <Input
               placeholder="Search..."
-              className="pl-9 pr-12 h-9 bg-white border-gray-200 rounded-lg text-sm placeholder:text-gray-400 focus:border-gray-300 focus:ring-gray-200"
+              className="pl-9 pr-12 h-9 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 rounded-lg text-sm placeholder:text-gray-400 focus:border-gray-300 focus:ring-gray-200"
             />
-            <kbd className="pointer-events-none absolute right-2.5 top-2 inline-flex h-5 items-center rounded border border-gray-200 bg-gray-50 px-1.5 text-[10px] font-medium text-gray-400">
+            <kbd className="pointer-events-none absolute right-2.5 top-2 inline-flex h-5 items-center rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-1.5 text-[10px] font-medium text-gray-400">
               &#8984;K
             </kbd>
           </div>
@@ -262,7 +262,7 @@ export default function Sidebar({ userRole, userName, collapsed = false, onToggl
           {sections.map((section) => (
             <div key={section.label}>
               {!collapsed && (
-                <p className="px-3 mb-2 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+                <p className="px-3 mb-2 text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
                   {section.label}
                 </p>
               )}
@@ -275,21 +275,21 @@ export default function Sidebar({ userRole, userName, collapsed = false, onToggl
       </ScrollArea>
 
       {/* User profile */}
-      <div className={cn("border-t border-gray-200", collapsed ? "p-2" : "p-4")}>
+      <div className={cn("border-t border-gray-200 dark:border-gray-800", collapsed ? "p-2" : "p-4")}>
         <div className={cn(
-          "flex items-center rounded-lg hover:bg-gray-50 transition-colors cursor-pointer",
+          "flex items-center rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer",
           collapsed ? "justify-center p-2" : "gap-3 p-2"
         )}>
-          <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-600 shrink-0">
+          <div className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-sm font-medium text-gray-600 dark:text-gray-300 shrink-0">
             {userName?.[0]?.toUpperCase() || "U"}
           </div>
           {!collapsed && (
             <>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                   {userName}
                 </p>
-                <p className="text-xs text-gray-500 capitalize">
+                <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
                   {userRole.toLowerCase()}
                 </p>
               </div>
@@ -305,13 +305,13 @@ export default function Sidebar({ userRole, userName, collapsed = false, onToggl
     <>
       {/* Mobile toggle */}
       <button
-        className="fixed top-4 left-4 z-50 lg:hidden rounded-lg p-2 bg-white border border-gray-200 shadow-sm hover:bg-gray-50 transition-colors"
+        className="fixed top-4 left-4 z-50 lg:hidden rounded-lg p-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
         onClick={() => setMobileOpen(!mobileOpen)}
       >
         {mobileOpen ? (
-          <X className="h-5 w-5 text-gray-700" />
+          <X className="h-5 w-5 text-gray-700 dark:text-gray-300" />
         ) : (
-          <Menu className="h-5 w-5 text-gray-700" />
+          <Menu className="h-5 w-5 text-gray-700 dark:text-gray-300" />
         )}
       </button>
 
@@ -329,11 +329,11 @@ export default function Sidebar({ userRole, userName, collapsed = false, onToggl
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed left-0 top-0 z-40 h-screen border-r border-gray-200 bg-white transition-all duration-300 ease-in-out lg:translate-x-0",
+          "fixed left-0 top-0 z-40 h-screen border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 transition-all duration-300 ease-in-out lg:translate-x-0",
           collapsed ? "lg:w-[68px]" : "lg:w-64",
           mobileOpen ? "translate-x-0 shadow-xl w-64" : "-translate-x-full w-64"
-        )}
-      >
+        )}>
+
         {sidebarContent}
       </aside>
     </>

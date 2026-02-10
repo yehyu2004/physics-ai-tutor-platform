@@ -355,7 +355,7 @@ export default function CreateAssignmentPage() {
                       <img
                         src={q.imagePreview}
                         alt="Question image"
-                        className="rounded-lg border border-gray-200 max-h-40"
+                        className="rounded-lg border border-gray-200 dark:border-gray-700 max-h-40"
                       />
                       <button
                         type="button"
@@ -366,9 +366,9 @@ export default function CreateAssignmentPage() {
                       </button>
                     </div>
                   ) : (
-                    <label className="flex items-center gap-2 px-3 py-2 border border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors w-fit">
-                      <ImagePlus className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm text-gray-500">Add image</span>
+                    <label className="flex items-center gap-2 px-3 py-2 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors w-fit">
+                      <ImagePlus className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                      <span className="text-sm text-gray-500 dark:text-gray-400">Add image</span>
                       <input
                         type="file"
                         className="hidden"

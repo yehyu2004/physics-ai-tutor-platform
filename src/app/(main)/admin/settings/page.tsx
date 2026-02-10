@@ -56,7 +56,7 @@ export default function AdminSettingsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-neutral-400" />
+        <Loader2 className="h-8 w-8 animate-spin text-neutral-400 dark:text-neutral-500" />
       </div>
     );
   }
@@ -64,8 +64,8 @@ export default function AdminSettingsPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
-        <p className="text-sm text-neutral-500 mt-1">
+        <h1 className="text-2xl font-bold tracking-tight dark:text-gray-100">Settings</h1>
+        <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
           Configure AI provider and system behavior
         </p>
       </div>
@@ -132,7 +132,7 @@ export default function AdminSettingsPage() {
             rows={10}
             className="font-mono text-sm"
           />
-          <p className="text-xs text-neutral-400 mt-2">
+          <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-2">
             Leave blank to use the default physics tutor prompt.
           </p>
         </CardContent>

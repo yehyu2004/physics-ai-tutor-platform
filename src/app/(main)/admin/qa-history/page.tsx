@@ -125,7 +125,7 @@ export default function QAHistoryPage() {
   if (loading && conversations.length === 0) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-neutral-400" />
+        <Loader2 className="h-8 w-8 animate-spin text-neutral-400 dark:text-neutral-500" />
       </div>
     );
   }
@@ -133,8 +133,8 @@ export default function QAHistoryPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Q&A History</h1>
-        <p className="text-sm text-neutral-500 mt-1">
+        <h1 className="text-2xl font-bold tracking-tight dark:text-gray-100">Q&A History</h1>
+        <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
           Browse all user conversations ({conversations.length} total)
         </p>
       </div>
@@ -155,7 +155,7 @@ export default function QAHistoryPage() {
         </Select>
 
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-neutral-400" />
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-neutral-400 dark:text-neutral-500" />
           <Input
             placeholder="Search by title, user name, or email..."
             value={searchQuery}
@@ -167,7 +167,7 @@ export default function QAHistoryPage() {
 
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-neutral-400" />
+          <Loader2 className="h-6 w-6 animate-spin text-neutral-400 dark:text-neutral-500" />
         </div>
       ) : (
         <div className="space-y-3">
@@ -180,10 +180,10 @@ export default function QAHistoryPage() {
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <MessageSquare className="h-4 w-4 text-neutral-400 shrink-0" />
+                      <MessageSquare className="h-4 w-4 text-neutral-400 dark:text-neutral-500 shrink-0" />
                       <div className="min-w-0">
                         <p className="text-sm font-medium truncate">{conv.title}</p>
-                        <p className="text-xs text-neutral-400">
+                        <p className="text-xs text-neutral-400 dark:text-neutral-500">
                           {conv.userName} ({conv.userEmail})
                         </p>
                       </div>
@@ -192,13 +192,13 @@ export default function QAHistoryPage() {
                       <Badge variant="secondary" className="text-xs">
                         {conv.messageCount} messages
                       </Badge>
-                      <span className="text-xs text-neutral-400">
+                      <span className="text-xs text-neutral-400 dark:text-neutral-500">
                         {formatShortDate(conv.updatedAt)}
                       </span>
                       {expandedId === conv.id ? (
-                        <ChevronUp className="h-4 w-4 text-neutral-400" />
+                        <ChevronUp className="h-4 w-4 text-neutral-400 dark:text-neutral-500" />
                       ) : (
-                        <ChevronDown className="h-4 w-4 text-neutral-400" />
+                        <ChevronDown className="h-4 w-4 text-neutral-400 dark:text-neutral-500" />
                       )}
                     </div>
                   </div>
@@ -206,10 +206,10 @@ export default function QAHistoryPage() {
               </button>
 
               {expandedId === conv.id && (
-                <div className="border-t px-4 pb-4">
+                <div className="border-t dark:border-gray-700 px-4 pb-4">
                   {loadingMessages ? (
                     <div className="py-4 text-center">
-                      <Loader2 className="h-5 w-5 animate-spin text-neutral-400 mx-auto" />
+                      <Loader2 className="h-5 w-5 animate-spin text-neutral-400 dark:text-neutral-500 mx-auto" />
                     </div>
                   ) : (
                     <ScrollArea className="max-h-96 mt-3">
@@ -219,8 +219,8 @@ export default function QAHistoryPage() {
                             key={msg.id}
                             className={`rounded-lg p-3 text-sm ${
                               msg.role === "user"
-                                ? "bg-neutral-900 text-white ml-8"
-                                : "bg-neutral-100 mr-8"
+                                ? "bg-neutral-900 text-white ml-8 dark:bg-neutral-800"
+                                : "bg-neutral-100 mr-8 dark:bg-neutral-800 dark:text-neutral-200"
                             }`}
                           >
                             <p className="text-xs opacity-60 mb-1">
@@ -241,8 +241,8 @@ export default function QAHistoryPage() {
           {filtered.length === 0 && (
             <Card>
               <CardContent className="py-12 text-center">
-                <MessageSquare className="h-12 w-12 text-neutral-300 mx-auto mb-4" />
-                <p className="text-sm text-neutral-400">
+                <MessageSquare className="h-12 w-12 text-neutral-300 dark:text-neutral-600 mx-auto mb-4" />
+                <p className="text-sm text-neutral-400 dark:text-neutral-500">
                   {searchQuery ? "No conversations match your search." : "No conversations yet."}
                 </p>
               </CardContent>

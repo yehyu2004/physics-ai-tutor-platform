@@ -48,7 +48,7 @@ export function MarkdownContent({ content, className }: MarkdownContentProps) {
               if (trimmed.startsWith("<svg")) {
                 return (
                   <div
-                    className="rounded-lg border border-gray-200 bg-white p-4 overflow-auto max-w-full my-3 flex justify-center"
+                    className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 overflow-auto max-w-full my-3 flex justify-center"
                     dangerouslySetInnerHTML={{ __html: trimmed }}
                   />
                 );
@@ -63,7 +63,7 @@ export function MarkdownContent({ content, className }: MarkdownContentProps) {
               );
             }
             return (
-              <code className="px-1.5 py-0.5 bg-gray-100 text-gray-700 rounded text-sm font-mono" {...props}>
+              <code className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded text-sm font-mono" {...props}>
                 {children}
               </code>
             );
@@ -74,15 +74,15 @@ export function MarkdownContent({ content, className }: MarkdownContentProps) {
             <img
               src={src}
               alt={alt || ""}
-              className="rounded-lg max-w-full my-3 border border-gray-200"
+              className="rounded-lg max-w-full my-3 border border-gray-200 dark:border-gray-700"
             />
           ),
           blockquote: ({ children }) => (
-            <blockquote className="border-l-2 border-gray-300 pl-4 italic text-gray-500 my-2 py-1">
+            <blockquote className="border-l-2 border-gray-300 dark:border-gray-600 pl-4 italic text-gray-500 dark:text-gray-400 my-2 py-1">
               {children}
             </blockquote>
           ),
-          hr: () => <hr className="my-3 border-gray-200" />,
+          hr: () => <hr className="my-3 border-gray-200 dark:border-gray-700" />,
         }}
       >
         {normalizeLatex(content)}

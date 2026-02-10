@@ -50,7 +50,7 @@ export default function AnalyticsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-neutral-400" />
+        <Loader2 className="h-8 w-8 animate-spin text-neutral-400 dark:text-neutral-500" />
       </div>
     );
   }
@@ -58,7 +58,7 @@ export default function AnalyticsPage() {
   if (!data) {
     return (
       <div className="flex items-center justify-center py-20">
-        <p className="text-neutral-500">Failed to load analytics data.</p>
+        <p className="text-neutral-500 dark:text-neutral-400">Failed to load analytics data.</p>
       </div>
     );
   }
@@ -73,8 +73,8 @@ export default function AnalyticsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Learning Analytics</h1>
-        <p className="text-sm text-neutral-500 mt-1">
+        <h1 className="text-2xl font-bold tracking-tight dark:text-gray-100">Learning Analytics</h1>
+        <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
           Track your study progress and performance
         </p>
       </div>
@@ -85,7 +85,7 @@ export default function AnalyticsPage() {
           <CardContent className="p-6">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-full bg-white/60 flex items-center justify-center">
-                <Brain className="h-5 w-5 text-neutral-700" />
+                <Brain className="h-5 w-5 text-neutral-700 dark:text-neutral-300" />
               </div>
               <div>
                 <div className="text-2xl font-bold">{data.overview.averagePercent}%</div>
@@ -99,7 +99,7 @@ export default function AnalyticsPage() {
           <CardContent className="p-6">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-full bg-white/60 flex items-center justify-center">
-                <MessageSquare className="h-5 w-5 text-neutral-700" />
+                <MessageSquare className="h-5 w-5 text-neutral-700 dark:text-neutral-300" />
               </div>
               <div>
                 <div className="text-2xl font-bold">{data.overview.totalMessages}</div>
@@ -113,7 +113,7 @@ export default function AnalyticsPage() {
           <CardContent className="p-6">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-full bg-white/60 flex items-center justify-center">
-                <Clock className="h-5 w-5 text-neutral-700" />
+                <Clock className="h-5 w-5 text-neutral-700 dark:text-neutral-300" />
               </div>
               <div>
                 <div className="text-2xl font-bold">
@@ -129,7 +129,7 @@ export default function AnalyticsPage() {
           <CardContent className="p-6">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-full bg-white/60 flex items-center justify-center">
-                <FileCheck className="h-5 w-5 text-neutral-700" />
+                <FileCheck className="h-5 w-5 text-neutral-700 dark:text-neutral-300" />
               </div>
               <div>
                 <div className="text-2xl font-bold">{data.overview.totalSubmissions}</div>
@@ -146,7 +146,7 @@ export default function AnalyticsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Weekly Activity</CardTitle>
-            <p className="text-xs text-neutral-500">Messages per day (last 7 days)</p>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400">Messages per day (last 7 days)</p>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -171,12 +171,12 @@ export default function AnalyticsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Score History</CardTitle>
-            <p className="text-xs text-neutral-500">Assignment scores over time</p>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400">Assignment scores over time</p>
           </CardHeader>
           <CardContent>
             {data.scoreHistory.length === 0 ? (
               <div className="flex items-center justify-center h-[300px]">
-                <p className="text-sm text-neutral-400">No graded submissions yet</p>
+                <p className="text-sm text-neutral-400 dark:text-neutral-500">No graded submissions yet</p>
               </div>
             ) : (
               <ResponsiveContainer width="100%" height={300}>

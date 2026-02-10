@@ -60,8 +60,8 @@ export default function GradesPage() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-3">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-        <p className="text-sm text-gray-400">Loading grades...</p>
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400 dark:text-gray-500" />
+        <p className="text-sm text-gray-400 dark:text-gray-500">Loading grades...</p>
       </div>
     );
   }
@@ -76,85 +76,85 @@ export default function GradesPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+        <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
           Grades
         </h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
           Track your performance across all assignments
         </p>
       </div>
 
       {/* Summary Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5 shadow-sm">
           <div className="flex items-center gap-2 mb-3">
-            <div className="p-2 rounded-lg bg-gray-50">
-              <TrendingUp className="h-4 w-4 text-gray-600" />
+            <div className="p-2 rounded-lg bg-gray-50 dark:bg-gray-800">
+              <TrendingUp className="h-4 w-4 text-gray-600 dark:text-gray-400" />
             </div>
-            <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Average</span>
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Average</span>
           </div>
-          <p className="text-3xl font-bold text-gray-900">{avgPercent}%</p>
-          <p className="text-xs text-gray-400 mt-1">
+          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{avgPercent}%</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
             {gradedEntries.length > 0
               ? `Letter Grade: ${getLetterGrade(avgPercent)}`
               : "No graded work yet"}
           </p>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5 shadow-sm">
           <div className="flex items-center gap-2 mb-3">
-            <div className="p-2 rounded-lg bg-gray-50">
-              <Award className="h-4 w-4 text-gray-600" />
+            <div className="p-2 rounded-lg bg-gray-50 dark:bg-gray-800">
+              <Award className="h-4 w-4 text-gray-600 dark:text-gray-400" />
             </div>
-            <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Points</span>
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Points</span>
           </div>
-          <p className="text-3xl font-bold text-gray-900">
+          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
             {totalEarned}
-            <span className="text-lg text-gray-400 font-normal">/{totalPossible}</span>
+            <span className="text-lg text-gray-400 dark:text-gray-500 font-normal">/{totalPossible}</span>
           </p>
-          <p className="text-xs text-gray-400 mt-1">Total points earned</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Total points earned</p>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5 shadow-sm">
           <div className="flex items-center gap-2 mb-3">
-            <div className="p-2 rounded-lg bg-gray-50">
-              <BarChart3 className="h-4 w-4 text-gray-600" />
+            <div className="p-2 rounded-lg bg-gray-50 dark:bg-gray-800">
+              <BarChart3 className="h-4 w-4 text-gray-600 dark:text-gray-400" />
             </div>
-            <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Graded</span>
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Graded</span>
           </div>
-          <p className="text-3xl font-bold text-gray-900">{gradedEntries.length}</p>
-          <p className="text-xs text-gray-400 mt-1">Assignments graded</p>
+          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{gradedEntries.length}</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Assignments graded</p>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5 shadow-sm">
           <div className="flex items-center gap-2 mb-3">
-            <div className="p-2 rounded-lg bg-gray-50">
-              <Clock className="h-4 w-4 text-gray-600" />
+            <div className="p-2 rounded-lg bg-gray-50 dark:bg-gray-800">
+              <Clock className="h-4 w-4 text-gray-600 dark:text-gray-400" />
             </div>
-            <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Pending</span>
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Pending</span>
           </div>
-          <p className="text-3xl font-bold text-gray-900">{pendingCount}</p>
-          <p className="text-xs text-gray-400 mt-1">Awaiting grading</p>
+          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{pendingCount}</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Awaiting grading</p>
         </div>
       </div>
 
       {/* Grades List */}
       {grades.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center shadow-sm">
-          <div className="mx-auto w-14 h-14 rounded-full bg-gray-50 flex items-center justify-center mb-4">
-            <GraduationCap className="h-7 w-7 text-gray-400" />
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 py-16 text-center shadow-sm">
+          <div className="mx-auto w-14 h-14 rounded-full bg-gray-50 dark:bg-gray-800 flex items-center justify-center mb-4">
+            <GraduationCap className="h-7 w-7 text-gray-400 dark:text-gray-500" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900">No grades yet</h3>
-          <p className="text-sm text-gray-500 mt-1 max-w-sm mx-auto">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">No grades yet</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-sm mx-auto">
             Submit assignments to see your grades here.
           </p>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-          <div className="px-6 py-4 border-b border-gray-100">
-            <h2 className="text-base font-semibold text-gray-900">All Grades</h2>
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden shadow-sm">
+          <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+            <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">All Grades</h2>
           </div>
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-gray-100 dark:divide-gray-800">
             {grades.map((grade) => {
               const scored = grade.score !== null;
               const pct = scored ? Math.round(((grade.score as number) / grade.totalPoints) * 100) : 0;
@@ -163,17 +163,17 @@ export default function GradesPage() {
               return (
                 <div
                   key={grade.id}
-                  className="flex items-center gap-4 px-6 py-4 hover:bg-gray-50/50 transition-colors"
+                  className="flex items-center gap-4 px-6 py-4 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 truncate">
+                    <p className="font-medium text-gray-900 dark:text-gray-100 truncate">
                       {grade.assignmentTitle}
                     </p>
                     <div className="flex items-center gap-3 mt-1.5">
-                      <Badge variant="secondary" className="text-xs font-medium bg-gray-50 text-gray-600 border-gray-200">
+                      <Badge variant="secondary" className="text-xs font-medium bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700">
                         {grade.assignmentType === "QUIZ" ? "Quiz" : "File Upload"}
                       </Badge>
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs text-gray-400 dark:text-gray-500">
                         Submitted {formatShortDate(grade.submittedAt)}
                       </span>
                     </div>
@@ -183,7 +183,7 @@ export default function GradesPage() {
                     <div className="flex items-center gap-4 shrink-0">
                       {/* Progress bar */}
                       <div className="w-32 hidden sm:block">
-                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
                           <div
                             className={`h-full rounded-full transition-all duration-500 ${colors.bg}`}
                             style={{ width: `${pct}%` }}
@@ -201,7 +201,7 @@ export default function GradesPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-200 text-gray-400 shrink-0">
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 shrink-0">
                       <Clock className="h-4 w-4" />
                       <span className="text-sm font-medium">Pending</span>
                     </div>

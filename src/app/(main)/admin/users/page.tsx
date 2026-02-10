@@ -156,8 +156,8 @@ export default function AdminUsersPage() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-3">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-        <p className="text-sm text-gray-400">Loading users...</p>
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400 dark:text-gray-500" />
+        <p className="text-sm text-gray-400 dark:text-gray-500">Loading users...</p>
       </div>
     );
   }
@@ -171,68 +171,68 @@ export default function AdminUsersPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+        <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
           User Management
         </h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
           Manage user accounts, roles, and access ({users.length} users)
         </p>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5 shadow-sm">
           <div className="flex items-center gap-2 mb-3">
-            <div className="p-2 rounded-lg bg-gray-50">
-              <GraduationCap className="h-4 w-4 text-gray-600" />
+            <div className="p-2 rounded-lg bg-gray-50 dark:bg-gray-800">
+              <GraduationCap className="h-4 w-4 text-gray-600 dark:text-gray-400" />
             </div>
-            <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Students
             </span>
           </div>
-          <p className="text-3xl font-bold text-gray-900">{studentCount}</p>
+          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{studentCount}</p>
         </div>
-        <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5 shadow-sm">
           <div className="flex items-center gap-2 mb-3">
-            <div className="p-2 rounded-lg bg-gray-50">
-              <Users className="h-4 w-4 text-gray-600" />
+            <div className="p-2 rounded-lg bg-gray-50 dark:bg-gray-800">
+              <Users className="h-4 w-4 text-gray-600 dark:text-gray-400" />
             </div>
-            <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               TAs
             </span>
           </div>
-          <p className="text-3xl font-bold text-gray-900">{taCount}</p>
+          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{taCount}</p>
         </div>
-        <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5 shadow-sm">
           <div className="flex items-center gap-2 mb-3">
-            <div className="p-2 rounded-lg bg-gray-50">
-              <Shield className="h-4 w-4 text-gray-600" />
+            <div className="p-2 rounded-lg bg-gray-50 dark:bg-gray-800">
+              <Shield className="h-4 w-4 text-gray-600 dark:text-gray-400" />
             </div>
-            <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Admins
             </span>
           </div>
-          <p className="text-3xl font-bold text-gray-900">{adminCount}</p>
+          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{adminCount}</p>
         </div>
-        <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5 shadow-sm">
           <div className="flex items-center gap-2 mb-3">
-            <div className="p-2 rounded-lg bg-red-50">
+            <div className="p-2 rounded-lg bg-red-50 dark:bg-red-950">
               <ShieldBan className="h-4 w-4 text-red-500" />
             </div>
-            <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Banned
             </span>
           </div>
-          <p className="text-3xl font-bold text-gray-900">{bannedCount}</p>
+          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{bannedCount}</p>
         </div>
       </div>
 
       {/* User List */}
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-        <div className="px-6 py-4 border-b border-gray-100">
-          <h2 className="text-base font-semibold text-gray-900">All Users</h2>
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden shadow-sm">
+        <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+          <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">All Users</h2>
         </div>
-        <div className="divide-y divide-gray-100">
+        <div className="divide-y divide-gray-100 dark:divide-gray-800">
           {users.map((user) => {
             const isSelf = user.id === currentUserId;
             const isLoading = actionLoading === user.id;
@@ -240,27 +240,27 @@ export default function AdminUsersPage() {
             return (
               <div
                 key={user.id}
-                className={`flex items-center justify-between px-6 py-4 hover:bg-gray-50/50 transition-colors ${
-                  user.isBanned ? "bg-red-50/30" : ""
+                className={`flex items-center justify-between px-6 py-4 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors ${
+                  user.isBanned ? "bg-red-50/30 dark:bg-red-950/30" : ""
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <div
                     className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
                       user.isBanned
-                        ? "bg-red-100 text-red-600"
-                        : "bg-gray-100 text-gray-600"
+                        ? "bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-400"
+                        : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
                     }`}
                   >
                     {user.name?.[0]?.toUpperCase() || "U"}
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium text-gray-900">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                         {user.name || "No name"}
                       </p>
                       {isSelf && (
-                        <Badge className="bg-gray-100 text-gray-600 border-gray-200 text-[10px]">
+                        <Badge className="bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 text-[10px]">
                           You
                         </Badge>
                       )}
@@ -275,12 +275,12 @@ export default function AdminUsersPage() {
                         </Badge>
                       )}
                     </div>
-                    <p className="text-xs text-gray-400">{user.email}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">{user.email}</p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <span className="text-xs text-gray-400 hidden sm:block">
+                  <span className="text-xs text-gray-400 dark:text-gray-500 hidden sm:block">
                     Joined {formatShortDate(user.createdAt)}
                   </span>
 
@@ -290,7 +290,7 @@ export default function AdminUsersPage() {
                     onValueChange={(value) => updateRole(user.id, value)}
                     disabled={isSelf}
                   >
-                    <SelectTrigger className="w-28 h-8 text-xs border-gray-200 rounded-lg">
+                    <SelectTrigger className="w-28 h-8 text-xs border-gray-200 dark:border-gray-700 rounded-lg">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -309,7 +309,7 @@ export default function AdminUsersPage() {
                     className={`gap-1.5 text-xs rounded-lg ${
                       user.isRestricted
                         ? "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-                        : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                        : "border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800"
                     }`}
                     title={user.isRestricted ? "Allow AI chat access" : "Block AI chat access (can still submit assignments)"}
                   >
@@ -373,7 +373,7 @@ export default function AdminUsersPage() {
             <DialogTitle>Delete User Account</DialogTitle>
             <DialogDescription>
               Are you sure you want to delete{" "}
-              <span className="font-semibold text-gray-900">
+              <span className="font-semibold text-gray-900 dark:text-gray-100">
                 {deleteTarget?.name || deleteTarget?.email}
               </span>
               ? This will soft-delete their account. They will no longer be able

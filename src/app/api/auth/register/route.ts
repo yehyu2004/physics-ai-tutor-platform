@@ -4,9 +4,9 @@ import { prisma } from "@/lib/prisma";
 
 export async function POST(req: Request) {
   try {
-    const { name, email, password } = await req.json();
+    const { name, email, password, studentId } = await req.json();
 
-    if (!name || !email || !password) {
+    if (!name || !email || !password || !studentId) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -31,6 +31,17 @@ export async function POST(req: Request) {
       );
     }
 
+    const existingStudentId = await prisma.user.findUnique({
+      where: { studentId: studentId.trim() },
+    });
+
+    if (existingStudentId) {
+      return NextResponse.json(
+        { error: "Student ID already in use" },
+        { status: 400 }
+      );
+    }
+
     const passwordHash = await bcrypt.hash(password, 12);
 
     const user = await prisma.user.create({
@@ -38,6 +49,7 @@ export async function POST(req: Request) {
         name,
         email,
         passwordHash,
+        studentId: studentId.trim(),
       },
     });
 

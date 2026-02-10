@@ -46,7 +46,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 relative overflow-hidden">
       {/* Subtle gradient blob decorations */}
       <div className="absolute top-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-gradient-to-br from-pink-100/40 to-purple-100/40 blur-3xl" />
       <div className="absolute bottom-[-15%] left-[-10%] w-[400px] h-[400px] rounded-full bg-gradient-to-tr from-purple-100/30 to-pink-100/30 blur-3xl" />
@@ -54,25 +54,25 @@ export default function LoginPage() {
       <div className="relative z-10 w-full max-w-md mx-4">
         {/* Logo / Branding */}
         <div className="flex flex-col items-center mb-8">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gray-900 mb-4">
-            <Atom className="h-6 w-6 text-white" />
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gray-900 dark:bg-gray-100 mb-4">
+            <Atom className="h-6 w-6 text-white dark:text-gray-900" />
           </div>
-          <h1 className="text-xl font-semibold text-gray-900 tracking-tight">
+          <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 tracking-tight">
             PhysTutor
           </h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
             Master Physics with AI
           </p>
         </div>
 
         {/* Card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-8">
           {/* Header */}
           <div className="text-center mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
               Welcome back
             </h2>
-            <p className="text-gray-500 mt-1 text-sm">
+            <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">
               Sign in to continue your learning journey
             </p>
           </div>
@@ -107,7 +107,7 @@ export default function LoginPage() {
           {/* Divider */}
           <div className="relative my-6">
             <Separator className="bg-gray-200" />
-            <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-3 text-xs text-gray-400 font-medium">
+            <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-900 px-3 text-xs text-gray-400 dark:text-gray-500 font-medium">
               or continue with email
             </span>
           </div>
@@ -122,7 +122,7 @@ export default function LoginPage() {
             )}
 
             <div className="space-y-1.5">
-              <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+              <Label htmlFor="email" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 Email
               </Label>
               <div className="relative">
@@ -140,7 +140,7 @@ export default function LoginPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="password" className="text-sm font-medium text-gray-700">
+              <Label htmlFor="password" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 Password
               </Label>
               <div className="relative">
@@ -171,12 +171,12 @@ export default function LoginPage() {
           </form>
 
           {/* Sign up link */}
-          <div className="mt-6 pt-5 border-t border-gray-100 text-center">
-            <p className="text-sm text-gray-500">
+          <div className="mt-6 pt-5 border-t border-gray-100 dark:border-gray-800 text-center">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               Don&apos;t have an account?{" "}
               <Link
                 href="/register"
-                className="font-semibold text-gray-900 hover:text-gray-700 transition-colors"
+                className="font-semibold text-gray-900 dark:text-gray-100 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
               >
                 Create one
               </Link>

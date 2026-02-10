@@ -42,7 +42,7 @@ export default function AdminAnalyticsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-neutral-400" />
+        <Loader2 className="h-8 w-8 animate-spin text-neutral-400 dark:text-neutral-500" />
       </div>
     );
   }
@@ -50,7 +50,7 @@ export default function AdminAnalyticsPage() {
   if (!data) {
     return (
       <div className="flex items-center justify-center py-20">
-        <p className="text-neutral-500">Failed to load analytics data.</p>
+        <p className="text-neutral-500 dark:text-neutral-400">Failed to load analytics data.</p>
       </div>
     );
   }
@@ -58,8 +58,8 @@ export default function AdminAnalyticsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Admin Analytics</h1>
-        <p className="text-sm text-neutral-500 mt-1">
+        <h1 className="text-2xl font-bold tracking-tight dark:text-gray-100">Admin Analytics</h1>
+        <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
           Platform-wide usage and performance overview
         </p>
       </div>
@@ -69,8 +69,8 @@ export default function AdminAnalyticsPage() {
         <Card className="gradient-card-purple border-0">
           <CardContent className="p-6">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-white/60 flex items-center justify-center">
-                <Users className="h-5 w-5 text-neutral-700" />
+              <div className="h-10 w-10 rounded-full bg-white/60 dark:bg-white/20 flex items-center justify-center">
+                <Users className="h-5 w-5 text-neutral-700 dark:text-neutral-300" />
               </div>
               <div>
                 <div className="text-2xl font-bold">{data.overview.totalUsers}</div>
@@ -83,8 +83,8 @@ export default function AdminAnalyticsPage() {
         <Card className="gradient-card-pink border-0">
           <CardContent className="p-6">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-white/60 flex items-center justify-center">
-                <MessageSquare className="h-5 w-5 text-neutral-700" />
+              <div className="h-10 w-10 rounded-full bg-white/60 dark:bg-white/20 flex items-center justify-center">
+                <MessageSquare className="h-5 w-5 text-neutral-700 dark:text-neutral-300" />
               </div>
               <div>
                 <div className="text-2xl font-bold">{data.overview.totalConversations}</div>
@@ -97,8 +97,8 @@ export default function AdminAnalyticsPage() {
         <Card className="gradient-card-blue border-0">
           <CardContent className="p-6">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-white/60 flex items-center justify-center">
-                <Mail className="h-5 w-5 text-neutral-700" />
+              <div className="h-10 w-10 rounded-full bg-white/60 dark:bg-white/20 flex items-center justify-center">
+                <Mail className="h-5 w-5 text-neutral-700 dark:text-neutral-300" />
               </div>
               <div>
                 <div className="text-2xl font-bold">{data.overview.totalMessages}</div>
@@ -111,8 +111,8 @@ export default function AdminAnalyticsPage() {
         <Card className="gradient-card-green border-0">
           <CardContent className="p-6">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-white/60 flex items-center justify-center">
-                <FileText className="h-5 w-5 text-neutral-700" />
+              <div className="h-10 w-10 rounded-full bg-white/60 dark:bg-white/20 flex items-center justify-center">
+                <FileText className="h-5 w-5 text-neutral-700 dark:text-neutral-300" />
               </div>
               <div>
                 <div className="text-2xl font-bold">{data.overview.totalSubmissions}</div>
@@ -127,7 +127,7 @@ export default function AdminAnalyticsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Daily Activity</CardTitle>
-          <p className="text-xs text-neutral-500">Messages per day (last 14 days)</p>
+          <p className="text-xs text-neutral-500 dark:text-neutral-400">Messages per day (last 14 days)</p>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
@@ -153,12 +153,12 @@ export default function AdminAnalyticsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Score Distribution</CardTitle>
-            <p className="text-xs text-neutral-500">Number of submissions per score range</p>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400">Number of submissions per score range</p>
           </CardHeader>
           <CardContent>
             {data.scoreDistribution.every((d) => d.count === 0) ? (
               <div className="flex items-center justify-center h-[300px]">
-                <p className="text-sm text-neutral-400">No graded submissions yet</p>
+                <p className="text-sm text-neutral-400 dark:text-neutral-500">No graded submissions yet</p>
               </div>
             ) : (
               <ResponsiveContainer width="100%" height={300}>
@@ -183,12 +183,12 @@ export default function AdminAnalyticsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Assignment Averages</CardTitle>
-            <p className="text-xs text-neutral-500">Sorted by average score (lowest first)</p>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400">Sorted by average score (lowest first)</p>
           </CardHeader>
           <CardContent>
             {data.assignmentAvgs.length === 0 ? (
               <div className="flex items-center justify-center h-[300px]">
-                <p className="text-sm text-neutral-400">No assignment data yet</p>
+                <p className="text-sm text-neutral-400 dark:text-neutral-500">No assignment data yet</p>
               </div>
             ) : (
               <ResponsiveContainer width="100%" height={300}>

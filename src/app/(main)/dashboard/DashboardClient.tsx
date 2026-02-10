@@ -59,9 +59,9 @@ function SectionHeading({
 }) {
   return (
     <div className="mb-5">
-      <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+      <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
       {subtitle && (
-        <p className="text-sm text-gray-400 mt-0.5">{subtitle}</p>
+        <p className="text-sm text-gray-400 dark:text-gray-500 mt-0.5">{subtitle}</p>
       )}
     </div>
   );
@@ -197,10 +197,10 @@ export default function DashboardClient({
     <div className="space-y-10 pb-8">
       {/* Welcome Section — plain text, no colored background */}
       <div className="pt-2 animate-fade-in">
-        <h1 className="text-2xl md:text-3xl font-semibold text-gray-900">
+        <h1 className="text-2xl md:text-3xl font-semibold text-gray-900 dark:text-gray-100">
           Welcome Back, {userName}
         </h1>
-        <p className="text-gray-400 mt-1">{date}</p>
+        <p className="text-gray-400 dark:text-gray-500 mt-1">{date}</p>
       </div>
 
       {/* Stat Cards */}
@@ -210,7 +210,7 @@ export default function DashboardClient({
           {statCards.map((stat, index) => (
             <div
               key={stat.label}
-              className="relative overflow-hidden bg-white border border-gray-100 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow animate-fade-in"
+              className="relative overflow-hidden bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow animate-fade-in"
               style={{ animationDelay: `${index * 100}ms` }}
             >
               {/* Gradient blob decoration */}
@@ -218,8 +218,8 @@ export default function DashboardClient({
 
               {/* Stat number with subtle dashed green accent */}
               <div className="relative inline-block mb-3">
-                <div className="border border-dashed border-emerald-200 rounded-xl px-3 py-1.5 inline-block">
-                  <p className="text-4xl font-bold text-gray-900">
+                <div className="border border-dashed border-emerald-200 dark:border-emerald-700 rounded-xl px-3 py-1.5 inline-block">
+                  <p className="text-4xl font-bold text-gray-900 dark:text-gray-100">
                     {stat.value}
                   </p>
                 </div>
@@ -227,12 +227,12 @@ export default function DashboardClient({
 
               {/* Icon + label */}
               <div className="flex items-center gap-2 mt-1">
-                <stat.icon className="h-4 w-4 text-gray-400" />
-                <span className="text-sm text-gray-500">{stat.label}</span>
+                <stat.icon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                <span className="text-sm text-gray-500 dark:text-gray-400">{stat.label}</span>
               </div>
 
               {/* Description */}
-              <p className="text-xs text-gray-400 mt-1">{stat.sublabel}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{stat.sublabel}</p>
             </div>
           ))}
         </div>
@@ -245,19 +245,19 @@ export default function DashboardClient({
           {filteredQuickStart.slice(0, 8).map((item, index) => (
             <Link key={item.href + item.label} href={item.href}>
               <div
-                className="bg-white border border-gray-100 rounded-2xl p-6 hover:shadow-md transition-all duration-200 cursor-pointer h-full group animate-fade-in"
+                className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-6 hover:shadow-md transition-all duration-200 cursor-pointer h-full group animate-fade-in"
                 style={{ animationDelay: `${index * 80}ms` }}
               >
                 {/* Circular icon with ring decoration */}
-                <div className="w-12 h-12 rounded-full border-2 border-gray-200 flex items-center justify-center mb-4 relative group-hover:border-gray-300 transition-colors">
-                  <div className="absolute inset-0 rounded-full border border-gray-100 scale-125 opacity-50" />
-                  <item.icon className="h-5 w-5 text-gray-600" />
+                <div className="w-12 h-12 rounded-full border-2 border-gray-200 dark:border-gray-700 flex items-center justify-center mb-4 relative group-hover:border-gray-300 transition-colors">
+                  <div className="absolute inset-0 rounded-full border border-gray-100 dark:border-gray-800 scale-125 opacity-50" />
+                  <item.icon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
                 </div>
 
-                <p className="text-sm font-medium text-gray-700">
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   {item.label}
                 </p>
-                <p className="text-xs text-gray-400 mt-1 leading-relaxed">
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 leading-relaxed">
                   {item.description}
                 </p>
               </div>
@@ -274,13 +274,13 @@ export default function DashboardClient({
         />
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Recent Conversations */}
-          <div className="bg-white border border-gray-100 rounded-2xl shadow-sm animate-fade-in">
+          <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl shadow-sm animate-fade-in">
             <div className="flex items-center justify-between p-6 pb-4">
               <div className="flex items-center gap-2.5">
                 <div className="h-8 w-8 rounded-lg bg-indigo-50 flex items-center justify-center">
                   <MessageSquare className="h-4 w-4 text-indigo-500" />
                 </div>
-                <h3 className="text-base font-semibold text-gray-900">
+                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
                   Recent Conversations
                 </h3>
               </div>
@@ -305,10 +305,10 @@ export default function DashboardClient({
                       <BookOpen className="h-5 w-5 text-indigo-300" />
                     </div>
                   </div>
-                  <p className="text-sm font-medium text-gray-600">
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
                     No conversations yet
                   </p>
-                  <p className="text-xs text-gray-400 mt-1">
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                     Start chatting with the AI tutor to get help with physics!
                   </p>
                   <Link
@@ -320,25 +320,25 @@ export default function DashboardClient({
                   </Link>
                 </div>
               ) : (
-                <div className="divide-y divide-gray-100">
+                <div className="divide-y divide-gray-100 dark:divide-gray-800">
                   {recentConversations.map((conv) => (
                     <Link
                       key={conv.id}
                       href={`/chat/${conv.id}`}
-                      className="flex items-start gap-3 py-3 hover:bg-gray-50/50 -mx-2 px-2 rounded-lg transition-colors group first:pt-0"
+                      className="flex items-start gap-3 py-3 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 -mx-2 px-2 rounded-lg transition-colors group first:pt-0"
                     >
                       <div className="h-8 w-8 rounded-full bg-indigo-50 flex items-center justify-center shrink-0 mt-0.5">
                         <MessageSquare className="h-3.5 w-3.5 text-indigo-500" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-800 truncate group-hover:text-indigo-700 transition-colors">
+                        <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate group-hover:text-indigo-700 transition-colors">
                           {conv.title}
                         </p>
-                        <p className="text-xs text-gray-400 truncate mt-0.5">
+                        <p className="text-xs text-gray-400 dark:text-gray-500 truncate mt-0.5">
                           {conv.lastMessage}
                         </p>
                       </div>
-                      <span className="text-xs text-gray-400 shrink-0 mt-0.5">
+                      <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0 mt-0.5">
                         {formatShortDate(conv.updatedAt)}
                       </span>
                     </Link>
@@ -350,7 +350,7 @@ export default function DashboardClient({
 
           {/* Upcoming Assignments */}
           <div
-            className="bg-white border border-gray-100 rounded-2xl shadow-sm animate-fade-in"
+            className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl shadow-sm animate-fade-in"
             style={{ animationDelay: "100ms" }}
           >
             <div className="flex items-center justify-between p-6 pb-4">
@@ -358,7 +358,7 @@ export default function DashboardClient({
                 <div className="h-8 w-8 rounded-lg bg-violet-50 flex items-center justify-center">
                   <FileText className="h-4 w-4 text-violet-500" />
                 </div>
-                <h3 className="text-base font-semibold text-gray-900">
+                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
                   Upcoming Assignments
                 </h3>
               </div>
@@ -383,26 +383,26 @@ export default function DashboardClient({
                       <Clock className="h-5 w-5 text-violet-300" />
                     </div>
                   </div>
-                  <p className="text-sm font-medium text-gray-600">
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
                     No upcoming assignments
                   </p>
-                  <p className="text-xs text-gray-400 mt-1">
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                     You are all caught up! Check back later for new work.
                   </p>
                 </div>
               ) : (
-                <div className="divide-y divide-gray-100">
+                <div className="divide-y divide-gray-100 dark:divide-gray-800">
                   {upcomingAssignments.map((assignment) => (
                     <Link
                       key={assignment.id}
                       href={`/assignments/${assignment.id}`}
-                      className="flex items-start gap-3 py-3 hover:bg-gray-50/50 -mx-2 px-2 rounded-lg transition-colors group first:pt-0"
+                      className="flex items-start gap-3 py-3 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 -mx-2 px-2 rounded-lg transition-colors group first:pt-0"
                     >
                       <div className="h-8 w-8 rounded-full bg-violet-50 flex items-center justify-center shrink-0 mt-0.5">
                         <FileText className="h-3.5 w-3.5 text-violet-500" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-800 truncate group-hover:text-violet-700 transition-colors">
+                        <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate group-hover:text-violet-700 transition-colors">
                           {assignment.title}
                         </p>
                         <div className="flex items-center gap-2 mt-1.5">
@@ -415,7 +415,7 @@ export default function DashboardClient({
                               : "File Upload"}
                           </Badge>
                           {assignment.dueDate && (
-                            <span className="text-xs text-gray-400 flex items-center gap-1">
+                            <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
                               <Clock className="h-3 w-3" />
                               Due {formatShortDate(assignment.dueDate)}
                             </span>

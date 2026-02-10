@@ -23,7 +23,7 @@ export default function MainLayoutClient({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   return (
-    <div className="h-screen bg-white overflow-hidden">
+    <div className="h-screen bg-white dark:bg-gray-950 overflow-hidden">
       <Sidebar
         userRole={userRole}
         userName={userName}
@@ -41,7 +41,7 @@ export default function MainLayoutClient({
           userImage={userImage}
           userRole={userRole}
         />
-        <main className="flex-1 p-6 bg-gray-50/50 overflow-auto">{children}</main>
+        <main className="flex-1 p-6 bg-gray-50/50 dark:bg-gray-950 overflow-auto">{children}</main>
       </div>
     </div>
   );

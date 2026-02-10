@@ -56,8 +56,8 @@ export default function AssignmentsPage() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-3">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-        <p className="text-sm text-gray-400">Loading assignments...</p>
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400 dark:text-gray-500" />
+        <p className="text-sm text-gray-400 dark:text-gray-500">Loading assignments...</p>
       </div>
     );
   }
@@ -73,10 +73,10 @@ export default function AssignmentsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
             Assignments
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             {userRole === "STUDENT"
               ? "View and submit your assignments"
               : "Manage assignments and view submissions"}
@@ -84,7 +84,7 @@ export default function AssignmentsPage() {
         </div>
         {(userRole === "TA" || userRole === "ADMIN") && (
           <Link href="/assignments/create">
-            <Button className="gap-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg shadow-sm">
+            <Button className="gap-2 bg-gray-900 dark:bg-gray-100 hover:bg-gray-800 dark:hover:bg-gray-200 text-white dark:text-gray-900 rounded-lg shadow-sm">
               <Plus className="h-4 w-4" />
               Create Assignment
             </Button>
@@ -100,8 +100,8 @@ export default function AssignmentsPage() {
             onClick={() => setFilter(type)}
             className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
               filter === type
-                ? "bg-gray-900 text-white shadow-sm"
-                : "bg-white text-gray-600 hover:bg-gray-50 border border-gray-200"
+                ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 shadow-sm"
+                : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700"
             }`}
           >
             {type === "ALL"
@@ -115,14 +115,14 @@ export default function AssignmentsPage() {
 
       {/* Assignment Cards */}
       {filteredAssignments.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center shadow-sm">
-          <div className="mx-auto w-14 h-14 rounded-full bg-gray-50 flex items-center justify-center mb-4">
-            <FileText className="h-7 w-7 text-gray-400" />
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 py-16 text-center shadow-sm">
+          <div className="mx-auto w-14 h-14 rounded-full bg-gray-50 dark:bg-gray-800 flex items-center justify-center mb-4">
+            <FileText className="h-7 w-7 text-gray-400 dark:text-gray-500" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             No assignments found
           </h3>
-          <p className="text-sm text-gray-500 mt-1 max-w-sm mx-auto">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-sm mx-auto">
             {filter !== "ALL"
               ? "No assignments match this filter. Try selecting a different type."
               : userRole === "STUDENT"
@@ -134,18 +134,18 @@ export default function AssignmentsPage() {
         <div className="grid gap-3">
           {filteredAssignments.map((assignment) => (
             <Link key={assignment.id} href={`/assignments/${assignment.id}`}>
-              <div className="group bg-white rounded-2xl border border-gray-100 p-5 hover:shadow-md transition-all cursor-pointer shadow-sm">
+              <div className="group bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5 hover:shadow-md transition-all cursor-pointer shadow-sm">
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2.5 mb-1.5">
-                      <div className="p-1.5 rounded-lg bg-gray-50">
+                      <div className="p-1.5 rounded-lg bg-gray-50 dark:bg-gray-800">
                         {assignment.type === "QUIZ" ? (
-                          <BookOpen className="h-4 w-4 text-gray-500" />
+                          <BookOpen className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                         ) : (
-                          <Upload className="h-4 w-4 text-gray-500" />
+                          <Upload className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                         )}
                       </div>
-                      <h3 className="text-base font-semibold text-gray-900 truncate group-hover:text-gray-700 transition-colors">
+                      <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors">
                         {assignment.title}
                       </h3>
                       {!assignment.published && (
@@ -160,12 +160,12 @@ export default function AssignmentsPage() {
                       )}
                     </div>
                     {assignment.description && (
-                      <p className="text-sm text-gray-500 line-clamp-1 mb-3 ml-9">
+                      <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-1 mb-3 ml-9">
                         {assignment.description}
                       </p>
                     )}
-                    <div className="flex items-center gap-4 text-xs text-gray-400 ml-9">
-                      <Badge variant="secondary" className="font-medium bg-gray-50 text-gray-600 border-gray-200">
+                    <div className="flex items-center gap-4 text-xs text-gray-400 dark:text-gray-500 ml-9">
+                      <Badge variant="secondary" className="font-medium bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700">
                         {assignment.type === "QUIZ" ? "Quiz" : "File Upload"}
                       </Badge>
                       <span className="flex items-center gap-1">
@@ -185,10 +185,10 @@ export default function AssignmentsPage() {
                     </div>
                   </div>
                   <div className="text-right ml-4 shrink-0">
-                    <p className="text-2xl font-bold text-gray-900">
+                    <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                       {assignment.totalPoints}
                     </p>
-                    <p className="text-xs text-gray-400 font-medium">points</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">points</p>
                   </div>
                 </div>
               </div>
