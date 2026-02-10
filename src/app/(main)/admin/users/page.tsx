@@ -321,13 +321,13 @@ export default function AdminUsersPage() {
             return (
               <div
                 key={user.id}
-                className={`flex items-center justify-between px-6 py-4 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors ${
+                className={`flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 sm:px-6 py-4 gap-3 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors ${
                   user.isBanned ? "bg-red-50/30 dark:bg-red-950/30" : ""
                 }`}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 min-w-0">
                   <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
+                    className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
                       user.isBanned
                         ? "bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-400"
                         : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
@@ -335,9 +335,9 @@ export default function AdminUsersPage() {
                   >
                     {user.name?.[0]?.toUpperCase() || "U"}
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                         {user.name || "No name"}
                       </p>
                       {isSelf && (
@@ -361,7 +361,7 @@ export default function AdminUsersPage() {
                         </Badge>
                       )}
                     </div>
-                    <p className="text-xs text-gray-400 dark:text-gray-500">
+                    <p className="text-xs text-gray-400 dark:text-gray-500 truncate">
                       {user.email}
                       {user.studentId && (
                         <span className="ml-2 text-gray-400 dark:text-gray-500">· ID: {user.studentId}</span>
@@ -370,7 +370,7 @@ export default function AdminUsersPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3 flex-wrap pl-12 sm:pl-0">
                   <span className="text-xs text-gray-400 dark:text-gray-500 hidden sm:block">
                     Joined {formatShortDate(user.createdAt)}
                   </span>
@@ -420,7 +420,7 @@ export default function AdminUsersPage() {
                     ) : (
                       <Circle className="h-3.5 w-3.5" />
                     )}
-                    {user.isVerified ? "Verified" : "Verify"}
+                    <span className="hidden sm:inline">{user.isVerified ? "Verified" : "Verify"}</span>
                   </Button>
 
                   {/* Send Warning button - both TA and Admin */}
@@ -434,7 +434,7 @@ export default function AdminUsersPage() {
                       title="Send warning email"
                     >
                       <AlertTriangle className="h-3.5 w-3.5" />
-                      Warn
+                      <span className="hidden sm:inline">Warn</span>
                     </Button>
                   )}
 
@@ -459,7 +459,7 @@ export default function AdminUsersPage() {
                       ) : (
                         <MessageSquareOff className="h-3.5 w-3.5" />
                       )}
-                      {user.isRestricted ? "Unrestrict" : "Restrict"}
+                      <span className="hidden sm:inline">{user.isRestricted ? "Unrestrict" : "Restrict"}</span>
                     </Button>
                   )}
 
@@ -475,6 +475,7 @@ export default function AdminUsersPage() {
                           ? "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
                           : "border-amber-200 text-amber-700 hover:bg-amber-50"
                       }`}
+                      title={user.isBanned ? "Unban user" : "Ban user"}
                     >
                       {isLoading ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -483,7 +484,7 @@ export default function AdminUsersPage() {
                       ) : (
                         <ShieldBan className="h-3.5 w-3.5" />
                       )}
-                      {user.isBanned ? "Unban" : "Ban"}
+                      <span className="hidden sm:inline">{user.isBanned ? "Unban" : "Ban"}</span>
                     </Button>
                   )}
 
@@ -519,7 +520,7 @@ export default function AdminUsersPage() {
                       ) : (
                         <Eye className="h-3.5 w-3.5" />
                       )}
-                      Impersonate
+                      <span className="hidden sm:inline">Impersonate</span>
                     </Button>
                   )}
 
@@ -531,9 +532,10 @@ export default function AdminUsersPage() {
                       disabled={isSelf || isLoading}
                       onClick={() => setDeleteTarget(user)}
                       className="gap-1.5 text-xs rounded-lg border-red-200 text-red-600 hover:bg-red-50"
+                      title="Delete user"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
-                      Delete
+                      <span className="hidden sm:inline">Delete</span>
                     </Button>
                   )}
                 </div>
