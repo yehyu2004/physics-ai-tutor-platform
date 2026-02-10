@@ -2,6 +2,54 @@ import { getEffectiveSession } from "@/lib/impersonate";
 import { prisma } from "@/lib/prisma";
 import { streamGenerateProblems, type AIProvider } from "@/lib/ai";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function normalizeDiagram(raw: any): { type: string; content: string } | null {
+  if (!raw) return null;
+
+  // Standard format: { type: "svg"|"mermaid", content: "..." }
+  if (typeof raw === "object" && raw.content && typeof raw.content === "string") {
+    return { type: String(raw.type || "svg").toLowerCase(), content: raw.content };
+  }
+
+  // Alternative: { svg: "<svg>..." } or { mermaid: "graph ..." }
+  if (typeof raw === "object") {
+    if (raw.svg && typeof raw.svg === "string") return { type: "svg", content: raw.svg };
+    if (raw.mermaid && typeof raw.mermaid === "string") return { type: "mermaid", content: raw.mermaid };
+    // { code: "..." } with type
+    if (raw.code && typeof raw.code === "string") return { type: String(raw.type || "svg").toLowerCase(), content: raw.code };
+  }
+
+  // Raw SVG string
+  if (typeof raw === "string" && raw.trim().startsWith("<svg")) {
+    return { type: "svg", content: raw.trim() };
+  }
+
+  return null;
+}
+
+// Extract inline SVG from questionText and move it to the diagram field
+function extractSvgFromText(text: string): { cleanText: string; diagram: { type: string; content: string } | null } {
+  // Check for ```svg code blocks
+  const svgBlockMatch = text.match(/```svg\s*([\s\S]*?)```/i);
+  if (svgBlockMatch && svgBlockMatch[1].trim().startsWith("<svg")) {
+    return {
+      cleanText: text.replace(svgBlockMatch[0], "").trim(),
+      diagram: { type: "svg", content: svgBlockMatch[1].trim() },
+    };
+  }
+
+  // Check for raw <svg>...</svg> in text
+  const rawSvgMatch = text.match(/(<svg[\s\S]*?<\/svg>)/i);
+  if (rawSvgMatch) {
+    return {
+      cleanText: text.replace(rawSvgMatch[0], "").trim(),
+      diagram: { type: "svg", content: rawSvgMatch[1].trim() },
+    };
+  }
+
+  return { cleanText: text, diagram: null };
+}
+
 export async function GET() {
   try {
     const session = await getEffectiveSession();
@@ -30,12 +78,51 @@ export async function GET() {
         difficulty: ps.difficulty,
         questionType: ps.questionType,
         createdBy: ps.createdBy.name,
+        createdById: ps.createdById,
         createdAt: ps.createdAt.toISOString(),
         problems: ps.problems,
       })),
     });
   } catch (error) {
     console.error("Problem sets fetch error:", error);
+    return Response.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const session = await getEffectiveSession();
+    if (!session?.user) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userId = (session.user as { id: string }).id;
+    const userRole = (session.user as { role?: string }).role;
+    if (userRole !== "TA" && userRole !== "ADMIN") {
+      return Response.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const { id } = await req.json();
+    if (!id) {
+      return Response.json({ error: "Missing problem set ID" }, { status: 400 });
+    }
+
+    const problemSet = await prisma.problemSet.findUnique({ where: { id } });
+    if (!problemSet) {
+      return Response.json({ error: "Problem set not found" }, { status: 404 });
+    }
+
+    // ADMIN can delete any; TA can only delete their own
+    if (userRole !== "ADMIN" && problemSet.createdById !== userId) {
+      return Response.json({ error: "Forbidden: you can only delete your own problem sets" }, { status: 403 });
+    }
+
+    // Cascade delete: GeneratedProblem has onDelete: Cascade in schema
+    await prisma.problemSet.delete({ where: { id } });
+
+    return Response.json({ success: true });
+  } catch (error) {
+    console.error("Delete problem set error:", error);
     return Response.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -106,6 +193,31 @@ export async function POST(req: Request) {
           const parsed = JSON.parse(jsonStr);
           const problems = parsed.problems || parsed.questions || [parsed];
 
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const normalizedProblems = problems.map((p: any) => {
+            let diagram = normalizeDiagram(p.diagram);
+            let questionText = p.questionText || "";
+
+            // If no diagram field, check if SVG is embedded in questionText
+            if (!diagram) {
+              const extracted = extractSvgFromText(questionText);
+              if (extracted.diagram) {
+                diagram = extracted.diagram;
+                questionText = extracted.cleanText;
+              }
+            }
+
+            return {
+              questionText,
+              questionType: p.questionType || questionType,
+              options: p.options || null,
+              correctAnswer: p.correctAnswer || "",
+              solution: p.solution || "",
+              points: p.points || 10,
+              diagram,
+            };
+          });
+
           const problemSet = await prisma.problemSet.create({
             data: {
               topic,
@@ -113,15 +225,7 @@ export async function POST(req: Request) {
               questionType,
               createdById: userId,
               problems: {
-                create: problems.map((p: { questionText: string; questionType?: string; options?: string[]; correctAnswer: string; solution?: string; points?: number; diagram?: { type: string; content: string } }) => ({
-                  questionText: p.questionText || "",
-                  questionType: p.questionType || questionType,
-                  options: p.options || null,
-                  correctAnswer: p.correctAnswer || "",
-                  solution: p.solution || "",
-                  points: p.points || 10,
-                  diagram: p.diagram || null,
-                })),
+                create: normalizedProblems,
               },
             },
             include: { problems: true },

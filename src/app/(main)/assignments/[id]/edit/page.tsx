@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import MermaidDiagram from "@/components/chat/MermaidDiagram";
 import Link from "next/link";
 
 interface Question {
@@ -31,10 +32,28 @@ interface Question {
   options: string[];
   correctAnswer: string;
   points: number;
-  diagram?: { type: "svg" | "mermaid"; content: string } | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  diagram?: { type: "svg" | "mermaid"; content: string } | any;
   imageUrl?: string | null;
   imageFile?: File | null;
   imagePreview?: string | null;
+}
+
+function getDiagramContent(diagram: unknown): { type: string; content: string } | null {
+  if (!diagram) return null;
+  if (typeof diagram === "object" && diagram !== null) {
+    const d = diagram as Record<string, unknown>;
+    if (d.content && typeof d.content === "string") {
+      return { type: String(d.type || "svg").toLowerCase(), content: d.content };
+    }
+    if (d.svg && typeof d.svg === "string") return { type: "svg", content: d.svg };
+    if (d.mermaid && typeof d.mermaid === "string") return { type: "mermaid", content: d.mermaid };
+    if (d.code && typeof d.code === "string") return { type: String(d.type || "svg").toLowerCase(), content: d.code };
+  }
+  if (typeof diagram === "string" && diagram.trim().startsWith("<svg")) {
+    return { type: "svg", content: diagram.trim() };
+  }
+  return null;
 }
 
 export default function EditAssignmentPage({
@@ -378,6 +397,36 @@ export default function EditAssignmentPage({
                     rows={2}
                   />
                 </div>
+
+                {(() => {
+                  const diag = getDiagramContent(q.diagram);
+                  if (!diag) return null;
+                  return (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label>Generated Diagram</Label>
+                        <button
+                          type="button"
+                          onClick={() => updateQuestion(qIndex, "diagram", null)}
+                          className="text-xs text-red-500 hover:text-red-600 flex items-center gap-1"
+                        >
+                          <X className="h-3 w-3" />
+                          Remove
+                        </button>
+                      </div>
+                      <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 overflow-auto max-w-full flex justify-center [&_svg]:w-full [&_svg]:h-auto">
+                        {diag.type === "svg" ? (
+                          <div
+                            className="w-full"
+                            dangerouslySetInnerHTML={{ __html: diag.content }}
+                          />
+                        ) : (
+                          <MermaidDiagram content={diag.content} />
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 <div className="space-y-2">
                   <Label>Question Image (optional)</Label>

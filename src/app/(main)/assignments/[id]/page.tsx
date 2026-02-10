@@ -41,8 +41,26 @@ interface Question {
   correctAnswer: string | null;
   points: number;
   order: number;
-  diagram?: { type: "svg" | "mermaid"; content: string } | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  diagram?: { type: "svg" | "mermaid"; content: string } | any;
   imageUrl?: string | null;
+}
+
+function getDiagramContent(diagram: unknown): { type: string; content: string } | null {
+  if (!diagram) return null;
+  if (typeof diagram === "object" && diagram !== null) {
+    const d = diagram as Record<string, unknown>;
+    if (d.content && typeof d.content === "string") {
+      return { type: String(d.type || "svg").toLowerCase(), content: d.content };
+    }
+    if (d.svg && typeof d.svg === "string") return { type: "svg", content: d.svg };
+    if (d.mermaid && typeof d.mermaid === "string") return { type: "mermaid", content: d.mermaid };
+    if (d.code && typeof d.code === "string") return { type: String(d.type || "svg").toLowerCase(), content: d.code };
+  }
+  if (typeof diagram === "string" && diagram.trim().startsWith("<svg")) {
+    return { type: "svg", content: diagram.trim() };
+  }
+  return null;
 }
 
 interface Assignment {
@@ -540,18 +558,22 @@ export default function AssignmentDetailPage({
               <CardContent className="space-y-3">
                 <MarkdownContent content={q.questionText} className="text-sm" />
 
-                {q.diagram && (
-                  <div className="my-3 flex justify-center">
-                    {q.diagram.type === "svg" ? (
-                      <div
-                        className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 overflow-auto max-w-full"
-                        dangerouslySetInnerHTML={{ __html: q.diagram.content }}
-                      />
-                    ) : (
-                      <MermaidDiagram content={q.diagram.content} />
-                    )}
-                  </div>
-                )}
+                {(() => {
+                  const diag = getDiagramContent(q.diagram);
+                  if (!diag) return null;
+                  return (
+                    <div className="my-3 flex justify-center">
+                      {diag.type === "svg" ? (
+                        <div
+                          className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 overflow-auto max-w-full [&_svg]:w-full [&_svg]:h-auto"
+                          dangerouslySetInnerHTML={{ __html: diag.content }}
+                        />
+                      ) : (
+                        <MermaidDiagram content={diag.content} />
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {q.imageUrl && (
                   <div className="my-3">

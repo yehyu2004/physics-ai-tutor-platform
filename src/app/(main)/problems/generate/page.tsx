@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState, useCallback } from "react";
+import React, { useRef, useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Sparkles,
@@ -16,6 +16,7 @@ import {
   Lightbulb,
   ChevronDown,
   FilePlus,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,7 +39,25 @@ interface GeneratedProblem {
   correctAnswer: string;
   solution: string;
   points: number;
-  diagram?: { type: "svg" | "mermaid"; content: string };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  diagram?: { type: "svg" | "mermaid"; content: string } | any;
+}
+
+function getDiagramContent(diagram: unknown): { type: string; content: string } | null {
+  if (!diagram) return null;
+  if (typeof diagram === "object" && diagram !== null) {
+    const d = diagram as Record<string, unknown>;
+    if (d.content && typeof d.content === "string") {
+      return { type: String(d.type || "svg").toLowerCase(), content: d.content };
+    }
+    if (d.svg && typeof d.svg === "string") return { type: "svg", content: d.svg };
+    if (d.mermaid && typeof d.mermaid === "string") return { type: "mermaid", content: d.mermaid };
+    if (d.code && typeof d.code === "string") return { type: String(d.type || "svg").toLowerCase(), content: d.code };
+  }
+  if (typeof diagram === "string" && diagram.trim().startsWith("<svg")) {
+    return { type: "svg", content: diagram.trim() };
+  }
+  return null;
 }
 
 interface ProblemSet {
@@ -47,6 +66,7 @@ interface ProblemSet {
   difficulty: number;
   questionType: string;
   createdBy: string;
+  createdById: string;
   createdAt: string;
   problems: GeneratedProblem[];
 }
@@ -92,6 +112,19 @@ export default function ProblemGeneratorPage() {
   const [pastSets, setPastSets] = useState<ProblemSet[]>([]);
   const [showPast, setShowPast] = useState(false);
   const [loadingPast, setLoadingPast] = useState(false);
+  const [currentUser, setCurrentUser] = useState<{ id: string; role: string } | null>(null);
+  const [deletingSetId, setDeletingSetId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/session")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.user) {
+          setCurrentUser({ id: data.user.id, role: data.user.role || "STUDENT" });
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const loadPastSets = async () => {
     if (pastSets.length > 0) {
@@ -111,6 +144,34 @@ export default function ProblemGeneratorPage() {
       setLoadingPast(false);
       setShowPast(true);
     }
+  };
+
+  const deleteProblemSet = async (e: React.MouseEvent, psId: string) => {
+    e.stopPropagation();
+    if (!confirm("Delete this problem set? This cannot be undone.")) return;
+    setDeletingSetId(psId);
+    try {
+      const res = await fetch("/api/problems/generate", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: psId }),
+      });
+      if (res.ok) {
+        setPastSets((prev) => prev.filter((s) => s.id !== psId));
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to delete");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setDeletingSetId(null);
+    }
+  };
+
+  const canDeleteSet = (ps: ProblemSet) => {
+    if (!currentUser) return false;
+    return currentUser.role === "ADMIN" || ps.createdById === currentUser.id;
   };
 
   const loadProblemSet = (ps: ProblemSet) => {
@@ -466,18 +527,22 @@ export default function ProblemGeneratorPage() {
                   className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed"
                 />
 
-                {problem.diagram && (
-                  <div className="my-3 flex justify-center">
-                    {problem.diagram.type === "svg" ? (
-                      <div
-                        className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 overflow-auto max-w-full"
-                        dangerouslySetInnerHTML={{ __html: problem.diagram.content }}
-                      />
-                    ) : (
-                      <MermaidDiagram content={problem.diagram.content} />
-                    )}
-                  </div>
-                )}
+                {(() => {
+                  const diag = getDiagramContent(problem.diagram);
+                  if (!diag) return null;
+                  return (
+                    <div className="my-3 flex justify-center">
+                      {diag.type === "svg" ? (
+                        <div
+                          className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 overflow-auto max-w-full [&_svg]:w-full [&_svg]:h-auto"
+                          dangerouslySetInnerHTML={{ __html: diag.content }}
+                        />
+                      ) : (
+                        <MermaidDiagram content={diag.content} />
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {problem.options && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -545,22 +610,40 @@ export default function ProblemGeneratorPage() {
         {showPast && pastSets.length > 0 && (
           <div className="border-t border-gray-100 dark:border-gray-800">
             {pastSets.map((ps) => (
-              <button
+              <div
                 key={ps.id}
-                onClick={() => loadProblemSet(ps)}
-                className="w-full px-6 py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-b border-gray-50 dark:border-gray-800 last:border-b-0 text-left"
+                className="flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-b border-gray-50 dark:border-gray-800 last:border-b-0"
               >
-                <div>
+                <button
+                  onClick={() => loadProblemSet(ps)}
+                  className="flex-1 px-6 py-3 text-left"
+                >
                   <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{ps.topic}</p>
                   <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
                     {ps.problems.length} problems &middot; {ps.questionType} &middot; Difficulty {ps.difficulty}/5
-                    {ps.createdBy && ` &middot; by ${ps.createdBy}`}
+                    {ps.createdBy && ` \u00B7 by ${ps.createdBy}`}
                   </p>
+                </button>
+                <div className="flex items-center gap-2 pr-4">
+                  <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0">
+                    {new Date(ps.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  </span>
+                  {canDeleteSet(ps) && (
+                    <button
+                      onClick={(e) => deleteProblemSet(e, ps.id)}
+                      disabled={deletingSetId === ps.id}
+                      className="p-1.5 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950 transition-colors disabled:opacity-50"
+                      title="Delete problem set"
+                    >
+                      {deletingSetId === ps.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-3.5 w-3.5" />
+                      )}
+                    </button>
+                  )}
                 </div>
-                <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0 ml-4">
-                  {new Date(ps.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                </span>
-              </button>
+              </div>
             ))}
           </div>
         )}

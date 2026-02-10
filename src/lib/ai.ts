@@ -209,6 +209,12 @@ For problems that benefit from a visual diagram, include a "diagram" field in th
 Use "svg" type for physics-specific diagrams (circuits, force/free-body diagrams, optical setups, electromagnetic field lines, current-carrying wires, fluid flow, projectile trajectories, wave diagrams, etc.). Generate clean, well-labeled SVG code with:
   - White background, clear black lines
   - Labeled components (use <text> elements)
+  - CRITICAL: SVG <text> elements CANNOT render LaTeX. Use plain Unicode text for ALL labels:
+    - Use Unicode subscripts: R₁, R₂, V₁, I₂ (not $R_1$)
+    - Use Unicode symbols: Ω, ε, θ, φ, μ, π, λ, Δ, ∑, →, ≈, ≤, ≥, ², ³, ½ (not LaTeX commands)
+    - Use plain numbers with units: "12.0 V", "6.0 Ω", "3.0 A" (not $12.0\\ \\mathrm{V}$)
+    - Example correct SVG label: <text x="50" y="30">R₁ = 6.0 Ω</text>
+    - Example incorrect SVG label: <text x="50" y="30">$R_1=6.0\ \Omega$</text>
   - Appropriate physics symbols and arrows
   - viewBox for proper scaling (e.g., viewBox="0 0 400 300")
   - No external dependencies
