@@ -32,6 +32,7 @@ interface Message {
   role: "user" | "assistant";
   content: string;
   imageUrls?: string[];
+  thinking?: string;
 }
 
 interface Conversation {
@@ -217,7 +218,7 @@ export default function ChatPageClient({
     const assistantMsgId = (Date.now() + 1).toString();
 
     // Add empty assistant message that will be streamed into
-    setMessages((prev) => [...prev, { id: assistantMsgId, role: "assistant", content: "" }]);
+    setMessages((prev) => [...prev, { id: assistantMsgId, role: "assistant", content: "", thinking: "" }]);
 
     try {
       const res = await fetch("/api/chat", {
@@ -266,6 +267,14 @@ export default function ChatPageClient({
                 },
                 ...prev,
               ]);
+            } else if (event.type === "thinking") {
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === assistantMsgId
+                    ? { ...msg, thinking: (msg.thinking || "") + event.content }
+                    : msg
+                )
+              );
             } else if (event.type === "delta") {
               setMessages((prev) =>
                 prev.map((msg) =>
@@ -618,11 +627,32 @@ export default function ChatPageClient({
                         ))}
                       </div>
                     )}
+                    {msg.role === "assistant" && msg.thinking && (
+                      <details className="mb-2 group">
+                        <summary className="flex items-center gap-1.5 cursor-pointer text-xs text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 select-none">
+                          <Sparkles className="h-3 w-3" />
+                          <span className="font-medium">Thinking</span>
+                          <svg className="h-3 w-3 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                        </summary>
+                        <div className="mt-1.5 pl-4 border-l-2 border-purple-200 dark:border-purple-800 text-xs text-gray-500 dark:text-gray-400 leading-relaxed whitespace-pre-wrap">
+                          {msg.thinking}
+                        </div>
+                      </details>
+                    )}
                     {msg.role === "assistant" && !msg.content ? (
                       <div className="flex items-center gap-1.5 py-1">
-                        <span className="h-1.5 w-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "0ms" }} />
-                        <span className="h-1.5 w-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "150ms" }} />
-                        <span className="h-1.5 w-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "300ms" }} />
+                        {msg.thinking ? (
+                          <span className="text-xs text-purple-500 dark:text-purple-400 animate-pulse flex items-center gap-1.5">
+                            <Sparkles className="h-3 w-3" />
+                            Thinking...
+                          </span>
+                        ) : (
+                          <>
+                            <span className="h-1.5 w-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "0ms" }} />
+                            <span className="h-1.5 w-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "150ms" }} />
+                            <span className="h-1.5 w-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "300ms" }} />
+                          </>
+                        )}
                       </div>
                     ) : (
                       <div className="prose-sm overflow-x-auto">
