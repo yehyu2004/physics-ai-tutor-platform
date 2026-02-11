@@ -167,6 +167,7 @@ export default function ChatPageClient({
   }, []);
 
   const MAX_IMAGES = 5;
+  const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -175,6 +176,13 @@ export default function ChatPageClient({
     const totalCount = imageFiles.length + files.length;
     if (totalCount > MAX_IMAGES) {
       setImageError(`You can upload at most ${MAX_IMAGES} images at a time.`);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
+    const oversized = files.find((f) => f.size > MAX_IMAGE_SIZE);
+    if (oversized) {
+      setImageError(`Image "${oversized.name}" exceeds the 5 MB limit. Please use a smaller image.`);
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
