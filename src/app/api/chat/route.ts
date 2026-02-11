@@ -198,7 +198,7 @@ export async function POST(req: Request) {
                 max_tokens: 50,
                 messages: [{
                   role: "user",
-                  content: `Generate a concise title (max 6 words) for this conversation based on the question and answer. Reply with ONLY the title, no quotes.\n\nQuestion: ${message}\n\nAnswer: ${fullContent.slice(0, 200)}`,
+                  content: `Generate a concise title (max 6 words) for this physics conversation. The title should primarily reflect the student's question. Use the AI answer only for minor clarification if the question alone is ambiguous. Reply with ONLY the title, no quotes.\n\nStudent question: ${message}\n\nAI answer (for context only): ${fullContent.slice(0, 100)}`,
                 }],
               });
               const titleBlock = titleResponse.content[0];
