@@ -25,7 +25,7 @@ const LANGUAGE_MAP: Record<string, { language: string; version: string }> = {
 export async function POST(req: NextRequest) {
   try {
     const session = await auth();
-    if (!session?.user) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
