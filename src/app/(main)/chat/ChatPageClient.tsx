@@ -20,6 +20,9 @@ import {
   PanelLeftOpen,
   PanelLeftClose,
   ShieldAlert,
+  FileDown,
+  Check,
+  Copy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -108,6 +111,8 @@ export default function ChatPageClient({
   const [chatMode, setChatMode] = useState<"normal" | "socratic">("normal");
   const [examModeActive, setExamModeActive] = useState(false);
   const [examBannerDismissed, setExamBannerDismissed] = useState(false);
+  const [conversationCopied, setConversationCopied] = useState(false);
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -374,6 +379,37 @@ export default function ChatPageClient({
 
   const activeConversation = conversations.find((c) => c.id === activeConversationId);
 
+  const copyConversationAsMarkdown = async () => {
+    if (messages.length === 0) return;
+
+    const markdown = messages.map(msg => {
+      const role = msg.role === "user" ? "**User**" : "**Assistant**";
+      let content = `${role}:\n\n${msg.content}`;
+
+      if (msg.imageUrls && msg.imageUrls.length > 0) {
+        content = `${role}:\n\n[${msg.imageUrls.length} image(s) attached]\n\n${msg.content}`;
+      }
+
+      if (msg.thinking) {
+        content += `\n\n*[Thinking: ${msg.thinking}]*`;
+      }
+
+      return content;
+    }).join("\n\n---\n\n");
+
+    const fullMarkdown = `# ${activeConversation?.title || "Chat Conversation"}\n\n${markdown}`;
+
+    await navigator.clipboard.writeText(fullMarkdown);
+    setConversationCopied(true);
+    setTimeout(() => setConversationCopied(false), 2000);
+  };
+
+  const copyMessage = async (messageId: string, content: string) => {
+    await navigator.clipboard.writeText(content);
+    setCopiedMessageId(messageId);
+    setTimeout(() => setCopiedMessageId(null), 2000);
+  };
+
   return (
     <div className="flex h-[calc(100vh-5rem)] sm:h-[calc(100vh-6.5rem)] overflow-hidden">
       {/* Mobile sidebar overlay (only on small screens) */}
@@ -508,8 +544,29 @@ export default function ChatPageClient({
             </div>
           </div>
 
-          {/* Socratic Mode Toggle + Model Selector */}
+          {/* Copy Conversation + Socratic Mode Toggle + Model Selector */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Copy Conversation Button */}
+            {messages.length > 0 && (
+              <button
+                onClick={copyConversationAsMarkdown}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs font-medium transition-colors"
+                title="Copy conversation as markdown"
+              >
+                {conversationCopied ? (
+                  <>
+                    <Check className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <FileDown className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Export</span>
+                  </>
+                )}
+              </button>
+            )}
+
             {/* Socratic Mode Toggle — hidden during exam mode */}
             {!examModeActive && (
               <Button
@@ -632,7 +689,7 @@ export default function ChatPageClient({
                 <div
                   key={msg.id}
                   className={cn(
-                    "flex gap-3",
+                    "flex gap-3 group",
                     msg.role === "user" ? "justify-end" : "justify-start"
                   )}
                 >
@@ -645,12 +702,31 @@ export default function ChatPageClient({
 
                   <div
                     className={cn(
-                      "text-sm leading-relaxed overflow-hidden",
+                      "text-sm leading-relaxed overflow-hidden relative",
                       msg.role === "user"
                         ? "max-w-[75%] bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-2xl rounded-br-md px-4 py-3"
                         : "flex-1 min-w-0 text-gray-900 dark:text-gray-100 py-1"
                     )}
                   >
+                    {/* Copy button for each message */}
+                    {msg.content && (
+                      <button
+                        onClick={() => copyMessage(msg.id, msg.content)}
+                        className={cn(
+                          "absolute top-1 right-1 p-1.5 rounded-md transition-all",
+                          msg.role === "user"
+                            ? "opacity-0 group-hover:opacity-100 bg-white/80 dark:bg-gray-900/80 hover:bg-white dark:hover:bg-gray-900 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                            : "opacity-0 group-hover:opacity-100 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                        )}
+                        title="Copy message"
+                      >
+                        {copiedMessageId === msg.id ? (
+                          <Check className="h-3 w-3" />
+                        ) : (
+                          <Copy className="h-3 w-3" />
+                        )}
+                      </button>
+                    )}
                     {msg.imageUrls && msg.imageUrls.length > 0 && (
                       <div className={cn(
                         "mb-3 gap-2",

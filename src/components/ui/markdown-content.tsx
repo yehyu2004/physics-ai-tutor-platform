@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
@@ -51,6 +51,17 @@ function CodeBlock({
   const isRunnable = runnableLanguages.includes(language.toLowerCase());
 
   const handleRun = async () => {
+    // Add confirmation for first-time use
+    if (!sessionStorage.getItem('code-run-acknowledged')) {
+      const confirmed = confirm(
+        'Code will be executed in a secure sandbox environment (Piston API).\n\n' +
+        '⚠️ Note: Code is sent to a third-party service for execution.\n\n' +
+        'Continue?'
+      );
+      if (!confirmed) return;
+      sessionStorage.setItem('code-run-acknowledged', 'true');
+    }
+
     setRunning(true);
     setOutput(null);
 
@@ -180,8 +191,64 @@ interface MarkdownContentProps {
 }
 
 export function MarkdownContent({ content, className }: MarkdownContentProps) {
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Add copy buttons to all rendered math elements
+    // Use setTimeout to ensure ReactMarkdown and KaTeX have finished rendering
+    const timer = setTimeout(() => {
+      const container = contentRef.current;
+      if (!container) return;
+
+      const mathElements = container.querySelectorAll('.katex-display, .katex:not(.katex-display .katex)');
+
+    mathElements.forEach((mathEl) => {
+      // Skip if already has a copy button
+      if (mathEl.parentElement?.classList.contains('math-wrapper')) return;
+
+      // Get the LaTeX source from the annotation element
+      const annotation = mathEl.querySelector('annotation[encoding="application/x-tex"]');
+      const latex = annotation?.textContent || '';
+
+      if (!latex) return;
+
+      // Create wrapper
+      const wrapper = document.createElement('div');
+      wrapper.className = 'math-wrapper relative inline-block group';
+      if (mathEl.classList.contains('katex-display')) {
+        wrapper.className = 'math-wrapper relative block group my-4';
+      }
+
+      // Create copy button
+      const copyBtn = document.createElement('button');
+      copyBtn.className = 'absolute top-1 right-1 p-1.5 rounded-md bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-all z-10';
+      copyBtn.title = 'Copy formula';
+      copyBtn.innerHTML = '<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>';
+
+      copyBtn.onclick = async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        await navigator.clipboard.writeText(latex);
+
+        // Update button to show check mark
+        copyBtn.innerHTML = '<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
+        setTimeout(() => {
+          copyBtn.innerHTML = '<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>';
+        }, 2000);
+      };
+
+      // Wrap the math element
+      mathEl.parentNode?.insertBefore(wrapper, mathEl);
+      wrapper.appendChild(mathEl);
+      wrapper.appendChild(copyBtn);
+    });
+    }, 100); // Delay to ensure ReactMarkdown has rendered
+
+    return () => clearTimeout(timer);
+  }, [content]);
+
   return (
-    <div className={className}>
+    <div ref={contentRef} className={className}>
       <ReactMarkdown
         remarkPlugins={[remarkMath]}
         rehypePlugins={[rehypeRaw, rehypeKatex]}
