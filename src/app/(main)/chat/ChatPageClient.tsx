@@ -695,90 +695,129 @@ export default function ChatPageClient({
                 >
                   {/* AI Avatar */}
                   {msg.role === "assistant" && (
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 self-end">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 self-start">
                       <Bot className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
                     </div>
                   )}
 
-                  <div
-                    className={cn(
-                      "text-sm leading-relaxed overflow-hidden relative",
-                      msg.role === "user"
-                        ? "max-w-[75%] bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-2xl rounded-br-md px-4 py-3"
-                        : "flex-1 min-w-0 text-gray-900 dark:text-gray-100 py-1"
-                    )}
-                  >
-                    {/* Copy button for each message */}
-                    {msg.content && (
+                  {msg.role === "user" ? (
+                    /* User message with inline copy button */
+                    <div className="flex items-start gap-2 max-w-[75%]">
+                      {/* Copy button - shows on hover, positioned to the left of bubble */}
                       <button
                         onClick={() => copyMessage(msg.id, msg.content)}
-                        className={cn(
-                          "absolute top-1 right-1 p-1.5 rounded-md transition-all opacity-50 hover:opacity-100",
-                          msg.role === "user"
-                            ? "bg-white/80 dark:bg-gray-900/80 hover:bg-white dark:hover:bg-gray-900 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                            : "bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                        )}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity mt-2 p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                         title="Copy message"
                       >
                         {copiedMessageId === msg.id ? (
-                          <Check className="h-3 w-3" />
+                          <Check className="h-3.5 w-3.5" />
                         ) : (
-                          <Copy className="h-3 w-3" />
+                          <Copy className="h-3.5 w-3.5" />
                         )}
                       </button>
-                    )}
-                    {msg.imageUrls && msg.imageUrls.length > 0 && (
-                      <div className={cn(
-                        "mb-3 gap-2",
-                        msg.imageUrls.length === 1 ? "flex" : "grid grid-cols-2"
-                      )}>
-                        {msg.imageUrls.map((url, idx) => (
-                          <img
-                            key={idx}
-                            src={url}
-                            alt={`Uploaded ${idx + 1}`}
-                            className="max-w-full rounded-lg max-h-60 object-contain"
-                          />
-                        ))}
-                      </div>
-                    )}
-                    {msg.role === "assistant" && msg.thinking && (
-                      <details className="mb-2 group">
-                        <summary className="flex items-center gap-1.5 cursor-pointer text-xs text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 select-none">
-                          <Sparkles className="h-3 w-3" />
-                          <span className="font-medium">Thinking</span>
-                          <svg className="h-3 w-3 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                        </summary>
-                        <div className="mt-1.5 pl-4 border-l-2 border-purple-200 dark:border-purple-800 text-xs text-gray-500 dark:text-gray-400 leading-relaxed whitespace-pre-wrap">
-                          {msg.thinking}
+
+                      <div className="bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-2xl rounded-br-md px-4 py-3 text-sm leading-relaxed">
+                        {msg.imageUrls && msg.imageUrls.length > 0 && (
+                          <div className={cn(
+                            "mb-3 gap-2",
+                            msg.imageUrls.length === 1 ? "flex" : "grid grid-cols-2"
+                          )}>
+                            {msg.imageUrls.map((url, idx) => (
+                              <img
+                                key={idx}
+                                src={url}
+                                alt={`Uploaded ${idx + 1}`}
+                                className="max-w-full rounded-lg max-h-60 object-contain"
+                              />
+                            ))}
+                          </div>
+                        )}
+                        <div className="prose-sm overflow-x-auto">
+                          <MarkdownContent content={msg.content} />
                         </div>
-                      </details>
-                    )}
-                    {msg.role === "assistant" && !msg.content ? (
-                      <div className="flex items-center gap-1.5 py-1">
-                        {msg.thinking ? (
-                          <span className="text-xs text-purple-500 dark:text-purple-400 animate-pulse flex items-center gap-1.5">
-                            <Sparkles className="h-3 w-3" />
-                            Thinking...
-                          </span>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Assistant message with action bar below */
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm leading-relaxed text-gray-900 dark:text-gray-100 py-1">
+                        {msg.imageUrls && msg.imageUrls.length > 0 && (
+                          <div className={cn(
+                            "mb-3 gap-2",
+                            msg.imageUrls.length === 1 ? "flex" : "grid grid-cols-2"
+                          )}>
+                            {msg.imageUrls.map((url, idx) => (
+                              <img
+                                key={idx}
+                                src={url}
+                                alt={`Uploaded ${idx + 1}`}
+                                className="max-w-full rounded-lg max-h-60 object-contain"
+                              />
+                            ))}
+                          </div>
+                        )}
+                        {msg.thinking && (
+                          <details className="mb-2 group/thinking">
+                            <summary className="flex items-center gap-1.5 cursor-pointer text-xs text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 select-none">
+                              <Sparkles className="h-3 w-3" />
+                              <span className="font-medium">Thinking</span>
+                              <svg className="h-3 w-3 transition-transform group-open/thinking:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                            </summary>
+                            <div className="mt-1.5 pl-4 border-l-2 border-purple-200 dark:border-purple-800 text-xs text-gray-500 dark:text-gray-400 leading-relaxed whitespace-pre-wrap">
+                              {msg.thinking}
+                            </div>
+                          </details>
+                        )}
+                        {!msg.content ? (
+                          <div className="flex items-center gap-1.5 py-1">
+                            {msg.thinking ? (
+                              <span className="text-xs text-purple-500 dark:text-purple-400 animate-pulse flex items-center gap-1.5">
+                                <Sparkles className="h-3 w-3" />
+                                Thinking...
+                              </span>
+                            ) : (
+                              <>
+                                <span className="h-1.5 w-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "0ms" }} />
+                                <span className="h-1.5 w-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "150ms" }} />
+                                <span className="h-1.5 w-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "300ms" }} />
+                              </>
+                            )}
+                          </div>
                         ) : (
-                          <>
-                            <span className="h-1.5 w-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "0ms" }} />
-                            <span className="h-1.5 w-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "150ms" }} />
-                            <span className="h-1.5 w-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "300ms" }} />
-                          </>
+                          <div className="prose-sm overflow-x-auto">
+                            <MarkdownContent content={msg.content} />
+                          </div>
                         )}
                       </div>
-                    ) : (
-                      <div className="prose-sm overflow-x-auto">
-                        <MarkdownContent content={msg.content} />
-                      </div>
-                    )}
-                  </div>
+
+                      {/* Action bar - shows on hover */}
+                      {msg.content && (
+                        <div className="flex items-center gap-2 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => copyMessage(msg.id, msg.content)}
+                            className="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 text-xs transition-colors"
+                            title="Copy message"
+                          >
+                            {copiedMessageId === msg.id ? (
+                              <>
+                                <Check className="h-3 w-3" />
+                                <span>Copied</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="h-3 w-3" />
+                                <span>Copy</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* User Avatar */}
                   {msg.role === "user" && (
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-900 self-end">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-900 dark:bg-gray-700 self-start">
                       <User className="h-3.5 w-3.5 text-white" />
                     </div>
                   )}

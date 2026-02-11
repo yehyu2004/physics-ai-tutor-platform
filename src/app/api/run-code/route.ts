@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 
+// Rate limiting: Track execution count per user
+const executionCount = new Map<string, { count: number; resetTime: number }>();
+const MAX_EXECUTIONS_PER_HOUR = 20; // Limit to 20 executions per hour per user
+const RATE_LIMIT_WINDOW = 60 * 60 * 1000; // 1 hour in milliseconds
+
 // Map language names to Piston API language identifiers
 const LANGUAGE_MAP: Record<string, { language: string; version: string }> = {
   python: { language: "python", version: "3.10.0" },
@@ -22,6 +27,29 @@ export async function POST(req: NextRequest) {
     const session = await auth();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Rate limiting check
+    const userId = session.user.id;
+    const now = Date.now();
+    const userLimit = executionCount.get(userId);
+
+    if (userLimit) {
+      if (now < userLimit.resetTime) {
+        if (userLimit.count >= MAX_EXECUTIONS_PER_HOUR) {
+          const minutesLeft = Math.ceil((userLimit.resetTime - now) / 60000);
+          return NextResponse.json(
+            { error: `Rate limit exceeded. Please try again in ${minutesLeft} minute(s).` },
+            { status: 429 }
+          );
+        }
+        userLimit.count++;
+      } else {
+        // Reset counter after time window
+        executionCount.set(userId, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+      }
+    } else {
+      executionCount.set(userId, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
     }
 
     const { code, language } = await req.json();
