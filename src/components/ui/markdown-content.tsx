@@ -1,10 +1,13 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import rehypeRaw from "rehype-raw";
+import { Check, Copy, Play, Edit3, Save } from "lucide-react";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import "katex/dist/katex.min.css";
 
 function normalizeLatex(content: string): string {
@@ -23,6 +26,152 @@ function normalizeLatex(content: string): string {
   content = content.replace(/\n{3,}/g, "\n\n");
 
   return content.trim();
+}
+
+function CodeBlock({
+  language,
+  code: initialCode
+}: {
+  language: string;
+  code: string;
+}) {
+  const [copied, setCopied] = useState(false);
+  const [running, setRunning] = useState(false);
+  const [output, setOutput] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [code, setCode] = useState(initialCode);
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const runnableLanguages = ["python", "javascript", "js", "typescript", "ts"];
+  const isRunnable = runnableLanguages.includes(language.toLowerCase());
+
+  const handleRun = async () => {
+    setRunning(true);
+    setOutput(null);
+
+    try {
+      const res = await fetch("/api/run-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, language }),
+      });
+
+      const data = await res.json();
+      setOutput(data.output || data.error || "No output");
+    } catch (err) {
+      setOutput(`Error: ${err instanceof Error ? err.message : "Failed to run code"}`);
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const toggleEdit = () => {
+    setIsEditing(!isEditing);
+  };
+
+  return (
+    <div className="my-4 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-2 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <span className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">
+          {language || "code"}
+        </span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={toggleEdit}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs font-medium transition-colors"
+            title={isEditing ? "Save and view" : "Edit code"}
+          >
+            {isEditing ? (
+              <>
+                <Save className="h-3 w-3" />
+                Save
+              </>
+            ) : (
+              <>
+                <Edit3 className="h-3 w-3" />
+                Edit
+              </>
+            )}
+          </button>
+          {isRunnable && (
+            <button
+              onClick={handleRun}
+              disabled={running}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-green-600 hover:bg-green-700 disabled:bg-green-800 disabled:opacity-50 text-white text-xs font-medium transition-colors"
+              title="Run code"
+            >
+              <Play className="h-3 w-3" />
+              {running ? "Running..." : "Run"}
+            </button>
+          )}
+          <button
+            onClick={handleCopy}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs font-medium transition-colors"
+            title="Copy code"
+          >
+            {copied ? (
+              <>
+                <Check className="h-3 w-3" />
+                Copied!
+              </>
+            ) : (
+              <>
+                <Copy className="h-3 w-3" />
+                Copy
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Code */}
+      {isEditing ? (
+        <textarea
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          className="w-full p-4 bg-gray-950 dark:bg-black text-gray-100 text-sm font-mono leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+          rows={Math.max(code.split('\n').length, 5)}
+          spellCheck={false}
+        />
+      ) : (
+        <SyntaxHighlighter
+          language={language}
+          style={vscDarkPlus}
+          customStyle={{
+            margin: 0,
+            padding: '1rem',
+            background: '#0a0a0a',
+            fontSize: '0.875rem',
+            lineHeight: '1.5',
+          }}
+          showLineNumbers
+          wrapLines
+        >
+          {code}
+        </SyntaxHighlighter>
+      )}
+
+      {/* Output */}
+      {output !== null && (
+        <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-900 dark:bg-gray-950">
+          <div className="px-4 py-2 bg-gray-800 dark:bg-gray-900 border-b border-gray-700">
+            <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">
+              Output
+            </span>
+          </div>
+          <pre className="p-4 overflow-x-auto text-sm font-mono leading-relaxed text-green-400">
+            {output}
+          </pre>
+        </div>
+      )}
+    </div>
+  );
 }
 
 interface MarkdownContentProps {
@@ -60,11 +209,9 @@ export function MarkdownContent({ content, className }: MarkdownContentProps) {
             }
             const isBlock = className?.includes("language-");
             if (isBlock) {
-              return (
-                <pre className="bg-gray-900 text-gray-100 rounded-lg p-4 my-3 overflow-x-auto text-xs font-mono leading-relaxed border border-gray-800">
-                  <code className={className} {...props}>{children}</code>
-                </pre>
-              );
+              const match = className?.match(/language-(\w+)/);
+              const language = match ? match[1] : "";
+              return <CodeBlock language={language} code={code} />;
             }
             return (
               <code className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded text-sm font-mono" {...props}>
