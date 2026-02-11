@@ -674,14 +674,14 @@ export default function GradingPage() {
             {selectedSubmission ? (
               <>
                 {/* Panel Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
                       <User className="h-5 w-5 text-gray-600 dark:text-gray-400" />
                     </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900 dark:text-gray-100">{selectedSubmission.userName}</h3>
-                      <div className="flex items-center gap-2">
+                    <div className="min-w-0">
+                      <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{selectedSubmission.userName}</h3>
+                      <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-xs text-gray-400 dark:text-gray-500">
                           Submitted {formatShortDate(selectedSubmission.submittedAt)}
                         </p>
@@ -698,11 +698,11 @@ export default function GradingPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 ml-auto">
                     {/* Grading mode toggle - only for QUIZ with questions */}
                     {selectedSubmission.answers.length > 0 && !allAutoGraded && (
                       <Select value={gradingMode} onValueChange={(v) => setGradingMode(v as GradingMode)}>
-                        <SelectTrigger className="w-40 h-9 text-xs">
+                        <SelectTrigger className="w-32 sm:w-40 h-9 text-xs">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -715,10 +715,12 @@ export default function GradingPage() {
                     <Button
                       onClick={handleSaveGrades}
                       disabled={saving || allAutoGraded}
-                      className="gap-2 bg-gray-900 dark:bg-gray-100 hover:bg-gray-800 dark:hover:bg-gray-200 text-white dark:text-gray-900 rounded-lg"
+                      size="sm"
+                      className="gap-1.5 bg-gray-900 dark:bg-gray-100 hover:bg-gray-800 dark:hover:bg-gray-200 text-white dark:text-gray-900 rounded-lg"
                     >
                       {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                      Save Grades
+                      <span className="hidden sm:inline">Save Grades</span>
+                      <span className="sm:hidden">Save</span>
                     </Button>
                   </div>
                 </div>
