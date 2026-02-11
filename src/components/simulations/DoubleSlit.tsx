@@ -12,7 +12,7 @@ import {
 } from "@/lib/simulation/scoring";
 import { playSFX, playScore } from "@/lib/simulation/sound";
 import { ParticleSystem } from "@/lib/simulation/particles";
-// drawing utils available if needed
+import { SimMath } from "@/components/simulations/SimMath";
 
 type Mode = "sandbox" | "measure-d" | "wavelength-quiz" | "compare";
 type SlitConfig = "single" | "double" | "multi";
@@ -813,9 +813,9 @@ export default function DoubleSlit() {
       <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
         <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Interference Equations</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-gray-600 dark:text-gray-400 font-mono">
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">d sin(\u03b8) = m\u03bb (maxima)</div>
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">d sin(\u03b8) = (m+\u00bd)\u03bb (minima)</div>
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">I = I\u2080 cos\u00b2(\u03c0d sin\u03b8/\u03bb)</div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"><SimMath math="d\sin\theta = m\lambda \text{ (maxima)}" /></div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"><SimMath math="d\sin\theta = (m+\tfrac{1}{2})\lambda \text{ (minima)}" /></div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"><SimMath math="I = I_0\cos^2\!\left(\frac{\pi d\sin\theta}{\lambda}\right)" /></div>
         </div>
       </div>
     </div>

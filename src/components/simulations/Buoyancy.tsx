@@ -907,7 +907,7 @@ export default function Buoyancy() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {gameMode !== "predict" && (
           <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Object Density (kg/m\u00B3)</label>
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Object Density (kg/m³)</label>
             <div className="flex items-center gap-3 mt-2">
               <input type="range" min={100} max={3000} step={50} value={objectDensity}
                 onChange={(e) => { setObjectDensity(Number(e.target.value)); posRef.current = 0.2; velRef.current = 0; lastTsRef.current = null; }}
@@ -917,7 +917,7 @@ export default function Buoyancy() {
           </div>
         )}
         <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fluid Density (kg/m\u00B3)</label>
+          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fluid Density (kg/m³)</label>
           <div className="flex items-center gap-3 mt-2">
             <input type="range" min={500} max={13600} step={100} value={fluidDensity}
               onChange={(e) => { setFluidDensity(Number(e.target.value)); posRef.current = 0.2; velRef.current = 0; lastTsRef.current = null; }}

@@ -798,7 +798,7 @@ export default function OhmsLaw() {
               </div>
             </div>
             <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Resistance (\u03A9)</label>
+              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Resistance (Ω)</label>
               <div className="flex items-center gap-3 mt-2">
                 <input type="range" min={10} max={1000} step={10} value={resistance}
                   onChange={(e) => setResistance(Number(e.target.value))}

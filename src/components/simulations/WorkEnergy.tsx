@@ -819,7 +819,7 @@ export default function WorkEnergy() {
           </div>
         </div>
         <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-3">
-          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Friction (\u03BC\u2096)</label>
+          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Friction (μₖ)</label>
           <div className="flex items-center gap-2 mt-1.5">
             <input type="range" min={0} max={0.5} step={0.01} value={friction}
               onChange={(e) => { setFriction(Number(e.target.value)); if (!isRunning) { reset(); } }}
