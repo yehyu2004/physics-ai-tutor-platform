@@ -15,7 +15,7 @@ export async function GET() {
     }
 
     const [totalUsers, totalConversations, totalMessages, totalSubmissions, submissions, recentMessages] = await Promise.all([
-      prisma.user.count(),
+      prisma.user.count({ where: { isDeleted: false } }),
       prisma.conversation.count(),
       prisma.message.count(),
       prisma.submission.count(),

@@ -42,7 +42,7 @@ export default async function DashboardPage() {
   let adminStats = null;
   if (role === "ADMIN") {
     const [totalUsers, totalConversations, totalSubmissions] = await Promise.all([
-      prisma.user.count(),
+      prisma.user.count({ where: { isDeleted: false } }),
       prisma.conversation.count(),
       prisma.submission.count(),
     ]);
