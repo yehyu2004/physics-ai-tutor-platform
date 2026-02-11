@@ -20,12 +20,12 @@
    - [Grading Submissions](#grading-submissions)
    - [Grade Export (CSV)](#grade-export)
    - [Managing Appeals](#managing-appeals)
+   - [Exam Mode](#exam-mode)
 4. [Administration](#4-administration)
    - [User Management](#user-management)
    - [Q&A History Monitoring](#qa-history-monitoring)
    - [Bulk Email](#bulk-email)
    - [Platform Analytics](#platform-analytics)
-   - [Exam Mode](#exam-mode)
 5. [Role Permissions](#5-role-permissions)
 6. [Future Roadmap](#6-future-roadmap)
 
@@ -140,7 +140,9 @@ Instructors can create two types of assignments:
 
 One of the most powerful features — generate physics problems using AI:
 
-- **15 physics topics**: Kinematics, Newton's Laws, Work & Energy, Momentum, Rotational Motion, Oscillations & Waves, Electrostatics, Electric Circuits, Magnetism, Electromagnetic Induction, Thermodynamics, Optics, Modern Physics, Fluid Mechanics, Gravitation
+- **15 preset physics topics**: Kinematics, Newton's Laws, Work & Energy, Momentum, Rotational Motion, Oscillations & Waves, Electrostatics, Electric Circuits, Magnetism, Electromagnetic Induction, Thermodynamics, Optics, Modern Physics, Fluid Mechanics, Gravitation
+- **Custom Topic** — type any specific topic not on the list (e.g., "Projectile motion with air resistance", "RC circuits with capacitor discharge", "Doppler effect")
+- **Additional Instructions** — optionally provide specific guidance for the AI (e.g., "Focus on conservation of energy with springs", "Include problems involving parallel circuits only", "Use SI units only")
 - **5 difficulty levels**: Easy, Medium, Average, Hard, Expert
 - **3 question types**: Multiple Choice, Numeric, Free Response
 - **Generate 1-10 problems** at once
@@ -148,7 +150,7 @@ One of the most powerful features — generate physics problems using AI:
 - **One-click assignment creation** — convert generated problems directly into assignments
 
 ![Problem Generator](handbook-screenshots/06-problem-generator.png)
-*The Problem Generator interface with topic selection, difficulty slider, question type, and problem count controls.*
+*The Problem Generator interface with topic selection (including Custom Topic option), difficulty slider, question type, and problem count controls.*
 
 ### Grading Submissions
 
@@ -179,6 +181,14 @@ When students submit grade appeals, instructors see them:
 - In the **grading interface** filtered by "With Appeals"
 - Appeals support **threaded messages** for back-and-forth discussion
 - Instructors can **accept** (with updated score), **reject**, or **reopen** appeals
+
+### Exam Mode
+
+TAs, Professors, and Admins can toggle Exam Mode from the top navigation bar:
+- **One-click toggle** — click the "Exam Mode" button in the top bar to activate or deactivate
+- **Platform-wide banner** — all users see a red "Exam Mode" indicator when active
+- **AI behavior change** — during exam mode, the AI tutor switches to guided-only mode, helping students understand concepts without giving direct answers
+- **Audit logged** — every toggle is recorded with who activated/deactivated it
 
 ---
 
@@ -223,13 +233,6 @@ The admin analytics dashboard shows:
 - Score distributions across assignments
 - Per-assignment average scores and submission counts
 
-### Exam Mode
-
-Admins can activate Exam Mode to:
-- Display a platform-wide exam notification banner
-- Set custom exam mode messages
-- Restrict certain platform features during exams
-
 ---
 
 ## 5. Role Permissions
@@ -250,8 +253,8 @@ Admins can activate Exam Mode to:
 | **Delete Users** | - | - | Yes | Yes |
 | **Impersonate Users** | - | - | Yes | Yes |
 | **Platform Analytics** | - | - | Yes | Yes |
+| **Exam Mode** | - | Yes | Yes | Yes |
 | **Platform Settings** | - | - | - | Yes |
-| **Exam Mode** | - | - | - | Yes |
 
 ---
 

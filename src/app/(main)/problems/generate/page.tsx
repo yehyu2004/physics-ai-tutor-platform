@@ -21,6 +21,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { MarkdownContent } from "@/components/ui/markdown-content";
 import MermaidDiagram from "@/components/chat/MermaidDiagram";
 import {
@@ -100,6 +101,8 @@ const difficultyConfig = [
 export default function ProblemGeneratorPage() {
   const router = useRouter();
   const [topic, setTopic] = useState("");
+  const [customTopic, setCustomTopic] = useState("");
+  const [customInstructions, setCustomInstructions] = useState("");
   const [difficulty, setDifficulty] = useState("3");
   const [count, setCount] = useState(3);
   const [questionType, setQuestionType] = useState("MC");
@@ -190,8 +193,10 @@ export default function ProblemGeneratorPage() {
     }
   }, []);
 
+  const effectiveTopic = topic === "__custom__" ? customTopic.trim() : topic;
+
   const handleGenerate = async () => {
-    if (!topic.trim()) return;
+    if (!effectiveTopic) return;
     setLoading(true);
     setProblems([]);
     streamBufferRef.current = "";
@@ -202,10 +207,11 @@ export default function ProblemGeneratorPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          topic,
+          topic: effectiveTopic,
           difficulty: Number(difficulty),
           count,
           questionType,
+          customInstructions: customInstructions.trim() || undefined,
         }),
       });
 
@@ -269,8 +275,8 @@ export default function ProblemGeneratorPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: `${topic} - Generated Problems`,
-          description: `Auto-generated ${problems.length} ${questionType} problems on ${topic} (difficulty ${difficulty}/5).`,
+          title: `${effectiveTopic} - Generated Problems`,
+          description: `Auto-generated ${problems.length} ${questionType} problems on ${effectiveTopic} (difficulty ${difficulty}/5).`,
           type: "QUIZ",
           totalPoints,
           questions: problems.map((p) => ({
@@ -352,7 +358,7 @@ export default function ProblemGeneratorPage() {
               {topics.map((t) => (
                 <button
                   key={t}
-                  onClick={() => setTopic(t)}
+                  onClick={() => { setTopic(t); setCustomTopic(""); }}
                   className={`flex items-center gap-2 px-3 py-2.5 text-xs font-medium rounded-lg border transition-colors ${
                     topic === t
                       ? "bg-gray-900 dark:bg-gray-100 border-gray-900 dark:border-gray-100 text-white dark:text-gray-900 shadow-sm"
@@ -365,7 +371,42 @@ export default function ProblemGeneratorPage() {
                   <span className="truncate">{t}</span>
                 </button>
               ))}
+              <button
+                onClick={() => setTopic("__custom__")}
+                className={`flex items-center gap-2 px-3 py-2.5 text-xs font-medium rounded-lg border transition-colors ${
+                  topic === "__custom__"
+                    ? "bg-gray-900 dark:bg-gray-100 border-gray-900 dark:border-gray-100 text-white dark:text-gray-900 shadow-sm"
+                    : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 border-dashed"
+                }`}
+              >
+                <span className={topic === "__custom__" ? "text-gray-300 dark:text-gray-600" : "text-gray-400 dark:text-gray-500"}>
+                  <Sparkles className="h-4 w-4" />
+                </span>
+                <span className="truncate">Custom Topic</span>
+              </button>
             </div>
+            {topic === "__custom__" && (
+              <Input
+                value={customTopic}
+                onChange={(e) => setCustomTopic(e.target.value)}
+                placeholder="e.g., Projectile motion with air resistance, RC circuits, Doppler effect..."
+                className="border-gray-200 dark:border-gray-700 rounded-lg focus-visible:ring-1 focus-visible:ring-gray-300 dark:focus-visible:ring-gray-600"
+              />
+            )}
+          </div>
+
+          {/* Additional Instructions (Optional) */}
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+              Additional Instructions <span className="font-normal text-gray-400 dark:text-gray-500">(optional)</span>
+            </Label>
+            <Textarea
+              value={customInstructions}
+              onChange={(e) => setCustomInstructions(e.target.value)}
+              placeholder="e.g., Focus on conservation of energy with springs, include problems with inclined planes, use SI units only..."
+              rows={2}
+              className="border-gray-200 dark:border-gray-700 rounded-lg focus-visible:ring-1 focus-visible:ring-gray-300 dark:focus-visible:ring-gray-600 resize-none text-sm"
+            />
           </div>
 
           {/* Difficulty Selection */}
@@ -419,7 +460,7 @@ export default function ProblemGeneratorPage() {
 
           <Button
             onClick={handleGenerate}
-            disabled={loading || !topic}
+            disabled={loading || !effectiveTopic}
             className="gap-2 bg-gray-900 hover:bg-gray-800 text-white shadow-sm w-full sm:w-auto rounded-lg"
           >
             {loading ? (
@@ -438,7 +479,7 @@ export default function ProblemGeneratorPage() {
           <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center gap-3">
             <Loader2 className="h-4 w-4 animate-spin text-gray-500 dark:text-gray-400" />
             <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Generating {count} {topic} problems...
+              Generating {count} {effectiveTopic} problems...
             </p>
           </div>
           {hasStreamText ? (

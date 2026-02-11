@@ -140,7 +140,7 @@ export async function POST(req: Request) {
       return Response.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { topic, difficulty, count, questionType } = await req.json();
+    const { topic, difficulty, count, questionType, customInstructions } = await req.json();
 
     const aiConfig = await prisma.aIConfig.findFirst({
       where: { isActive: true },
@@ -156,7 +156,7 @@ export async function POST(req: Request) {
         try {
           if (provider === "openai") {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const stream = await streamGenerateProblems(topic, difficulty, count, questionType, "openai") as any;
+            const stream = await streamGenerateProblems(topic, difficulty, count, questionType, "openai", customInstructions) as any;
             for await (const event of stream) {
               if (event.type === "response.output_text.delta") {
                 const delta = event.delta || "";
@@ -168,7 +168,7 @@ export async function POST(req: Request) {
             }
           } else {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const stream = await streamGenerateProblems(topic, difficulty, count, questionType, "anthropic") as any;
+            const stream = await streamGenerateProblems(topic, difficulty, count, questionType, "anthropic", customInstructions) as any;
             for await (const event of stream) {
               if (event.type === "content_block_delta" && event.delta?.text) {
                 fullContent += event.delta.text;

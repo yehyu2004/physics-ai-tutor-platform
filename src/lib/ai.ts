@@ -223,14 +223,14 @@ Use "mermaid" type for conceptual/process diagrams (energy flow, thermodynamic c
 
 If no diagram is needed, omit the "diagram" field entirely.`;
 
-function buildProblemPrompt(topic: string, difficulty: number, count: number, questionType: string, format: "array" | "object"): string {
+function buildProblemPrompt(topic: string, difficulty: number, count: number, questionType: string, format: "array" | "object", customInstructions?: string): string {
   const formatInstruction = format === "object"
     ? 'Format your response as a JSON object with a "problems" key containing an array of objects'
     : 'Format your response as a JSON array with objects';
 
   return `Generate ${count} physics problem(s) about "${topic}" at difficulty level ${difficulty}/5.
 Question type: ${questionType}
-
+${customInstructions ? `\nAdditional instructions: ${customInstructions}\n` : ""}
 For each problem, provide:
 1. The question text using proper markdown with LaTeX math ($...$ for inline, $$...$$ for display math)
 2. ${questionType === "MC" ? "4 options labeled A, B, C, D (each option should also use LaTeX for any math)" : ""}
@@ -254,9 +254,10 @@ export async function generateProblems(
   difficulty: number,
   count: number,
   questionType: string,
-  provider: AIProvider = "openai"
+  provider: AIProvider = "openai",
+  customInstructions?: string
 ) {
-  const prompt = buildProblemPrompt(topic, difficulty, count, questionType, "array");
+  const prompt = buildProblemPrompt(topic, difficulty, count, questionType, "array", customInstructions);
 
   if (provider === "openai") {
     const response = await openai.responses.create({
@@ -286,9 +287,10 @@ export async function streamGenerateProblems(
   difficulty: number,
   count: number,
   questionType: string,
-  provider: AIProvider = "openai"
+  provider: AIProvider = "openai",
+  customInstructions?: string
 ) {
-  const prompt = buildProblemPrompt(topic, difficulty, count, questionType, "object");
+  const prompt = buildProblemPrompt(topic, difficulty, count, questionType, "object", customInstructions);
 
   if (provider === "openai") {
     return openai.responses.create({
