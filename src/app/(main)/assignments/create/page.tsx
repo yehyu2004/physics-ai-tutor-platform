@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Plus,
@@ -14,7 +14,26 @@ import {
   Send,
   CheckCircle2,
   SkipForward,
+  GripVertical,
 } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,6 +57,7 @@ import {
 import Link from "next/link";
 
 interface Question {
+  _uid: string;
   questionText: string;
   questionType: "MC" | "NUMERIC" | "FREE_RESPONSE";
   options: string[];
@@ -45,6 +65,67 @@ interface Question {
   points: number;
   imageFile?: File | null;
   imagePreview?: string | null;
+}
+
+function SortableQuestionCard({
+  id,
+  index,
+  onRemove,
+  children,
+}: {
+  id: string;
+  index: number;
+  onRemove: () => void;
+  children: React.ReactNode;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 10 : undefined,
+    opacity: isDragging ? 0.8 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className={isDragging ? "shadow-lg rounded-lg" : ""}>
+      <Card>
+        <CardContent className="p-6 space-y-4">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-2">
+              <button
+                {...attributes}
+                {...listeners}
+                className="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-grab active:cursor-grabbing touch-none"
+                title="Drag to reorder"
+              >
+                <GripVertical className="h-4 w-4" />
+              </button>
+              <span className="text-sm font-medium text-neutral-500">
+                Question {index + 1}
+              </span>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-red-500 h-8 w-8"
+              onClick={onRemove}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+          {children}
+        </CardContent>
+      </Card>
+    </div>
+  );
 }
 
 export default function CreateAssignmentPage() {
@@ -78,10 +159,32 @@ export default function CreateAssignmentPage() {
   const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
   const [loadingStudents, setLoadingStudents] = useState(false);
 
+  const uidCounterRef = useRef(0);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setQuestions((prev) => {
+        const oldIndex = prev.findIndex((q) => q._uid === active.id);
+        const newIndex = prev.findIndex((q) => q._uid === over.id);
+        if (oldIndex === -1 || newIndex === -1) return prev;
+        return arrayMove(prev, oldIndex, newIndex);
+      });
+    }
+  };
+
   const addQuestion = () => {
+    uidCounterRef.current += 1;
     setQuestions((prev) => [
       ...prev,
       {
+        _uid: `q-${uidCounterRef.current}`,
         questionText: "",
         questionType: "MC",
         options: ["", "", "", ""],
@@ -401,130 +504,118 @@ export default function CreateAssignmentPage() {
             </Button>
           </div>
 
-          {questions.map((q, qIndex) => (
-            <Card key={qIndex}>
-              <CardContent className="p-6 space-y-4">
-                <div className="flex items-start justify-between">
-                  <span className="text-sm font-medium text-neutral-500">
-                    Question {qIndex + 1}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-red-500 h-8 w-8"
-                    onClick={() => removeQuestion(qIndex)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Question Text (supports Markdown and LaTeX: $...$)</Label>
-                  <Textarea
-                    value={q.questionText}
-                    onChange={(e) => updateQuestion(qIndex, "questionText", e.target.value)}
-                    placeholder="Enter the question (supports Markdown and LaTeX: $...$)"
-                    rows={2}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Question Image (optional)</Label>
-                  {q.imagePreview ? (
-                    <div className="relative inline-block">
-                      <img
-                        src={q.imagePreview}
-                        alt="Question image"
-                        className="rounded-lg border border-gray-200 dark:border-gray-700 max-h-40"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeImage(qIndex)}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  ) : (
-                    <label className="flex items-center gap-2 px-3 py-2 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors w-fit">
-                      <ImagePlus className="h-4 w-4 text-gray-400 dark:text-gray-500" />
-                      <span className="text-sm text-gray-500 dark:text-gray-400">Add image</span>
-                      <input
-                        type="file"
-                        className="hidden"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleImageUpload(qIndex, file);
-                        }}
-                      />
-                    </label>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={questions.map((q) => q._uid)} strategy={verticalListSortingStrategy}>
+              {questions.map((q, qIndex) => (
+                <SortableQuestionCard key={q._uid} id={q._uid} index={qIndex} onRemove={() => removeQuestion(qIndex)}>
                   <div className="space-y-2">
-                    <Label>Type</Label>
-                    <Select
-                      value={q.questionType}
-                      onValueChange={(v) => updateQuestion(qIndex, "questionType", v)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="MC">Multiple Choice</SelectItem>
-                        <SelectItem value="NUMERIC">Numeric Answer</SelectItem>
-                        <SelectItem value="FREE_RESPONSE">Free Response</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Points</Label>
-                    <Input
-                      type="number"
-                      value={q.points}
-                      onChange={(e) => updateQuestion(qIndex, "points", Number(e.target.value))}
+                    <Label>Question Text (supports Markdown and LaTeX: $...$)</Label>
+                    <Textarea
+                      value={q.questionText}
+                      onChange={(e) => updateQuestion(qIndex, "questionText", e.target.value)}
+                      placeholder="Enter the question (supports Markdown and LaTeX: $...$)"
+                      rows={2}
                     />
                   </div>
-                </div>
 
-                {q.questionType === "MC" && (
                   <div className="space-y-2">
-                    <Label>Options</Label>
-                    {q.options.map((opt, oIndex) => (
-                      <div key={oIndex} className="flex items-center gap-2">
-                        <span className="text-sm font-medium w-6">
-                          {String.fromCharCode(65 + oIndex)}.
-                        </span>
-                        <Input
-                          value={opt}
-                          onChange={(e) => updateOption(qIndex, oIndex, e.target.value)}
-                          placeholder={`Option ${String.fromCharCode(65 + oIndex)}`}
+                    <Label>Question Image (optional)</Label>
+                    {q.imagePreview ? (
+                      <div className="relative inline-block">
+                        <img
+                          src={q.imagePreview}
+                          alt="Question image"
+                          className="rounded-lg border border-gray-200 dark:border-gray-700 max-h-40"
                         />
+                        <button
+                          type="button"
+                          onClick={() => removeImage(qIndex)}
+                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
                       </div>
-                    ))}
+                    ) : (
+                      <label className="flex items-center gap-2 px-3 py-2 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors w-fit">
+                        <ImagePlus className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                        <span className="text-sm text-gray-500 dark:text-gray-400">Add image</span>
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleImageUpload(qIndex, file);
+                          }}
+                        />
+                      </label>
+                    )}
                   </div>
-                )}
 
-                <div className="space-y-2">
-                  <Label>Correct Answer</Label>
-                  <Input
-                    value={q.correctAnswer}
-                    onChange={(e) => updateQuestion(qIndex, "correctAnswer", e.target.value)}
-                    placeholder={
-                      q.questionType === "MC"
-                        ? "e.g., A"
-                        : q.questionType === "NUMERIC"
-                        ? "e.g., 9.8"
-                        : "Sample answer (for reference)"
-                    }
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Type</Label>
+                      <Select
+                        value={q.questionType}
+                        onValueChange={(v) => updateQuestion(qIndex, "questionType", v)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="MC">Multiple Choice</SelectItem>
+                          <SelectItem value="NUMERIC">Numeric Answer</SelectItem>
+                          <SelectItem value="FREE_RESPONSE">Free Response</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Points</Label>
+                      <Input
+                        type="number"
+                        value={q.points}
+                        onChange={(e) => updateQuestion(qIndex, "points", Number(e.target.value))}
+                      />
+                    </div>
+                  </div>
+
+                  {q.questionType === "MC" && (
+                    <div className="space-y-2">
+                      <Label>Options</Label>
+                      {q.options.map((opt, oIndex) => (
+                        <div key={oIndex} className="flex items-center gap-2">
+                          <span className="text-sm font-medium w-6">
+                            {String.fromCharCode(65 + oIndex)}.
+                          </span>
+                          <Input
+                            value={opt}
+                            onChange={(e) => updateOption(qIndex, oIndex, e.target.value)}
+                            placeholder={`Option ${String.fromCharCode(65 + oIndex)}`}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label>Correct Answer</Label>
+                    <Input
+                      value={q.correctAnswer}
+                      onChange={(e) => updateQuestion(qIndex, "correctAnswer", e.target.value)}
+                      placeholder={
+                        q.questionType === "MC"
+                          ? "e.g., A"
+                          : q.questionType === "NUMERIC"
+                          ? "e.g., 9.8"
+                          : "Sample answer (for reference)"
+                      }
+                    />
+                  </div>
+                </SortableQuestionCard>
+              ))}
+            </SortableContext>
+          </DndContext>
 
           {questions.length === 0 && (
             <Card>
