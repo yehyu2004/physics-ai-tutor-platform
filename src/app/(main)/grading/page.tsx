@@ -636,6 +636,7 @@ export default function GradingPage() {
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{sub.userName}</p>
                           <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{sub.userEmail}</p>
+                          <p className="text-[10px] text-gray-400 dark:text-gray-500">Submitted {new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(sub.submittedAt))}</p>
                         </div>
                       </div>
                       <div className="mt-2 ml-10 space-y-1">
