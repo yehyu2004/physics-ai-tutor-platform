@@ -417,6 +417,7 @@ export default function CreateAssignmentPage() {
                 type="datetime-local"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
+                lang="en-US"
               />
             </div>
 

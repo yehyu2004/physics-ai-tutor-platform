@@ -119,6 +119,15 @@ const difficultyConfig = [
   { value: "5", label: "Expert", color: "bg-red-50 text-red-700 border-red-200" },
 ];
 
+function formatQuestionType(type: string): string {
+  const typeMap: Record<string, string> = {
+    "FREE_RESPONSE": "Free Response",
+    "MC": "Multiple Choice",
+    "TF": "True/False",
+  };
+  return typeMap[type] || type;
+}
+
 function SortableProblemItem({
   id,
   index,
@@ -456,7 +465,7 @@ export default function ProblemGeneratorPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: `${effectiveTopic} - Generated Problems`,
-          description: `Auto-generated ${problems.length} ${questionType} problems on ${effectiveTopic} (difficulty ${difficulty}/5).`,
+          description: `Auto-generated ${problems.length} ${formatQuestionType(questionType)} problems on ${effectiveTopic} (difficulty ${difficulty}/5).`,
           type: "QUIZ",
           totalPoints,
           questions: problems.map((p) => ({

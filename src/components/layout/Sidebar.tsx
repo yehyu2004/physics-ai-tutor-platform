@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Home,
   MessageSquare,
@@ -25,6 +25,12 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { UserRole } from "@/types";
 
 interface NavItem {
@@ -90,7 +96,22 @@ interface SidebarProps {
 
 export default function Sidebar({ userRole, userName, collapsed = false, onToggleCollapse, mobileOpen = false, onMobileToggle }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Keyboard shortcut for ⌘K
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const toggleExpand = (label: string) => {
     setExpandedItems((prev) =>
@@ -119,6 +140,48 @@ export default function Sidebar({ userRole, userName, collapsed = false, onToggl
       : adminItems.filter((item) => item.href === "/admin/qa-history" || item.href === "/admin/users" || item.href === "/admin/email-records");
     sections.push({ label: "ADMIN", items: staffItems });
   }
+
+  // Get all searchable items (flattened)
+  const getAllSearchableItems = () => {
+    const items: Array<{ id: string; label: string; href: string; icon: React.ElementType; section: string }> = [];
+    sections.forEach((section) => {
+      section.items.forEach((item) => {
+        // Skip parent items that have children (children are listed separately)
+        if (!item.children) {
+          items.push({ id: `${section.label}-${item.label}`, label: item.label, href: item.href, icon: item.icon, section: section.label });
+        }
+        if (item.children) {
+          item.children.forEach((child) => {
+            if (child.href === "/assignments/create") {
+              if (userRole === "TA" || userRole === "PROFESSOR" || userRole === "ADMIN") {
+                items.push({ id: `${section.label}-${child.label}`, label: child.label, href: child.href, icon: item.icon, section: section.label });
+              }
+            } else {
+              items.push({ id: `${section.label}-${child.label}`, label: child.label, href: child.href, icon: item.icon, section: section.label });
+            }
+          });
+        }
+      });
+    });
+    return items;
+  };
+
+  const searchableItems = getAllSearchableItems();
+  const filteredSearchItems = searchQuery
+    ? searchableItems.filter((item) =>
+        item.label.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : searchableItems;
+
+  const handleSearchItemClick = (href: string) => {
+    // Navigate first, then clean up state
+    router.push(href);
+    // Close dialog after a brief delay to allow navigation to start
+    setTimeout(() => {
+      setSearchOpen(false);
+      setSearchQuery("");
+    }, 100);
+  };
 
   const renderNavItem = (item: NavItem) => {
     const active = isActive(item.href);
@@ -248,7 +311,9 @@ export default function Sidebar({ userRole, userName, collapsed = false, onToggl
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
             <Input
               placeholder="Search..."
-              className="pl-9 pr-12 h-9 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 rounded-lg text-sm placeholder:text-gray-400 focus:border-gray-300 focus:ring-gray-200"
+              readOnly
+              onClick={() => setSearchOpen(true)}
+              className="pl-9 pr-12 h-9 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 rounded-lg text-sm placeholder:text-gray-400 focus:border-gray-300 focus:ring-gray-200 cursor-pointer"
             />
             <kbd className="pointer-events-none absolute right-2.5 top-2 inline-flex h-5 items-center rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-1.5 text-[10px] font-medium text-gray-400">
               &#8984;K
@@ -364,6 +429,61 @@ export default function Sidebar({ userRole, userName, collapsed = false, onToggl
 
         {sidebarContent}
       </aside>
+
+      {/* Search Dialog */}
+      <Dialog open={searchOpen} onOpenChange={setSearchOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Search</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Type to search..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 h-10"
+                autoFocus
+              />
+            </div>
+            <ScrollArea className="max-h-[300px]">
+              <div className="space-y-1">
+                {filteredSearchItems.length === 0 && searchQuery && (
+                  <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+                    No results found for &quot;{searchQuery}&quot;
+                  </p>
+                )}
+                {filteredSearchItems.length === 0 && !searchQuery && (
+                  <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+                    Type to search for pages...
+                  </p>
+                )}
+                {filteredSearchItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => handleSearchItemClick(item.href)}
+                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                    >
+                      <Icon className="h-4 w-4 text-gray-500 dark:text-gray-400 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-gray-900 dark:text-gray-100 font-medium truncate">
+                          {item.label}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                          {item.section}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
