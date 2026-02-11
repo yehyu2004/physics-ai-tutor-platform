@@ -143,18 +143,21 @@ export default function Sidebar({ userRole, userName, collapsed = false, onToggl
 
   // Get all searchable items (flattened)
   const getAllSearchableItems = () => {
-    const items: Array<{ label: string; href: string; icon: React.ElementType; section: string }> = [];
+    const items: Array<{ id: string; label: string; href: string; icon: React.ElementType; section: string }> = [];
     sections.forEach((section) => {
       section.items.forEach((item) => {
-        items.push({ label: item.label, href: item.href, icon: item.icon, section: section.label });
+        // Skip parent items that have children (children are listed separately)
+        if (!item.children) {
+          items.push({ id: `${section.label}-${item.label}`, label: item.label, href: item.href, icon: item.icon, section: section.label });
+        }
         if (item.children) {
           item.children.forEach((child) => {
             if (child.href === "/assignments/create") {
               if (userRole === "TA" || userRole === "PROFESSOR" || userRole === "ADMIN") {
-                items.push({ label: `${item.label} > ${child.label}`, href: child.href, icon: item.icon, section: section.label });
+                items.push({ id: `${section.label}-${child.label}`, label: child.label, href: child.href, icon: item.icon, section: section.label });
               }
             } else {
-              items.push({ label: `${item.label} > ${child.label}`, href: child.href, icon: item.icon, section: section.label });
+              items.push({ id: `${section.label}-${child.label}`, label: child.label, href: child.href, icon: item.icon, section: section.label });
             }
           });
         }
@@ -173,7 +176,8 @@ export default function Sidebar({ userRole, userName, collapsed = false, onToggl
   const handleSearchItemClick = (href: string) => {
     setSearchOpen(false);
     setSearchQuery("");
-    router.push(href);
+    // Use setTimeout to ensure dialog closes before navigation
+    setTimeout(() => router.push(href), 0);
   };
 
   const renderNavItem = (item: NavItem) => {
@@ -456,7 +460,7 @@ export default function Sidebar({ userRole, userName, collapsed = false, onToggl
                   const Icon = item.icon;
                   return (
                     <button
-                      key={item.href}
+                      key={item.id}
                       onClick={() => handleSearchItemClick(item.href)}
                       className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                     >
