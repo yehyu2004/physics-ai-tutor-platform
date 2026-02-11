@@ -612,13 +612,15 @@ export default function BeamBalance() {
     if (mode === "beam") {
       /* Beam physics: angular acceleration based on net torque */
       const netTorque = computeNetTorque(weightsRef.current);
-      const beamMoi = 5; // moment of inertia for beam
-      const alpha = netTorque / beamMoi;
+      const beamMoi = 50; // moment of inertia for beam
+      // Add gravity restoring torque on beam itself
+      const gravityRestore = -20 * Math.sin(beamAngleRef.current);
+      const alpha = (netTorque + gravityRestore) / beamMoi;
       beamAngVelRef.current += alpha * dt;
-      beamAngVelRef.current *= 0.92; // damping
+      beamAngVelRef.current *= 0.88; // damping
       beamAngleRef.current += beamAngVelRef.current * dt;
       /* Clamp beam angle */
-      beamAngleRef.current = Math.max(-0.5, Math.min(0.5, beamAngleRef.current));
+      beamAngleRef.current = Math.max(-0.4, Math.min(0.4, beamAngleRef.current));
     } else if (mode === "hooke") {
       /* Spring physics */
       const springState = springAnimRef.current;
@@ -645,12 +647,13 @@ export default function BeamBalance() {
     } else if (mode === "challenge") {
       /* Challenge beam physics */
       const netTorque = computeNetTorque(challengeWeightsRef.current);
-      const beamMoi = 5;
-      const alpha = netTorque / beamMoi;
+      const beamMoi = 50;
+      const gravityRestore = -20 * Math.sin(challengeBeamAngleRef.current);
+      const alpha = (netTorque + gravityRestore) / beamMoi;
       challengeBeamAngVelRef.current += alpha * dt;
-      challengeBeamAngVelRef.current *= 0.92;
+      challengeBeamAngVelRef.current *= 0.88;
       challengeBeamAngleRef.current += challengeBeamAngVelRef.current * dt;
-      challengeBeamAngleRef.current = Math.max(-0.5, Math.min(0.5, challengeBeamAngleRef.current));
+      challengeBeamAngleRef.current = Math.max(-0.4, Math.min(0.4, challengeBeamAngleRef.current));
 
       /* Check equilibrium */
       const isBalanced = Math.abs(netTorque) < EQUILIBRIUM_TOLERANCE &&
