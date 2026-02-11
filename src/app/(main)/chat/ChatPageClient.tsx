@@ -213,17 +213,14 @@ export default function ChatPageClient({
     const uploadedUrls: string[] = [];
 
     for (const file of imageFiles) {
-      const formData = new FormData();
-      formData.append("file", file);
-      try {
-        const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
-        if (uploadRes.ok) {
-          const uploadData = await uploadRes.json();
-          uploadedUrls.push(uploadData.url);
-        }
-      } catch (err) {
-        console.error("Upload failed:", err);
-      }
+      // Convert to base64 data URL so the AI API can access the image
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      uploadedUrls.push(dataUrl);
     }
 
     const userMessage: Message = {

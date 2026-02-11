@@ -130,7 +130,7 @@ async function streamOpenAI(
           { type: "input_text", text: msg.content },
           ...msg.imageUrls.map((url) => ({
             type: "input_image",
-            image_url: url,
+            image_url: url.startsWith("data:") ? url : `${process.env.NEXTAUTH_URL || ""}${url}`,
           })),
         ],
       });
@@ -166,10 +166,20 @@ async function streamAnthropic(
       anthropicMessages.push({
         role: msg.role,
         content: [
-          ...msg.imageUrls.map((url) => ({
-            type: "image" as const,
-            source: { type: "url" as const, url },
-          })),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          ...msg.imageUrls.map((url): any => {
+            const dataMatch = url.match(/^data:(.+?);base64,(.+)$/);
+            if (dataMatch) {
+              return {
+                type: "image",
+                source: { type: "base64", media_type: dataMatch[1], data: dataMatch[2] },
+              };
+            }
+            return {
+              type: "image",
+              source: { type: "url", url },
+            };
+          }),
           { type: "text" as const, text: msg.content },
         ],
       });
