@@ -128,6 +128,10 @@ export default function CreateAssignmentPage() {
   };
 
   const handleImageUpload = (qIndex: number, file: File) => {
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image exceeds the 5 MB limit. Please use a smaller image.");
+      return;
+    }
     const preview = URL.createObjectURL(file);
     setQuestions((prev) =>
       prev.map((q, i) =>
@@ -145,6 +149,10 @@ export default function CreateAssignmentPage() {
   };
 
   const handlePdfUpload = async (file: File) => {
+    if (file.size > 20 * 1024 * 1024) {
+      alert("PDF exceeds the 20 MB limit. Please use a smaller file.");
+      return;
+    }
     setPdfFile(file);
     setUploadingPdf(true);
     try {

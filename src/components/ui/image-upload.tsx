@@ -22,6 +22,8 @@ export function ImageUpload({
 }: ImageUploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB
+
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
@@ -31,6 +33,10 @@ export function ImageUpload({
 
     for (const file of filesToUpload) {
       if (!file.type.startsWith("image/")) continue;
+      if (file.size > MAX_IMAGE_SIZE) {
+        alert(`Image "${file.name}" exceeds the 5 MB limit. Please use a smaller image.`);
+        continue;
+      }
       const url = await onUpload(file);
       if (url) {
         onImagesChange([...images, url]);

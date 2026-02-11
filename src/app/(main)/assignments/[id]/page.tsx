@@ -754,7 +754,15 @@ export default function AssignmentDetailPage({
               </p>
               <input
                 type="file"
-                onChange={(e) => setAttachmentFile(e.target.files?.[0] || null)}
+                onChange={(e) => {
+                  const f = e.target.files?.[0] || null;
+                  if (f && f.size > 20 * 1024 * 1024) {
+                    alert("File exceeds the 20 MB limit. Please use a smaller file.");
+                    e.target.value = "";
+                    return;
+                  }
+                  setAttachmentFile(f);
+                }}
                 className="text-sm"
                 accept=".pdf"
               />
@@ -1159,7 +1167,15 @@ export default function AssignmentDetailPage({
               </p>
               <input
                 type="file"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
+                onChange={(e) => {
+                  const f = e.target.files?.[0] || null;
+                  if (f && f.size > 20 * 1024 * 1024) {
+                    alert("File exceeds the 20 MB limit. Please use a smaller file.");
+                    e.target.value = "";
+                    return;
+                  }
+                  setFile(f);
+                }}
                 className="text-sm"
                 accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
               />

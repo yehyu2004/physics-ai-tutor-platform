@@ -312,6 +312,10 @@ export default function GradingPage() {
   };
 
   const handleUploadFeedbackFile = async (file: File) => {
+    if (file.size > 20 * 1024 * 1024) {
+      alert("File exceeds the 20 MB limit. Please use a smaller file.");
+      return;
+    }
     setFeedbackFile(file);
     setUploadingFeedback(true);
     try {
