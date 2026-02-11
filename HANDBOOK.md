@@ -67,8 +67,16 @@ Students can have unlimited conversations with the AI physics tutor. The chat su
 
 - **Multiple AI models** — choose between GPT-5.2 and Claude Haiku
 - **Socratic mode** — toggle guided questioning instead of direct answers
-- **LaTeX math rendering** — equations are beautifully typeset
+- **LaTeX math rendering** — equations are beautifully typeset with click-to-copy functionality
 - **Image upload** — upload up to 5 images of handwritten problems for the AI to analyze
+- **Interactive code blocks** — view, edit, and run code directly in the chat:
+  - **Syntax highlighting** for all programming languages
+  - **Copy button** to copy code to clipboard
+  - **Edit mode** to modify code inline
+  - **Run button** for Python, JavaScript, and TypeScript (sandboxed execution via Piston API)
+  - **Output display** shows execution results or errors
+  - **Rate limited** to 20 code executions per hour per user for safety
+- **Message copy** — copy entire messages (user questions or AI responses) with one click
 - **Conversation history** — all past conversations are saved and searchable
 
 ![AI Chat](handbook-screenshots/03-ai-chat-conversation.png)
