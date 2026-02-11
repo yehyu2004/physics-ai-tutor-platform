@@ -174,10 +174,13 @@ export default function Sidebar({ userRole, userName, collapsed = false, onToggl
     : searchableItems;
 
   const handleSearchItemClick = (href: string) => {
-    setSearchOpen(false);
-    setSearchQuery("");
-    // Use setTimeout to ensure dialog closes before navigation
-    setTimeout(() => router.push(href), 0);
+    // Navigate first, then clean up state
+    router.push(href);
+    // Close dialog after a brief delay to allow navigation to start
+    setTimeout(() => {
+      setSearchOpen(false);
+      setSearchQuery("");
+    }, 100);
   };
 
   const renderNavItem = (item: NavItem) => {
