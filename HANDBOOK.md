@@ -82,6 +82,25 @@ Students can view all published assignments, take quizzes directly in the browse
 - Number of questions and due date
 - Submission status
 
+#### Auto-Save
+
+Quiz answers are **automatically saved** as you work — no need to worry about losing progress:
+
+- Answers are saved to the server every **2 seconds** after you stop typing
+- A small **"Saving..." / "Saved"** indicator appears next to the Submit button
+- If you navigate away or close the browser, your answers are preserved
+- When you return to the quiz, a blue banner confirms: *"Your previous answers were restored from an auto-saved draft."*
+- Auto-saved drafts do **not** count as a final submission — you must click Submit to finalize
+
+#### Locked Assignments
+
+Some assignments (especially timed quizzes) may be **locked after submission**:
+
+- A warning banner appears above the Submit button: *"This assignment is locked after submission. You will not be able to change or resubmit your answers."*
+- Clicking Submit shows a confirmation dialog asking you to confirm
+- After submitting, the "Delete & Resubmit" option is replaced with a notice: *"This assignment is locked. You cannot delete or resubmit."*
+- Your answers are still auto-saved as drafts while you work, so you won't lose progress before submitting
+
 ### Grades & Performance
 
 The Grades page gives students a complete view of their academic performance:
@@ -128,10 +147,12 @@ Instructors can create two types of assignments:
    - Multiple choice, numeric, and free response question types
    - Optional PDF attachment for problem statements
    - Auto-grading support for multiple choice and numeric answers
+   - **Lock after submission** — optional toggle that prevents students from deleting or resubmitting once they submit (ideal for timed quizzes and exams)
 
 2. **File Upload** — students upload PDF/image files
    - Suitable for handwritten homework
    - Manual grading with per-question feedback
+   - Lock after submission also available for file uploads
 
 ![Create Assignment](handbook-screenshots/10-create-assignment.png)
 *The assignment creation form with title, description, type selection, due date, total points, optional PDF upload, and question builder.*
@@ -163,6 +184,11 @@ The grading interface provides a streamlined workflow:
 - **Image feedback** — attach up to 3 annotated images per question
 - **AI grading suggestions** — get AI-assisted score and feedback recommendations
 - **Grader attribution** — track who graded each submission
+- **Auto-save grading progress** — scores and feedback are saved automatically:
+  - Saved to **localStorage** instantly on every change (survives page refresh)
+  - Saved to the **server** every 5 seconds as a draft (survives browser/device switch)
+  - When you select a submission you previously started grading, a banner confirms: *"Grading progress restored from a previous session."*
+  - Draft saves do **not** mark the submission as graded — click "Save Grades" to finalize
 
 ![Grading](handbook-screenshots/05-grading.png)
 *The grading interface showing submissions for "Test 1" with scores, grading status, and CSV export button.*
