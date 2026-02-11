@@ -148,6 +148,7 @@ Instructors can create two types of assignments:
    - Optional PDF attachment for problem statements
    - Auto-grading support for multiple choice and numeric answers
    - **Lock after submission** — optional toggle that prevents students from deleting or resubmitting once they submit (ideal for timed quizzes and exams)
+   - **Save & Download LaTeX** — save the quiz as a draft and immediately download a LaTeX ZIP file containing the questions, options, and answer key (great for creating printable exam copies)
 
 2. **File Upload** — students upload PDF/image files
    - Suitable for handwritten homework
@@ -178,7 +179,7 @@ One of the most powerful features — generate physics problems using AI:
 The grading interface provides a streamlined workflow:
 
 - **Assignment selector** — choose which assignment to grade
-- **Submission list** — see all students, their scores, and grading status
+- **Submission list** — see all students, their submission time, scores, and grading status
 - **Filter** by status — All, Ungraded, Graded, With Appeals
 - **Per-question grading** — score and provide feedback for each question
 - **Image feedback** — attach up to 3 annotated images per question
@@ -273,6 +274,7 @@ The admin analytics dashboard shows:
 | **Grade Submissions** | - | Yes | Yes | Yes |
 | **Generate Problems** | - | Yes | Yes | Yes |
 | **Export Grades (CSV)** | - | Yes | Yes | Yes |
+| **Export LaTeX** | - | Yes | Yes | Yes |
 | **View Q&A History** | - | Yes | Yes | Yes |
 | **Verify/Ban/Restrict Users** | - | Yes | Yes | Yes |
 | **Change User Roles** | - | - | Yes | Yes |
