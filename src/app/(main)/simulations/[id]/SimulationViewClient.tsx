@@ -47,6 +47,16 @@ import LCOscillations from "@/components/simulations/LCOscillations";
 import HydrogenAtom from "@/components/simulations/HydrogenAtom";
 import NuclearFission from "@/components/simulations/NuclearFission";
 import StandardModel from "@/components/simulations/StandardModel";
+import ProjectileChallenge from "@/components/simulations/ProjectileChallenge";
+import CollisionLab from "@/components/simulations/CollisionLab";
+import EscapeVelocity from "@/components/simulations/EscapeVelocity";
+import RollerCoasterDesigner from "@/components/simulations/RollerCoasterDesigner";
+import CircuitBuilder from "@/components/simulations/CircuitBuilder";
+import RippleTank from "@/components/simulations/RippleTank";
+import PhotoelectricEffect from "@/components/simulations/PhotoelectricEffect";
+import GravitySandbox from "@/components/simulations/GravitySandbox";
+import MagneticField3D from "@/components/simulations/MagneticField3D";
+import DecayChain from "@/components/simulations/DecayChain";
 
 const simulationComponents: Record<string, React.ComponentType> = {
   "constant-acceleration": ConstantAcceleration,
@@ -90,6 +100,16 @@ const simulationComponents: Record<string, React.ComponentType> = {
   "hydrogen-atom": HydrogenAtom,
   "nuclear-fission": NuclearFission,
   "standard-model": StandardModel,
+  "projectile-challenge": ProjectileChallenge,
+  "collision-lab": CollisionLab,
+  "escape-velocity": EscapeVelocity,
+  "roller-coaster-designer": RollerCoasterDesigner,
+  "circuit-builder": CircuitBuilder,
+  "ripple-tank": RippleTank,
+  "photoelectric-effect": PhotoelectricEffect,
+  "gravity-sandbox": GravitySandbox,
+  "magnetic-field-3d": MagneticField3D,
+  "decay-chain": DecayChain,
 };
 
 export default function SimulationViewClient({

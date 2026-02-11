@@ -20,7 +20,6 @@ import {
   PanelLeftOpen,
   PanelLeftClose,
   ShieldAlert,
-  FileDown,
   Check,
   Copy,
 } from "lucide-react";
@@ -111,7 +110,6 @@ export default function ChatPageClient({
   const [chatMode, setChatMode] = useState<"normal" | "socratic">("normal");
   const [examModeActive, setExamModeActive] = useState(false);
   const [examBannerDismissed, setExamBannerDismissed] = useState(false);
-  const [conversationCopied, setConversationCopied] = useState(false);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -379,31 +377,6 @@ export default function ChatPageClient({
 
   const activeConversation = conversations.find((c) => c.id === activeConversationId);
 
-  const copyConversationAsMarkdown = async () => {
-    if (messages.length === 0) return;
-
-    const markdown = messages.map(msg => {
-      const role = msg.role === "user" ? "**User**" : "**Assistant**";
-      let content = `${role}:\n\n${msg.content}`;
-
-      if (msg.imageUrls && msg.imageUrls.length > 0) {
-        content = `${role}:\n\n[${msg.imageUrls.length} image(s) attached]\n\n${msg.content}`;
-      }
-
-      if (msg.thinking) {
-        content += `\n\n*[Thinking: ${msg.thinking}]*`;
-      }
-
-      return content;
-    }).join("\n\n---\n\n");
-
-    const fullMarkdown = `# ${activeConversation?.title || "Chat Conversation"}\n\n${markdown}`;
-
-    await navigator.clipboard.writeText(fullMarkdown);
-    setConversationCopied(true);
-    setTimeout(() => setConversationCopied(false), 2000);
-  };
-
   const copyMessage = async (messageId: string, content: string) => {
     await navigator.clipboard.writeText(content);
     setCopiedMessageId(messageId);
@@ -544,34 +517,8 @@ export default function ChatPageClient({
             </div>
           </div>
 
-          {/* Copy Conversation + Socratic Mode Toggle + Model Selector */}
+          {/* Socratic Mode Toggle + Model Selector */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            {/* Copy Conversation Button */}
-            {messages.length > 0 && (
-              <button
-                onClick={copyConversationAsMarkdown}
-                className={cn(
-                  "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all",
-                  conversationCopied
-                    ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
-                    : "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400"
-                )}
-                title="Copy conversation as markdown"
-              >
-                {conversationCopied ? (
-                  <>
-                    <Check className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">Copied!</span>
-                  </>
-                ) : (
-                  <>
-                    <FileDown className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">Export</span>
-                  </>
-                )}
-              </button>
-            )}
-
             {/* Socratic Mode Toggle — hidden during exam mode */}
             {!examModeActive && (
               <Button

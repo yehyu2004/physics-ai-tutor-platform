@@ -1,6 +1,18 @@
 "use client";
 
 import React, { useRef, useEffect, useState, useCallback } from "react";
+import { ParticleSystem } from "@/lib/simulation/particles";
+import { playSFX, playScore } from "@/lib/simulation/sound";
+import {
+  calculateAccuracy,
+  renderScorePopup,
+  renderScoreboard,
+  createChallengeState,
+  updateChallengeState,
+  type ScorePopup,
+  type ChallengeState,
+} from "@/lib/simulation/scoring";
+import { drawMeter } from "@/lib/simulation/drawing";
 
 interface Particle {
   x: number;
@@ -17,29 +29,99 @@ export default function GasMolecules() {
   const [numParticles, setNumParticles] = useState(80);
   const [isRunning, setIsRunning] = useState(true);
   const [showHistogram, setShowHistogram] = useState(true);
+  const [challengeMode, setChallengeMode] = useState(false);
   const particlesRef = useRef<Particle[]>([]);
   const speedHistRef = useRef<number[]>(new Array(20).fill(0));
+  const particleSystemRef = useRef(new ParticleSystem());
+  const popupsRef = useRef<ScorePopup[]>([]);
+  const challengeRef = useRef<ChallengeState>(createChallengeState());
+
+  // Piston state - normalized position (0 = fully left, 1 = fully right)
+  const pistonRef = useRef(1.0); // 1.0 = max volume
+  const pistonDraggingRef = useRef(false);
+
+  // Pressure tracking
+  const pressureRef = useRef(0);
+  const wallHitsRef = useRef(0);
+  const pressureHistoryRef = useRef<number[]>([]);
+
+  // Challenge: target pressure
+  const targetPressureRef = useRef(0);
 
   const initParticles = useCallback((n: number, temp: number) => {
     const particles: Particle[] = [];
     const speedScale = Math.sqrt(temp / 300) * 3;
+    const maxX = pistonRef.current * 0.86 + 0.02; // account for piston position
     for (let i = 0; i < n; i++) {
       const angle = Math.random() * Math.PI * 2;
       const speed = (Math.random() * 2 + 0.5) * speedScale;
       particles.push({
-        x: 0.1 + Math.random() * 0.55,
-        y: 0.1 + Math.random() * 0.8,
+        x: 0.02 + Math.random() * (maxX - 0.02),
+        y: 0.02 + Math.random() * 0.96,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
         r: 3 + Math.random() * 2,
       });
     }
     particlesRef.current = particles;
+    wallHitsRef.current = 0;
+    pressureHistoryRef.current = [];
   }, []);
 
   useEffect(() => {
     initParticles(numParticles, temperature);
   }, [numParticles, temperature, initParticles]);
+
+  const startChallenge = useCallback(() => {
+    // Generate a random target pressure
+    const basePressure = (numParticles * temperature) / 300;
+    const targetFactor = 0.5 + Math.random() * 1.5;
+    targetPressureRef.current = Math.round(basePressure * targetFactor);
+    challengeRef.current = {
+      ...createChallengeState(),
+      active: true,
+      description: `Reach target pressure: ${targetPressureRef.current.toFixed(0)}`,
+    };
+    setChallengeMode(true);
+  }, [numParticles, temperature]);
+
+  const checkPressure = useCallback(() => {
+    const currentPressure = pressureRef.current;
+    const target = targetPressureRef.current;
+    const result = calculateAccuracy(currentPressure, target, target * 0.5);
+    challengeRef.current = updateChallengeState(challengeRef.current, result);
+
+    const canvas = canvasRef.current;
+    if (canvas) {
+      popupsRef.current.push({
+        text: result.label,
+        points: result.points,
+        x: canvas.width / 2,
+        y: canvas.height / 2,
+        startTime: performance.now(),
+      });
+    }
+
+    if (result.points > 0) {
+      playSFX("correct");
+      playScore(result.points);
+      if (result.tier === "perfect" && canvas) {
+        particleSystemRef.current.emitConfetti(canvas.width / 2, canvas.height / 2, 20);
+      }
+      // Generate new target
+      setTimeout(() => {
+        const basePressure = (numParticles * temperature) / 300;
+        const targetFactor = 0.3 + Math.random() * 2.0;
+        targetPressureRef.current = Math.round(basePressure * targetFactor);
+        challengeRef.current = {
+          ...challengeRef.current,
+          description: `Reach target pressure: ${targetPressureRef.current.toFixed(0)}`,
+        };
+      }, 1500);
+    } else {
+      playSFX("incorrect");
+    }
+  }, [numParticles, temperature]);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -49,6 +131,7 @@ export default function GasMolecules() {
 
     const W = canvas.width;
     const H = canvas.height;
+    const now = performance.now();
 
     ctx.clearRect(0, 0, W, H);
     ctx.fillStyle = "#0f172a";
@@ -56,7 +139,8 @@ export default function GasMolecules() {
 
     const boxLeft = W * 0.05;
     const boxTop = H * 0.05;
-    const boxW = W * 0.6;
+    const boxMaxW = W * 0.6;
+    const boxW = boxMaxW * pistonRef.current;
     const boxH = H * 0.9;
 
     // Container
@@ -71,6 +155,51 @@ export default function GasMolecules() {
     ctx.beginPath();
     ctx.roundRect(boxLeft, boxTop, boxW, boxH, 8);
     ctx.fill();
+
+    // Piston (right wall of container) - draggable
+    const pistonX = boxLeft + boxW;
+    const pistonGrad = ctx.createLinearGradient(pistonX - 12, 0, pistonX + 12, 0);
+    pistonGrad.addColorStop(0, "#64748b");
+    pistonGrad.addColorStop(0.5, "#94a3b8");
+    pistonGrad.addColorStop(1, "#64748b");
+    ctx.fillStyle = pistonGrad;
+    ctx.fillRect(pistonX - 8, boxTop + 2, 16, boxH - 4);
+
+    // Piston handle grip lines
+    ctx.strokeStyle = "rgba(255,255,255,0.3)";
+    ctx.lineWidth = 1;
+    for (let gy = boxTop + boxH * 0.3; gy < boxTop + boxH * 0.7; gy += 8) {
+      ctx.beginPath();
+      ctx.moveTo(pistonX - 4, gy);
+      ctx.lineTo(pistonX + 4, gy);
+      ctx.stroke();
+    }
+
+    // Piston arrow hint
+    if (!pistonDraggingRef.current) {
+      ctx.fillStyle = "rgba(255,255,255,0.15)";
+      ctx.font = "10px system-ui";
+      ctx.textAlign = "center";
+      ctx.fillText("\u2190 drag \u2192", pistonX, boxTop - 8);
+    }
+
+    // Pressure meter on walls (visualize wall hits)
+    const pressure = pressureRef.current;
+    const maxPressure = numParticles * 2;
+
+    // Top wall pressure indicator
+    const pressureIntensity = Math.min(pressure / maxPressure, 1);
+    const pColor = `rgba(239, 68, 68, ${pressureIntensity * 0.5})`;
+    ctx.fillStyle = pColor;
+    ctx.fillRect(boxLeft, boxTop, boxW, 4);
+    ctx.fillRect(boxLeft, boxTop + boxH - 4, boxW, 4);
+    ctx.fillRect(boxLeft, boxTop, 4, boxH);
+    ctx.fillRect(pistonX - 4, boxTop, 4, boxH);
+
+    // Pressure gauge
+    const gaugeX = boxLeft + 10;
+    const gaugeY = boxTop + boxH - 50;
+    drawMeter(ctx, gaugeX, gaugeY, 100, 12, pressure, maxPressure, "#ef4444", `P: ${pressure.toFixed(0)}`);
 
     // Particles
     const particles = particlesRef.current;
@@ -102,9 +231,9 @@ export default function GasMolecules() {
       ctx.fill();
     }
 
-    // Speed histogram
+    // Speed histogram with Maxwell-Boltzmann overlay
     if (showHistogram && speeds.length > 0) {
-      const histX = boxLeft + boxW + 30;
+      const histX = boxLeft + boxMaxW + 30;
       const histY = boxTop + 20;
       const histW = W - histX - 20;
       const histH = boxH - 40;
@@ -152,56 +281,120 @@ export default function GasMolecules() {
           ctx.fill();
         }
 
-        // Maxwell-Boltzmann curve
+        // Maxwell-Boltzmann curve (theoretical overlay)
         const kT = temperature / 300;
         ctx.strokeStyle = "#fbbf24";
         ctx.lineWidth = 2;
+        ctx.shadowColor = "rgba(251,191,36,0.4)";
+        ctx.shadowBlur = 4;
         ctx.beginPath();
         for (let i = 0; i <= histW; i++) {
           const v = (i / histW) * maxSpeed;
-          // f(v) ∝ v² exp(-v²/(2kT))
+          // f(v) proportional to v^2 exp(-v^2/(2kT))
           const fv = v * v * Math.exp(-(v * v) / (2 * kT * 4));
-          const maxFv = (2 * kT * 4) * Math.exp(-1) * 0.7; // approximate max
+          const maxFv = 2 * kT * 4 * Math.exp(-1) * 0.7;
           const py = histY + histH - (fv / maxFv) * (histH - 30) * (maxCount / numParticles) * 10;
           if (i === 0) ctx.moveTo(histX + i, py);
           else ctx.lineTo(histX + i, py);
         }
         ctx.stroke();
+        ctx.shadowBlur = 0;
 
         // Labels
         ctx.font = "10px ui-monospace";
         ctx.fillStyle = "#64748b";
         ctx.textAlign = "center";
-        ctx.fillText("speed →", histX + histW / 2, histY + histH + 15);
+        ctx.fillText("speed \u2192", histX + histW / 2, histY + histH + 15);
         ctx.fillStyle = "#fbbf24";
-        ctx.fillText("— Maxwell-Boltzmann", histX + histW / 2, histY + histH + 32);
+        ctx.fillText("\u2014 Maxwell-Boltzmann", histX + histW / 2, histY + histH + 32);
       }
     }
 
     // Temperature indicator
     ctx.fillStyle = "rgba(0,0,0,0.5)";
     ctx.beginPath();
-    ctx.roundRect(boxLeft + 10, boxTop + 10, 130, 35, 6);
+    ctx.roundRect(boxLeft + 10, boxTop + 10, 140, 55, 6);
     ctx.fill();
     ctx.font = "bold 14px ui-monospace";
-    ctx.fillStyle = temperature > 500 ? "#ef4444" : temperature > 200 ? "#fbbf24" : "#3b82f6";
+    ctx.fillStyle =
+      temperature > 500 ? "#ef4444" : temperature > 200 ? "#fbbf24" : "#3b82f6";
     ctx.textAlign = "left";
     ctx.fillText(`T = ${temperature} K`, boxLeft + 20, boxTop + 33);
-  }, [temperature, numParticles, showHistogram]);
+
+    // Volume display
+    const volume = (pistonRef.current * 100).toFixed(0);
+    ctx.font = "11px ui-monospace";
+    ctx.fillStyle = "#94a3b8";
+    ctx.fillText(`V = ${volume}%`, boxLeft + 20, boxTop + 50);
+
+    // Ideal gas law readout
+    const idealPressure = (numParticles * temperature) / (300 * pistonRef.current);
+    ctx.font = "10px ui-monospace";
+    ctx.fillStyle = "#60a5fa";
+    ctx.fillText(`PV/NkT \u2248 ${((pressure * pistonRef.current) / idealPressure / pistonRef.current).toFixed(2)}`, boxLeft + 20, boxTop + 62);
+
+    // Particle effects
+    particleSystemRef.current.draw(ctx);
+
+    // Score popups
+    popupsRef.current = popupsRef.current.filter((p) => renderScorePopup(ctx, p, now));
+
+    // Challenge mode scoreboard and target
+    if (challengeMode && challengeRef.current.active) {
+      // Target pressure indicator
+      const targetP = targetPressureRef.current;
+      ctx.fillStyle = "rgba(0,0,0,0.6)";
+      ctx.beginPath();
+      ctx.roundRect(boxLeft + 10, boxTop + boxH - 95, 140, 40, 6);
+      ctx.fill();
+
+      ctx.font = "bold 11px ui-monospace, monospace";
+      ctx.fillStyle = "#f59e0b";
+      ctx.textAlign = "left";
+      ctx.fillText("TARGET PRESSURE", boxLeft + 20, boxTop + boxH - 78);
+      ctx.font = "bold 16px ui-monospace, monospace";
+      const pDiff = Math.abs(pressure - targetP) / targetP;
+      ctx.fillStyle = pDiff < 0.1 ? "#22c55e" : pDiff < 0.3 ? "#f59e0b" : "#ef4444";
+      ctx.fillText(`P = ${targetP.toFixed(0)}`, boxLeft + 20, boxTop + boxH - 60);
+
+      // Scoreboard
+      renderScoreboard(ctx, W - 165, H - 135, 155, 125, challengeRef.current);
+    }
+  }, [temperature, numParticles, showHistogram, challengeMode]);
 
   const animate = useCallback(() => {
     const particles = particlesRef.current;
     const dt = 0.016;
+    const piston = pistonRef.current;
+    // effective wall for piston
+    const rightWall = 0.98 * piston / Math.max(piston, 0.15);
+    let frameHits = 0;
 
     for (const p of particles) {
       p.x += p.vx * dt * 0.03;
       p.y += p.vy * dt * 0.03;
 
-      // Bounce off walls
-      if (p.x < 0.02) { p.x = 0.02; p.vx = Math.abs(p.vx); }
-      if (p.x > 0.98) { p.x = 0.98; p.vx = -Math.abs(p.vx); }
-      if (p.y < 0.02) { p.y = 0.02; p.vy = Math.abs(p.vy); }
-      if (p.y > 0.98) { p.y = 0.98; p.vy = -Math.abs(p.vy); }
+      // Bounce off walls - left, top, bottom fixed, right = piston
+      if (p.x < 0.02) {
+        p.x = 0.02;
+        p.vx = Math.abs(p.vx);
+        frameHits++;
+      }
+      if (p.x > rightWall) {
+        p.x = rightWall;
+        p.vx = -Math.abs(p.vx);
+        frameHits++;
+      }
+      if (p.y < 0.02) {
+        p.y = 0.02;
+        p.vy = Math.abs(p.vy);
+        frameHits++;
+      }
+      if (p.y > 0.98) {
+        p.y = 0.98;
+        p.vy = -Math.abs(p.vy);
+        frameHits++;
+      }
     }
 
     // Simple collision detection between nearby particles
@@ -225,18 +418,50 @@ export default function GasMolecules() {
             particles[i].vy -= dvDotN * ny;
             particles[j].vx += dvDotN * nx;
             particles[j].vy += dvDotN * ny;
+
+            // Collision sparks
+            const relSpeed = Math.sqrt(dvx * dvx + dvy * dvy);
+            if (relSpeed > 3) {
+              const canvas = canvasRef.current;
+              if (canvas) {
+                const boxLeft = canvas.width * 0.05;
+                const boxTop = canvas.height * 0.05;
+                const boxW = canvas.width * 0.6 * pistonRef.current;
+                const boxH = canvas.height * 0.9;
+                const sparkX = boxLeft + ((particles[i].x + particles[j].x) / 2) * boxW;
+                const sparkY = boxTop + ((particles[i].y + particles[j].y) / 2) * boxH;
+                const sparkIntensity = Math.min(relSpeed / 8, 1);
+                particleSystemRef.current.emitSparks(
+                  sparkX,
+                  sparkY,
+                  Math.round(2 + sparkIntensity * 4),
+                  `rgba(255, ${Math.round(200 - sparkIntensity * 100)}, ${Math.round(100 - sparkIntensity * 100)}, 0.8)`
+                );
+              }
+            }
           }
 
           // Separate
           const overlap = minDist - dist;
-          particles[i].x -= nx * overlap / 2;
-          particles[i].y -= ny * overlap / 2;
-          particles[j].x += nx * overlap / 2;
-          particles[j].y += ny * overlap / 2;
+          particles[i].x -= (nx * overlap) / 2;
+          particles[i].y -= (ny * overlap) / 2;
+          particles[j].x += (nx * overlap) / 2;
+          particles[j].y += (ny * overlap) / 2;
         }
       }
     }
 
+    // Update pressure (smoothed wall hit count, normalized by perimeter)
+    wallHitsRef.current = wallHitsRef.current * 0.95 + frameHits * 0.05;
+    // Scale pressure to be proportional to N*T/V (ideal gas law)
+    const perimeter = 2 * (1 + piston);
+    pressureRef.current = (wallHitsRef.current / Math.max(perimeter, 0.1)) * 60;
+
+    // Pressure history for smoothing display
+    pressureHistoryRef.current.push(pressureRef.current);
+    if (pressureHistoryRef.current.length > 60) pressureHistoryRef.current.shift();
+
+    particleSystemRef.current.update(dt);
     draw();
     animRef.current = requestAnimationFrame(animate);
   }, [draw]);
@@ -263,6 +488,64 @@ export default function GasMolecules() {
     return () => cancelAnimationFrame(animRef.current);
   }, [isRunning, animate]);
 
+  // Piston drag handler
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const handleMouseDown = (e: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const mx = (e.clientX - rect.left) * scaleX;
+      const W = canvas.width;
+      const boxLeft = W * 0.05;
+      const boxMaxW = W * 0.6;
+      const pistonX = boxLeft + boxMaxW * pistonRef.current;
+
+      // Check if clicking near the piston
+      if (Math.abs(mx - pistonX) < 20) {
+        pistonDraggingRef.current = true;
+        e.preventDefault();
+      }
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!pistonDraggingRef.current) return;
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const mx = (e.clientX - rect.left) * scaleX;
+      const W = canvas.width;
+      const boxLeft = W * 0.05;
+      const boxMaxW = W * 0.6;
+
+      const newPiston = Math.max(0.15, Math.min(1.0, (mx - boxLeft) / boxMaxW));
+      pistonRef.current = newPiston;
+
+      // Push particles if piston compresses past them
+      const rightWall = 0.98 * newPiston / Math.max(newPiston, 0.15);
+      for (const p of particlesRef.current) {
+        if (p.x > rightWall) {
+          p.x = rightWall - 0.01;
+          p.vx = -Math.abs(p.vx) * 1.1; // slight boost from piston compression
+        }
+      }
+    };
+
+    const handleMouseUp = () => {
+      pistonDraggingRef.current = false;
+    };
+
+    canvas.addEventListener("mousedown", handleMouseDown);
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      canvas.removeEventListener("mousedown", handleMouseDown);
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, []);
+
   const adjustTemp = (newTemp: number) => {
     const ratio = Math.sqrt(newTemp / temperature);
     for (const p of particlesRef.current) {
@@ -275,57 +558,137 @@ export default function GasMolecules() {
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden bg-gray-950">
-        <canvas ref={canvasRef} className="w-full" />
+        <canvas ref={canvasRef} className="w-full cursor-ew-resize" />
       </div>
+
+      {/* Challenge mode panel */}
+      {challengeMode && challengeRef.current.active && (
+        <div className="rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+                Adjust temperature and volume to reach target pressure
+              </p>
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                Target: P = {targetPressureRef.current.toFixed(0)} | Current: P = {pressureRef.current.toFixed(0)} |
+                Score: {challengeRef.current.score} pts
+              </p>
+            </div>
+            <button
+              onClick={checkPressure}
+              className="px-6 h-10 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium transition-colors"
+            >
+              Check Pressure
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Temperature</label>
+          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            Temperature
+          </label>
           <div className="flex items-center gap-3 mt-2">
-            <input type="range" min={50} max={1000} step={10} value={temperature}
+            <input
+              type="range"
+              min={50}
+              max={1000}
+              step={10}
+              value={temperature}
               onChange={(e) => adjustTemp(Number(e.target.value))}
-              className="flex-1 accent-orange-500" />
-            <span className="text-sm font-mono font-bold text-gray-900 dark:text-gray-100 min-w-[3.5rem] text-right">{temperature} K</span>
+              className="flex-1 accent-orange-500"
+            />
+            <span className="text-sm font-mono font-bold text-gray-900 dark:text-gray-100 min-w-[3.5rem] text-right">
+              {temperature} K
+            </span>
           </div>
         </div>
 
         <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Particles</label>
+          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            Particles
+          </label>
           <div className="flex items-center gap-3 mt-2">
-            <input type="range" min={10} max={200} step={5} value={numParticles}
+            <input
+              type="range"
+              min={10}
+              max={200}
+              step={5}
+              value={numParticles}
               onChange={(e) => setNumParticles(Number(e.target.value))}
-              className="flex-1 accent-blue-500" />
-            <span className="text-sm font-mono font-bold text-gray-900 dark:text-gray-100 min-w-[2.5rem] text-right">{numParticles}</span>
+              className="flex-1 accent-blue-500"
+            />
+            <span className="text-sm font-mono font-bold text-gray-900 dark:text-gray-100 min-w-[2.5rem] text-right">
+              {numParticles}
+            </span>
           </div>
         </div>
 
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 flex items-end">
-          <button onClick={() => setShowHistogram(!showHistogram)}
-            className={`w-full h-10 rounded-lg text-sm font-medium transition-colors ${
-              showHistogram ? "bg-amber-600 text-white" : "border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300"
-            }`}>
+        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 flex items-end gap-2">
+          <button
+            onClick={() => setShowHistogram(!showHistogram)}
+            className={`flex-1 h-10 rounded-lg text-sm font-medium transition-colors ${
+              showHistogram
+                ? "bg-amber-600 text-white"
+                : "border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300"
+            }`}
+          >
             Histogram {showHistogram ? "ON" : "OFF"}
+          </button>
+          <button
+            onClick={() => {
+              if (challengeMode) {
+                setChallengeMode(false);
+                challengeRef.current = { ...challengeRef.current, active: false };
+              } else {
+                startChallenge();
+              }
+            }}
+            className={`flex-1 h-10 rounded-lg text-sm font-medium transition-colors ${
+              challengeMode
+                ? "bg-green-600 text-white"
+                : "border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300"
+            }`}
+          >
+            {challengeMode ? "End Challenge" : "Challenge"}
           </button>
         </div>
 
         <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 flex items-end gap-2">
-          <button onClick={() => setIsRunning(!isRunning)}
-            className="flex-1 h-10 rounded-lg bg-orange-600 hover:bg-orange-700 text-white font-medium text-sm transition-colors">
+          <button
+            onClick={() => setIsRunning(!isRunning)}
+            className="flex-1 h-10 rounded-lg bg-orange-600 hover:bg-orange-700 text-white font-medium text-sm transition-colors"
+          >
             {isRunning ? "Pause" : "Play"}
           </button>
-          <button onClick={() => initParticles(numParticles, temperature)}
-            className="h-10 px-4 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium transition-colors">
+          <button
+            onClick={() => {
+              pistonRef.current = 1.0;
+              initParticles(numParticles, temperature);
+            }}
+            className="h-10 px-4 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium transition-colors"
+          >
             Reset
           </button>
         </div>
       </div>
 
       <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Kinetic Theory</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-gray-600 dark:text-gray-400 font-mono">
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">KE_avg = (3/2)kT</div>
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">v_rms = √(3kT/m)</div>
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+          Kinetic Theory
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-sm text-gray-600 dark:text-gray-400 font-mono">
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
+            KE_avg = (3/2)kT
+          </div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
+            v_rms = &radic;(3kT/m)
+          </div>
           <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">PV = NkT</div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
+            P = F/A = Nmv&sup2;/3V
+          </div>
         </div>
       </div>
     </div>

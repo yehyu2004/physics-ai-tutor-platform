@@ -122,7 +122,7 @@ export default function EnergyConservation() {
     // Ball glow
     const glow = ctx.createRadialGradient(screenBallX, screenBallY - 10, 0, screenBallX, screenBallY - 10, 25);
     glow.addColorStop(0, "rgba(251,191,36,0.4)");
-    glow.addColorStop(1, "transparent");
+    glow.addColorStop(1, "rgba(251,191,36,0)");
     ctx.fillStyle = glow;
     ctx.beginPath();
     ctx.arc(screenBallX, screenBallY - 10, 25, 0, Math.PI * 2);
@@ -208,11 +208,23 @@ export default function EnergyConservation() {
   const animate = useCallback(() => {
     const dt = 0.02;
     const g = 9.8;
-    const slope = getTrackSlope(posRef.current);
-    const accel = -g * slope / (1 + slope * slope) - friction * velRef.current * 0.5;
 
-    velRef.current += accel * dt;
-    posRef.current += velRef.current * dt;
+    // Velocity Verlet integration for energy conservation
+    const slope1 = getTrackSlope(posRef.current);
+    const accel1 = -g * slope1 / (1 + slope1 * slope1) - friction * velRef.current * 0.5;
+
+    // Half-step velocity
+    const velHalf = velRef.current + accel1 * dt * 0.5;
+    // Full-step position
+    const newPos = posRef.current + velHalf * dt;
+
+    // Acceleration at new position
+    const slope2 = getTrackSlope(newPos);
+    const accel2 = -g * slope2 / (1 + slope2 * slope2) - friction * velHalf * 0.5;
+
+    // Full-step velocity
+    velRef.current = velHalf + accel2 * dt * 0.5;
+    posRef.current = newPos;
 
     // Boundaries
     if (posRef.current < 0.1) { posRef.current = 0.1; velRef.current = Math.abs(velRef.current) * 0.95; }

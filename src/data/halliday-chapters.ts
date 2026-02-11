@@ -98,6 +98,15 @@ export const textbookParts: Part[] = [
             },
           },
           {
+            number: "4-4b",
+            title: "Projectile Challenge",
+            simulation: {
+              id: "projectile-challenge",
+              title: "Hit the Target!",
+              description: "Set angle and speed to hit a randomly placed target. Score points for accuracy with wind resistance challenges.",
+            },
+          },
+          {
             number: "4-5",
             title: "Uniform Circular Motion",
             simulation: {
@@ -176,6 +185,15 @@ export const textbookParts: Part[] = [
               description: "Track kinetic, potential, and total energy of a ball on a roller coaster track.",
             },
           },
+          {
+            number: "8-2b",
+            title: "Roller Coaster Designer",
+            simulation: {
+              id: "roller-coaster-designer",
+              title: "Roller Coaster Designer",
+              description: "Draw your own track, place a ball, and see if it has enough energy to make it through loops and hills.",
+            },
+          },
           { number: "8-3", title: "Reading a Potential Energy Curve" },
           { number: "8-4", title: "Work Done on a System by an External Force" },
         ],
@@ -197,6 +215,15 @@ export const textbookParts: Part[] = [
               id: "collisions",
               title: "1D & 2D Collisions",
               description: "Simulate elastic and inelastic collisions, observing momentum and energy conservation.",
+            },
+          },
+          {
+            number: "9-4b",
+            title: "Collision Lab Challenge",
+            simulation: {
+              id: "collision-lab",
+              title: "Collision Lab",
+              description: "Set up collisions with goals: make a cart stop, match velocities. Predict outcomes and earn points.",
             },
           },
           { number: "9-5", title: "Conservation of Linear Momentum" },
@@ -292,6 +319,24 @@ export const textbookParts: Part[] = [
               id: "orbital-motion",
               title: "Orbital Motion",
               description: "Simulate planetary orbits, adjust mass and velocity, and observe Kepler's laws in action.",
+            },
+          },
+          {
+            number: "13-6b",
+            title: "Escape Velocity Challenge",
+            simulation: {
+              id: "escape-velocity",
+              title: "Escape Velocity Challenge",
+              description: "Launch rockets from different planets. Find the exact escape velocity to break free of gravity.",
+            },
+          },
+          {
+            number: "13-6c",
+            title: "Gravity Sandbox",
+            simulation: {
+              id: "gravity-sandbox",
+              title: "Gravity Sandbox",
+              description: "Place stars and planets with custom masses and velocities. Watch N-body gravitational orbits unfold.",
             },
           },
           { number: "13-7", title: "Satellites: Orbits and Energy" },
@@ -574,6 +619,15 @@ export const textbookParts: Part[] = [
         title: "Circuits",
         sections: [
           { number: "27-1", title: "Single-Loop Circuits" },
+          {
+            number: "27-1b",
+            title: "Circuit Builder",
+            simulation: {
+              id: "circuit-builder",
+              title: "Circuit Builder",
+              description: "Drag and drop batteries, resistors, and lightbulbs to build circuits. See animated current flow and voltage drops.",
+            },
+          },
           { number: "27-2", title: "Multiloop Circuits" },
           { number: "27-3", title: "The Ammeter and the Voltmeter" },
           {
@@ -601,6 +655,15 @@ export const textbookParts: Part[] = [
               id: "charged-particle-magnetic",
               title: "Charge in a Magnetic Field",
               description: "Watch a charged particle spiral through a magnetic field. Adjust charge, mass, and field strength.",
+            },
+          },
+          {
+            number: "28-4b",
+            title: "3D Magnetic Field Explorer",
+            simulation: {
+              id: "magnetic-field-3d",
+              title: "Magnetic Field 3D",
+              description: "Shoot charged particles through magnetic fields and watch them spiral. Visualize the right-hand rule.",
             },
           },
           { number: "28-5", title: "Cyclotrons and Synchrotrons" },
@@ -751,6 +814,15 @@ export const textbookParts: Part[] = [
               description: "Observe the iconic interference pattern. Adjust slit separation, width, and wavelength.",
             },
           },
+          {
+            number: "35-2b",
+            title: "Ripple Tank",
+            simulation: {
+              id: "ripple-tank",
+              title: "Ripple Tank",
+              description: "Place wave sources and barriers in a 2D tank. Watch interference patterns and diffraction emerge.",
+            },
+          },
           { number: "35-3", title: "Interference and Double-Slit Intensity" },
           { number: "35-4", title: "Interference from Thin Films" },
           { number: "35-5", title: "Michelson's Interferometer" },
@@ -810,6 +882,15 @@ export const textbookParts: Part[] = [
         title: "Photons and Matter Waves",
         sections: [
           { number: "38-1", title: "The Photon, the Quantum of Light" },
+          {
+            number: "38-1b",
+            title: "Photoelectric Effect Lab",
+            simulation: {
+              id: "photoelectric-effect",
+              title: "Photoelectric Effect Lab",
+              description: "Shine light on metals and observe electron emission. Find the threshold frequency and measure Planck's constant.",
+            },
+          },
           { number: "38-2", title: "The Photoelectric Effect" },
           { number: "38-3", title: "Photons, Momentum, Compton Scattering" },
           { number: "38-4", title: "Light as a Probability Wave" },
@@ -890,6 +971,15 @@ export const textbookParts: Part[] = [
               id: "radioactive-decay",
               title: "Radioactive Decay",
               description: "Watch atoms randomly decay over time. See half-life, activity curves, and decay statistics.",
+            },
+          },
+          {
+            number: "42-3b",
+            title: "Decay Chain Game",
+            simulation: {
+              id: "decay-chain",
+              title: "Nuclear Decay Chain",
+              description: "Follow uranium through its decay chain. Predict the next element after each alpha or beta decay.",
             },
           },
           { number: "42-4", title: "Alpha Decay" },
