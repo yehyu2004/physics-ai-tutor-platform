@@ -14,8 +14,9 @@
 e2e/fixtures/
 public/uploads/
 
-# test screenshots (root-level only)
+# test screenshots and development images
 /*.png
+/dev-screenshots/
 
 # next.js
 /.next/
