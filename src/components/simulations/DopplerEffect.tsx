@@ -11,6 +11,7 @@ export default function DopplerEffect() {
 
   const timeRef = useRef(0);
   const wavesRef = useRef<{ x: number; y: number; t: number }[]>([]);
+  const lastTsRef = useRef<number | null>(null);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -128,7 +129,13 @@ export default function DopplerEffect() {
   }, [sourceSpeed, waveSpeed]);
 
   const animate = useCallback(() => {
-    timeRef.current += 0.016;
+    const now = performance.now();
+    if (lastTsRef.current == null) {
+      lastTsRef.current = now;
+    }
+    const dt = Math.min((now - lastTsRef.current) / 1000, 0.05);
+    lastTsRef.current = now;
+    timeRef.current += dt;
     const t = timeRef.current;
     const cy = canvasRef.current ? canvasRef.current.height * 0.5 : 250;
     const W = canvasRef.current ? canvasRef.current.width : 800;
@@ -170,6 +177,7 @@ export default function DopplerEffect() {
 
   const reset = () => {
     timeRef.current = 0;
+    lastTsRef.current = null;
     wavesRef.current = [];
     draw();
   };
@@ -199,7 +207,12 @@ export default function DopplerEffect() {
           </div>
         </div>
         <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 flex items-end gap-2 col-span-1 sm:col-span-2">
-          <button onClick={() => setIsRunning(!isRunning)}
+          <button onClick={() => {
+            if (!isRunning) {
+              lastTsRef.current = null;
+            }
+            setIsRunning(!isRunning);
+          }}
             className="flex-1 h-10 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm transition-colors">
             {isRunning ? "Pause" : "Play"}
           </button>

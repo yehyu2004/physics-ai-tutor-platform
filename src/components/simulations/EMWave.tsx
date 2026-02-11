@@ -11,6 +11,7 @@ export default function EMWave() {
   const [showB, setShowB] = useState(true);
   const [isRunning, setIsRunning] = useState(true);
   const timeRef = useRef(0);
+  const lastTsRef = useRef<number | null>(null);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -159,7 +160,13 @@ export default function EMWave() {
   }, [wavelength, amplitude, showE, showB]);
 
   const animate = useCallback(() => {
-    timeRef.current += 0.025;
+    const now = performance.now();
+    if (lastTsRef.current == null) {
+      lastTsRef.current = now;
+    }
+    const dt = Math.min((now - lastTsRef.current) / 1000, 0.05);
+    lastTsRef.current = now;
+    timeRef.current += dt;
     draw();
     animRef.current = requestAnimationFrame(animate);
   }, [draw]);
@@ -221,7 +228,12 @@ export default function EMWave() {
           </button>
         </div>
         <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-3 flex items-end">
-          <button onClick={() => setIsRunning(!isRunning)}
+          <button onClick={() => {
+            if (!isRunning) {
+              lastTsRef.current = null;
+            }
+            setIsRunning(!isRunning);
+          }}
             className="w-full h-8 rounded-lg bg-purple-600 text-white text-xs font-medium">
             {isRunning ? "Pause" : "Play"}
           </button>

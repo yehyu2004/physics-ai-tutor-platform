@@ -13,6 +13,7 @@ export default function PendulumSim() {
   const angleRef = useRef((initAngle * Math.PI) / 180);
   const angVelRef = useRef(0);
   const trailRef = useRef<{ x: number; y: number }[]>([]);
+  const lastTsRef = useRef<number | null>(null);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -215,12 +216,17 @@ export default function PendulumSim() {
   }, [length, gravity]);
 
   const animate = useCallback(() => {
-    const dt = 0.025;
+    const now = performance.now();
+    if (lastTsRef.current == null) {
+      lastTsRef.current = now;
+    }
+    const dt = Math.min((now - lastTsRef.current) / 1000, 0.05);
+    lastTsRef.current = now;
     const g = gravity;
     const L = length / 100; // meters
     const alpha = -(g / L) * Math.sin(angleRef.current);
     angVelRef.current += alpha * dt;
-    angVelRef.current *= 0.999; // tiny damping
+    angVelRef.current *= Math.exp(-0.5 * dt); // tiny damping
     angleRef.current += angVelRef.current * dt;
 
     const canvas = canvasRef.current;
@@ -267,6 +273,7 @@ export default function PendulumSim() {
     angleRef.current = (initAngle * Math.PI) / 180;
     angVelRef.current = 0;
     trailRef.current = [];
+    lastTsRef.current = null;
     draw();
   };
 
@@ -308,7 +315,12 @@ export default function PendulumSim() {
         </div>
 
         <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 flex items-end gap-2">
-          <button onClick={() => setIsRunning(!isRunning)}
+          <button onClick={() => {
+            if (!isRunning) {
+              lastTsRef.current = null;
+            }
+            setIsRunning(!isRunning);
+          }}
             className="flex-1 h-10 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm transition-colors">
             {isRunning ? "Pause" : "Play"}
           </button>

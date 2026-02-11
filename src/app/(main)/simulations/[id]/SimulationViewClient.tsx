@@ -36,6 +36,7 @@ import ParticleInBox from "@/components/simulations/ParticleInBox";
 import RadioactiveDecay from "@/components/simulations/RadioactiveDecay";
 import WorkEnergy from "@/components/simulations/WorkEnergy";
 import AngularMomentum from "@/components/simulations/AngularMomentum";
+import SpinningTop from "@/components/simulations/SpinningTop";
 import ThermalEquilibrium from "@/components/simulations/ThermalEquilibrium";
 import HeatEngine from "@/components/simulations/HeatEngine";
 import Equipotential from "@/components/simulations/Equipotential";
@@ -78,6 +79,7 @@ const simulationComponents: Record<string, React.ComponentType> = {
   "radioactive-decay": RadioactiveDecay,
   "work-energy": WorkEnergy,
   "angular-momentum": AngularMomentum,
+  "spinning-top": SpinningTop,
   "thermal-equilibrium": ThermalEquilibrium,
   "heat-engine": HeatEngine,
   "equipotential": Equipotential,

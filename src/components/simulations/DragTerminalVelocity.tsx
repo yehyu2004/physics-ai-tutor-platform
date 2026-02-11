@@ -14,6 +14,7 @@ export default function DragTerminalVelocity() {
   const velRef = useRef(0);
   const historyRef = useRef<{ t: number; v: number; y: number }[]>([]);
   const timeRef = useRef(0);
+  const lastTsRef = useRef<number | null>(null);
 
   const g = 9.8;
   const rho = 1.225; // air density
@@ -111,7 +112,7 @@ export default function DragTerminalVelocity() {
     ctx.fillText("mg", objX + 10, objY + objR + 5 + gLen / 2);
 
     // Drag (up)
-    const dragForce = 0.5 * rho * dragCoeff * crossArea * velRef.current * velRef.current;
+    const dragForce = 0.5 * rho * dragCoeff * crossArea * velRef.current * Math.abs(velRef.current);
     const dLen = (dragForce / maxForce) * 60;
     if (dLen > 2) {
       ctx.strokeStyle = "#3b82f6";
@@ -217,11 +218,16 @@ export default function DragTerminalVelocity() {
   }, [mass, dragCoeff, crossArea, terminalVel]);
 
   const animate = useCallback(() => {
-    const dt = 0.03;
+    const now = performance.now();
+    if (lastTsRef.current == null) {
+      lastTsRef.current = now;
+    }
+    const dt = Math.min((now - lastTsRef.current) / 1000, 0.05);
+    lastTsRef.current = now;
     timeRef.current += dt;
 
     const v = velRef.current;
-    const dragForce = 0.5 * rho * dragCoeff * crossArea * v * v;
+    const dragForce = 0.5 * rho * dragCoeff * crossArea * v * Math.abs(v);
     const netForce = mass * g - dragForce;
     const accel = netForce / mass;
 
@@ -262,6 +268,7 @@ export default function DragTerminalVelocity() {
     posRef.current = 0;
     timeRef.current = 0;
     historyRef.current = [];
+    lastTsRef.current = null;
     draw();
   };
 
@@ -300,7 +307,12 @@ export default function DragTerminalVelocity() {
           </div>
         </div>
         <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 flex items-end gap-2">
-          <button onClick={() => setIsRunning(!isRunning)}
+          <button onClick={() => {
+            if (!isRunning) {
+              lastTsRef.current = null;
+            }
+            setIsRunning(!isRunning);
+          }}
             className="flex-1 h-10 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm transition-colors">
             {isRunning ? "Pause" : "Play"}
           </button>

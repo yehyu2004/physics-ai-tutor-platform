@@ -11,6 +11,7 @@ export default function Capacitor() {
   const [dielectric, setDielectric] = useState(1); // relative permittivity
 
   const timeRef = useRef(0);
+  const lastTsRef = useRef<number | null>(null);
 
   const epsilon0 = 8.854e-12;
   const capacitance = dielectric * epsilon0 * plateArea / separation; // Farads
@@ -252,7 +253,13 @@ export default function Capacitor() {
   }, [separation, plateArea, voltage, dielectric, capacitance, charge, eField, energy, sigmaDensity]);
 
   const animate = useCallback(() => {
-    timeRef.current += 0.016;
+    const now = performance.now();
+    if (lastTsRef.current == null) {
+      lastTsRef.current = now;
+    }
+    const dt = Math.min((now - lastTsRef.current) / 1000, 0.05);
+    lastTsRef.current = now;
+    timeRef.current += dt;
     draw();
     animRef.current = requestAnimationFrame(animate);
   }, [draw]);

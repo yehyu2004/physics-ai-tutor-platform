@@ -12,6 +12,7 @@ export default function Buoyancy() {
 
   const posRef = useRef(0.2);
   const velRef = useRef(0);
+  const lastTsRef = useRef<number | null>(null);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -172,7 +173,12 @@ export default function Buoyancy() {
   }, [objectDensity, fluidDensity, objectSize]);
 
   const animate = useCallback(() => {
-    const dt = 0.016;
+    const now = performance.now();
+    if (lastTsRef.current == null) {
+      lastTsRef.current = now;
+    }
+    const dt = Math.min((now - lastTsRef.current) / 1000, 0.05);
+    lastTsRef.current = now;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const H = canvas.height;
@@ -190,8 +196,8 @@ export default function Buoyancy() {
 
     const accel = netForce / (objectDensity * vol);
     velRef.current += accel * dt * 0.0003;
-    velRef.current *= 0.98; // damping for stability
-    posRef.current += velRef.current;
+    velRef.current *= Math.pow(0.98, dt / 0.016); // frame-rate independent damping
+    posRef.current += velRef.current * (dt / 0.016);
 
     // Bounds
     if (posRef.current > 0.85) { posRef.current = 0.85; velRef.current *= -0.3; }
@@ -224,6 +230,7 @@ export default function Buoyancy() {
   const reset = () => {
     posRef.current = 0.2;
     velRef.current = 0;
+    lastTsRef.current = null;
     draw();
   };
 
@@ -261,7 +268,12 @@ export default function Buoyancy() {
           </div>
         </div>
         <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 flex items-end gap-2">
-          <button onClick={() => setIsRunning(!isRunning)}
+          <button onClick={() => {
+            if (!isRunning) {
+              lastTsRef.current = null;
+            }
+            setIsRunning(!isRunning);
+          }}
             className="flex-1 h-10 rounded-lg bg-cyan-600 hover:bg-cyan-700 text-white font-medium text-sm transition-colors">
             {isRunning ? "Pause" : "Play"}
           </button>

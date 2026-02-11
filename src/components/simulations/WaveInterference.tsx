@@ -12,6 +12,7 @@ export default function WaveInterference() {
   const [phase, setPhase] = useState(0);
   const [isRunning, setIsRunning] = useState(true);
   const timeRef = useRef(0);
+  const lastTsRef = useRef<number | null>(null);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -118,7 +119,13 @@ export default function WaveInterference() {
   }, [freq1, freq2, amp1, amp2, phase]);
 
   const animate = useCallback(() => {
-    timeRef.current += 0.016;
+    const now = performance.now();
+    if (lastTsRef.current == null) {
+      lastTsRef.current = now;
+    }
+    const dt = Math.min((now - lastTsRef.current) / 1000, 0.05);
+    lastTsRef.current = now;
+    timeRef.current += dt;
     draw();
     animRef.current = requestAnimationFrame(animate);
   }, [draw]);
@@ -204,7 +211,12 @@ export default function WaveInterference() {
       </div>
 
       <button
-        onClick={() => setIsRunning(!isRunning)}
+        onClick={() => {
+          if (!isRunning) {
+            lastTsRef.current = null;
+          }
+          setIsRunning(!isRunning);
+        }}
         className="px-6 h-10 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-medium text-sm transition-colors"
       >
         {isRunning ? "Pause" : "Play"}

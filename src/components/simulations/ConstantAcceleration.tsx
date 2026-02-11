@@ -10,6 +10,7 @@ export default function ConstantAcceleration() {
   const [isRunning, setIsRunning] = useState(true);
   const timeRef = useRef(0);
   const historyRef = useRef<{ t: number; x: number; v: number }[]>([]);
+  const lastTsRef = useRef<number | null>(null);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -242,7 +243,13 @@ export default function ConstantAcceleration() {
   }, [v0, accel]);
 
   const animate = useCallback(() => {
-    timeRef.current += 0.03;
+    const now = performance.now();
+    if (lastTsRef.current == null) {
+      lastTsRef.current = now;
+    }
+    const dt = Math.min((now - lastTsRef.current) / 1000, 0.05);
+    lastTsRef.current = now;
+    timeRef.current += dt;
     const t = timeRef.current;
     const x = v0 * t + 0.5 * accel * t * t;
     const v = v0 + accel * t;
@@ -277,6 +284,7 @@ export default function ConstantAcceleration() {
   const reset = () => {
     timeRef.current = 0;
     historyRef.current = [];
+    lastTsRef.current = null;
     draw();
   };
 
@@ -308,7 +316,12 @@ export default function ConstantAcceleration() {
         </div>
 
         <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 flex items-end gap-2">
-          <button onClick={() => setIsRunning(!isRunning)}
+          <button onClick={() => {
+            if (!isRunning) {
+              lastTsRef.current = null;
+            }
+            setIsRunning(!isRunning);
+          }}
             className="flex-1 h-10 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm transition-colors">
             {isRunning ? "Pause" : "Play"}
           </button>

@@ -11,6 +11,8 @@ export default function CircularMotion() {
   const [isRunning, setIsRunning] = useState(true);
   const angleRef = useRef(0);
   const trailRef = useRef<{ x: number; y: number; a: number }[]>([]);
+  const lastTsRef = useRef<number | null>(null);
+  const pxPerMeter = 50;
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -98,9 +100,10 @@ export default function CircularMotion() {
     ctx.fill();
 
     if (showVectors) {
-      const omega = speed / R;
+      const radiusMeters = R / pxPerMeter;
+      const omega = speed / Math.max(radiusMeters, 0.1);
       const velMag = speed * 15; // visual scale
-      const accelMag = (speed * speed / R) * 40; // visual scale
+      const accelMag = (speed * speed / Math.max(radiusMeters, 0.1)) * 4; // visual scale
 
       // Velocity vector (tangential)
       const vx = -Math.sin(theta) * velMag;
@@ -193,8 +196,9 @@ export default function CircularMotion() {
     ctx.fill();
 
     // Info panel
-    const T = (2 * Math.PI * R) / speed;
-    const ac = (speed * speed) / R;
+    const radiusMeters = R / pxPerMeter;
+    const period = (2 * Math.PI * radiusMeters) / speed;
+    const ac = (speed * speed) / radiusMeters;
 
     ctx.fillStyle = "rgba(0,0,0,0.6)";
     ctx.beginPath();
@@ -207,15 +211,22 @@ export default function CircularMotion() {
     ctx.font = "12px ui-monospace";
     ctx.fillStyle = "#e2e8f0";
     ctx.fillText(`Speed:  ${speed.toFixed(1)} m/s`, W - 183, 48);
-    ctx.fillText(`Radius: ${(R / 50).toFixed(1)} m`, W - 183, 63);
-    ctx.fillText(`Period: ${(T / 50).toFixed(2)} s`, W - 183, 78);
-    ctx.fillText(`a_c:    ${(ac / 50).toFixed(1)} m/s²`, W - 183, 93);
+    ctx.fillText(`Radius: ${radiusMeters.toFixed(1)} m`, W - 183, 63);
+    ctx.fillText(`Period: ${period.toFixed(2)} s`, W - 183, 78);
+    ctx.fillText(`a_c:    ${ac.toFixed(1)} m/s²`, W - 183, 93);
   }, [radius, speed, showVectors]);
 
   const animate = useCallback(() => {
     const R = Math.min(radius, 200);
-    const omega = speed / R;
-    angleRef.current += omega * 0.5;
+    const radiusMeters = R / pxPerMeter;
+    const omega = speed / Math.max(radiusMeters, 0.1);
+    const now = performance.now();
+    if (lastTsRef.current == null) {
+      lastTsRef.current = now;
+    }
+    const dt = Math.min((now - lastTsRef.current) / 1000, 0.05);
+    lastTsRef.current = now;
+    angleRef.current += omega * dt;
 
     const canvas = canvasRef.current;
     if (canvas) {
@@ -259,6 +270,7 @@ export default function CircularMotion() {
   const reset = () => {
     angleRef.current = 0;
     trailRef.current = [];
+    lastTsRef.current = null;
     draw();
   };
 
@@ -275,7 +287,7 @@ export default function CircularMotion() {
             <input type="range" min={50} max={200} value={radius}
               onChange={(e) => { setRadius(Number(e.target.value)); reset(); }}
               className="flex-1 accent-blue-500" />
-            <span className="text-sm font-mono font-bold text-gray-900 dark:text-gray-100 min-w-[3rem] text-right">{(radius/50).toFixed(1)} m</span>
+            <span className="text-sm font-mono font-bold text-gray-900 dark:text-gray-100 min-w-[3rem] text-right">{(radius / pxPerMeter).toFixed(1)} m</span>
           </div>
         </div>
 
@@ -299,7 +311,12 @@ export default function CircularMotion() {
         </div>
 
         <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 flex items-end gap-2">
-          <button onClick={() => setIsRunning(!isRunning)}
+          <button onClick={() => {
+            if (!isRunning) {
+              lastTsRef.current = null;
+            }
+            setIsRunning(!isRunning);
+          }}
             className="flex-1 h-10 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm transition-colors">
             {isRunning ? "Pause" : "Play"}
           </button>

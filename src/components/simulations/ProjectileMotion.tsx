@@ -16,6 +16,7 @@ export default function ProjectileMotion() {
   const [isRunning, setIsRunning] = useState(false);
   const timeRef = useRef(0);
   const trailsRef = useRef<Trail[]>([]);
+  const lastTsRef = useRef<number | null>(null);
 
   const groundY = 0.85; // fraction of canvas height
 
@@ -186,13 +187,19 @@ export default function ProjectileMotion() {
     const gY = canvas.height * groundY;
     const scale = (gY - 40) / ((speed * speed) / (2 * gravity) + 10);
     const originX = 60;
+    const now = performance.now();
+    if (lastTsRef.current == null) {
+      lastTsRef.current = now;
+    }
+    const dt = Math.min((now - lastTsRef.current) / 1000, 0.05);
+    lastTsRef.current = now;
 
     if (timeRef.current <= totalTime) {
       const t = timeRef.current;
       const bx = originX + vx * t * scale;
       const by = gY - (vy * t - 0.5 * gravity * t * t) * scale;
       trailsRef.current = [...trailsRef.current, { x: bx, y: by }];
-      timeRef.current += 0.025;
+      timeRef.current += dt;
       draw();
       animRef.current = requestAnimationFrame(animate);
     } else {
@@ -229,6 +236,7 @@ export default function ProjectileMotion() {
   const launch = () => {
     timeRef.current = 0;
     trailsRef.current = [];
+    lastTsRef.current = null;
     setIsRunning(true);
   };
 
@@ -236,6 +244,7 @@ export default function ProjectileMotion() {
     cancelAnimationFrame(animRef.current);
     timeRef.current = 0;
     trailsRef.current = [];
+    lastTsRef.current = null;
     setIsRunning(false);
     draw();
   };

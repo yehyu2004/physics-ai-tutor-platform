@@ -247,6 +247,15 @@ export const textbookParts: Part[] = [
               description: "Watch a spinning figure skater pull arms in to spin faster. Explore I, omega, and L = Iomega.",
             },
           },
+          {
+            number: "11-9",
+            title: "Gyroscopes and Precession",
+            simulation: {
+              id: "spinning-top",
+              title: "Spinning Top Precession",
+              description: "Explore gyroscopic precession of a tilted spinning top. Tune spin rate, tilt, and damping to see how Omega = tau/L changes.",
+            },
+          },
         ],
       },
       {

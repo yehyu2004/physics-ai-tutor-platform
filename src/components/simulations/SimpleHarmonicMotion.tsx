@@ -12,6 +12,7 @@ export default function SimpleHarmonicMotion() {
   const [isRunning, setIsRunning] = useState(true);
   const timeRef = useRef(0);
   const historyRef = useRef<number[]>([]);
+  const lastTsRef = useRef<number | null>(null);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -213,7 +214,13 @@ export default function SimpleHarmonicMotion() {
   }, [mass, springK, amplitude, damping]);
 
   const animate = useCallback(() => {
-    timeRef.current += 0.03;
+    const now = performance.now();
+    if (lastTsRef.current == null) {
+      lastTsRef.current = now;
+    }
+    const dt = Math.min((now - lastTsRef.current) / 1000, 0.05);
+    lastTsRef.current = now;
+    timeRef.current += dt;
     const omega = Math.sqrt(springK / mass);
     const dampFactor = Math.exp(-damping * timeRef.current / (2 * mass));
     const displacement = amplitude * dampFactor * Math.cos(omega * timeRef.current);
@@ -248,6 +255,7 @@ export default function SimpleHarmonicMotion() {
   const reset = () => {
     timeRef.current = 0;
     historyRef.current = [];
+    lastTsRef.current = null;
     draw();
   };
 
@@ -301,7 +309,12 @@ export default function SimpleHarmonicMotion() {
 
       <div className="flex gap-3">
         <button
-          onClick={() => setIsRunning(!isRunning)}
+          onClick={() => {
+            if (!isRunning) {
+              lastTsRef.current = null;
+            }
+            setIsRunning(!isRunning);
+          }}
           className="px-6 h-10 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm transition-colors"
         >
           {isRunning ? "Pause" : "Play"}

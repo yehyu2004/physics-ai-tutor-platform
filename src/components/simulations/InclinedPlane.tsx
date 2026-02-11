@@ -12,6 +12,8 @@ export default function InclinedPlane() {
   const animRef = useRef<number>(0);
   const posRef = useRef(0);
   const velRef = useRef(0);
+  const lastTsRef = useRef<number | null>(null);
+  const pxPerMeter = 50;
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -80,12 +82,13 @@ export default function InclinedPlane() {
     ctx.fillText(`${angle}°`, rampTopX - 48, rampBaseY - 10);
 
     // Block position on ramp
-    const blockPos = Math.min(Math.max(posRef.current, 0), rampLen - 40);
-
-    // Calculate block position along the ramp
-    const t = 0.4 + blockPos / rampLen * 0.5; // fraction along ramp
-    const bx = rampBaseX + t * (rampTopX - rampBaseX);
-    const by = rampBaseY + t * (rampTopY - rampBaseY);
+    const usableRampPx = Math.max(rampLen - 80, 10);
+    const blockPosPx = Math.min(Math.max(posRef.current * pxPerMeter, 0), usableRampPx);
+    const downUx = Math.cos(rad);
+    const downUy = Math.sin(rad);
+    const startOffsetPx = 30;
+    const bx = rampTopX - downUx * startOffsetPx + downUx * blockPosPx;
+    const by = rampTopY + downUy * startOffsetPx + downUy * blockPosPx;
 
     // Block (rotated)
     const blockSize = 36;
@@ -120,7 +123,7 @@ export default function InclinedPlane() {
 
     // Force vectors
     if (showComponents) {
-      const forceScale = 3;
+      const forceScale = 2;
       const mg = mass * g * forceScale;
       const mgSin = mg * Math.sin(rad);
       const mgCos = mg * Math.cos(rad);
@@ -161,14 +164,15 @@ export default function InclinedPlane() {
         ctx.setLineDash([4, 3]);
         ctx.beginPath();
         ctx.moveTo(bx, by);
-        ctx.lineTo(bx + mgCos * Math.sin(rad), by + mgCos * (-Math.cos(rad) + 1));
-        // Actually perpendicular to ramp (into surface)
+        // Perpendicular component into the ramp
         const perpX = Math.sin(rad);
         const perpY = Math.cos(rad);
-        ctx.moveTo(bx, by);
         ctx.lineTo(bx + perpX * mgCos, by + perpY * mgCos);
         ctx.stroke();
         ctx.setLineDash([]);
+        ctx.fillStyle = "#a855f7";
+        ctx.textAlign = "left";
+        ctx.fillText("mg cosθ", bx + perpX * mgCos + 6, by + perpY * mgCos);
 
         // Normal force - perpendicular to ramp away from surface
         ctx.strokeStyle = "#22c55e";
@@ -251,12 +255,19 @@ export default function InclinedPlane() {
   const animate = useCallback(() => {
     const g = 9.8;
     const rad = (angle * Math.PI) / 180;
-    const netAccel = g * (Math.sin(rad) - friction * Math.cos(rad));
-    const dt = 0.016;
+    const driveAccel = g * (Math.sin(rad) - friction * Math.cos(rad));
+    const now = performance.now();
+    if (lastTsRef.current == null) {
+      lastTsRef.current = now;
+    }
+    const dt = Math.min((now - lastTsRef.current) / 1000, 0.05);
+    lastTsRef.current = now;
 
-    if (netAccel > 0) {
-      velRef.current += netAccel * dt * 0.5;
-      posRef.current += velRef.current * dt * 5;
+    if (driveAccel > 0) {
+      velRef.current += driveAccel * dt;
+      posRef.current += velRef.current * dt;
+    } else {
+      velRef.current = 0;
     }
 
     draw();
@@ -290,6 +301,7 @@ export default function InclinedPlane() {
   const reset = () => {
     posRef.current = 0;
     velRef.current = 0;
+    lastTsRef.current = null;
     draw();
   };
 
@@ -337,7 +349,13 @@ export default function InclinedPlane() {
             }`}>
             Forces
           </button>
-          <button onClick={() => { setIsRunning(!isRunning); if (!isRunning) reset(); }}
+          <button onClick={() => {
+            if (!isRunning) {
+              lastTsRef.current = null;
+              reset();
+            }
+            setIsRunning(!isRunning);
+          }}
             className="h-10 px-4 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition-colors">
             {isRunning ? "Stop" : "Slide"}
           </button>

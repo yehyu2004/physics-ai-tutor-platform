@@ -13,6 +13,7 @@ export default function OrbitalMotion() {
   const posRef = useRef({ x: 0.75, y: 0.5 });
   const velRef = useRef({ vx: 0, vy: 0 });
   const trailRef = useRef<{ x: number; y: number }[]>([]);
+  const lastTsRef = useRef<number | null>(null);
 
   const G_SCALE = 0.0008;
 
@@ -221,8 +222,14 @@ export default function OrbitalMotion() {
 
   const animate = useCallback(() => {
     const GM = centralMass * G_SCALE;
-    const dt = 0.005;
-    const substeps = 3; // multiple substeps for accuracy
+    const now = performance.now();
+    if (lastTsRef.current == null) {
+      lastTsRef.current = now;
+    }
+    const frameDt = Math.min((now - lastTsRef.current) / 1000, 0.05);
+    lastTsRef.current = now;
+    const substeps = 4; // multiple substeps for accuracy
+    const dt = frameDt / substeps;
 
     const pos = posRef.current;
     const vel = velRef.current;
@@ -292,6 +299,7 @@ export default function OrbitalMotion() {
 
   const reset = () => {
     init();
+    lastTsRef.current = null;
     draw();
   };
 
@@ -334,7 +342,12 @@ export default function OrbitalMotion() {
         </div>
 
         <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 flex items-end gap-2">
-          <button onClick={() => setIsRunning(!isRunning)}
+          <button onClick={() => {
+            if (!isRunning) {
+              lastTsRef.current = null;
+            }
+            setIsRunning(!isRunning);
+          }}
             className="flex-1 h-10 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-medium text-sm transition-colors">
             {isRunning ? "Pause" : "Play"}
           </button>
