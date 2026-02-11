@@ -713,10 +713,10 @@ export default function ChatPageClient({
                       <button
                         onClick={() => copyMessage(msg.id, msg.content)}
                         className={cn(
-                          "absolute top-1 right-1 p-1.5 rounded-md transition-all",
+                          "absolute top-1 right-1 p-1.5 rounded-md transition-all opacity-50 hover:opacity-100",
                           msg.role === "user"
-                            ? "opacity-0 group-hover:opacity-100 bg-white/80 dark:bg-gray-900/80 hover:bg-white dark:hover:bg-gray-900 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                            : "opacity-0 group-hover:opacity-100 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                            ? "bg-white/80 dark:bg-gray-900/80 hover:bg-white dark:hover:bg-gray-900 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                            : "bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                         )}
                         title="Copy message"
                       >
