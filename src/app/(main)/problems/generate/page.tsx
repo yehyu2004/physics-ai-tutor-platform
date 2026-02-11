@@ -17,6 +17,9 @@ import {
   ChevronDown,
   FilePlus,
   Trash2,
+  GripVertical,
+  Layers,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +27,24 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { MarkdownContent } from "@/components/ui/markdown-content";
 import MermaidDiagram from "@/components/chat/MermaidDiagram";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
   Select,
   SelectContent,
@@ -98,6 +119,76 @@ const difficultyConfig = [
   { value: "5", label: "Expert", color: "bg-red-50 text-red-700 border-red-200" },
 ];
 
+function SortableProblemItem({
+  id,
+  index,
+  problem,
+  onRemove,
+}: {
+  id: string;
+  index: number;
+  problem: GeneratedProblem & { sourceTopic: string; _uid: string };
+  onRemove: () => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 10 : undefined,
+    opacity: isDragging ? 0.8 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-6 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${
+        isDragging ? "bg-indigo-50 dark:bg-indigo-950 shadow-lg rounded-lg" : ""
+      }`}
+    >
+      <button
+        {...attributes}
+        {...listeners}
+        className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-grab active:cursor-grabbing touch-none shrink-0"
+        title="Drag to reorder"
+      >
+        <GripVertical className="h-5 w-5" />
+      </button>
+      <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-bold shrink-0">
+        {index + 1}
+      </span>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+          <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 shrink-0">
+            {problem.sourceTopic}
+          </span>
+          <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0">
+            {problem.points} pts &middot; {problem.questionType}
+          </span>
+        </div>
+        <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-1">
+          {problem.questionText.replace(/\$\$?[^$]+\$\$?/g, "[math]").slice(0, 120)}
+        </p>
+      </div>
+      <button
+        onClick={onRemove}
+        className="p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950 transition-colors shrink-0"
+        title="Remove"
+      >
+        <X className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
+
 export default function ProblemGeneratorPage() {
   const router = useRouter();
   const [topic, setTopic] = useState("");
@@ -117,6 +208,13 @@ export default function ProblemGeneratorPage() {
   const [loadingPast, setLoadingPast] = useState(false);
   const [currentUser, setCurrentUser] = useState<{ id: string; role: string } | null>(null);
   const [deletingSetId, setDeletingSetId] = useState<string | null>(null);
+
+  // Merge problem sets state
+  const [selectedSetIds, setSelectedSetIds] = useState<Set<string>>(new Set());
+  const [mergedProblems, setMergedProblems] = useState<(GeneratedProblem & { sourceTopic: string; _uid: string })[]>([]);
+  const [showStagingArea, setShowStagingArea] = useState(false);
+  const [creatingFromMerged, setCreatingFromMerged] = useState(false);
+  const uidCounterRef = useRef(0);
 
   useEffect(() => {
     fetch("/api/auth/session")
@@ -175,6 +273,88 @@ export default function ProblemGeneratorPage() {
   const canDeleteSet = (ps: ProblemSet) => {
     if (!currentUser) return false;
     return currentUser.role === "ADMIN" || ps.createdById === currentUser.id;
+  };
+
+  const toggleSetSelection = (psId: string) => {
+    setSelectedSetIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(psId)) next.delete(psId);
+      else next.add(psId);
+      return next;
+    });
+  };
+
+  const handleMergeSelected = () => {
+    const selected = pastSets.filter((ps) => selectedSetIds.has(ps.id));
+    const merged = selected.flatMap((ps) =>
+      ps.problems.map((p) => {
+        uidCounterRef.current += 1;
+        return { ...p, sourceTopic: ps.topic, _uid: `mp-${uidCounterRef.current}` };
+      })
+    );
+    setMergedProblems(merged);
+    setShowStagingArea(true);
+    setSelectedSetIds(new Set());
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setMergedProblems((prev) => {
+        const oldIndex = prev.findIndex((p) => p._uid === active.id);
+        const newIndex = prev.findIndex((p) => p._uid === over.id);
+        if (oldIndex === -1 || newIndex === -1) return prev;
+        return arrayMove(prev, oldIndex, newIndex);
+      });
+    }
+  };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const removeMergedProblem = (index: number) => {
+    setMergedProblems((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const createAssignmentFromMerged = async () => {
+    if (mergedProblems.length === 0) return;
+    setCreatingFromMerged(true);
+    try {
+      const totalPoints = mergedProblems.reduce((sum, p) => sum + p.points, 0);
+      const topics = Array.from(new Set(mergedProblems.map((p) => p.sourceTopic)));
+      const title = topics.length <= 3
+        ? `${topics.join(", ")} - Merged Problems`
+        : `${topics.slice(0, 2).join(", ")} + ${topics.length - 2} more - Merged Problems`;
+      const res = await fetch("/api/assignments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          description: `Merged ${mergedProblems.length} problems from ${topics.length} topic(s): ${topics.join(", ")}.`,
+          type: "QUIZ",
+          totalPoints,
+          questions: mergedProblems.map((p) => ({
+            questionText: p.questionText,
+            questionType: p.questionType,
+            options: p.options || null,
+            correctAnswer: p.correctAnswer,
+            points: p.points,
+            diagram: p.diagram || null,
+          })),
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        router.push(`/assignments/${data.assignment.id}/edit`);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setCreatingFromMerged(false);
+    }
   };
 
   const loadProblemSet = (ps: ProblemSet) => {
@@ -620,6 +800,69 @@ export default function ProblemGeneratorPage() {
         </div>
       )}
 
+      {/* Staging Area (Merged Problems) */}
+      {showStagingArea && mergedProblems.length > 0 && (
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border-2 border-indigo-200 dark:border-indigo-800 overflow-hidden shadow-sm">
+          <div className="px-6 py-4 border-b border-indigo-100 dark:border-indigo-900 bg-indigo-50 dark:bg-indigo-950 flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2.5">
+              <Layers className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+              <h2 className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">
+                Staging Area
+              </h2>
+              <span className="text-xs text-indigo-500 dark:text-indigo-400">
+                ({mergedProblems.length} problems)
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={createAssignmentFromMerged}
+                disabled={creatingFromMerged || mergedProblems.length === 0}
+                size="sm"
+                className="gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg"
+              >
+                {creatingFromMerged ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <FilePlus className="h-3.5 w-3.5" />
+                )}
+                Create Assignment
+              </Button>
+              <Button
+                onClick={() => { setShowStagingArea(false); setMergedProblems([]); }}
+                size="sm"
+                variant="outline"
+                className="gap-1.5 text-gray-600 dark:text-gray-400 rounded-lg"
+              >
+                <X className="h-3.5 w-3.5" />
+                Clear
+              </Button>
+            </div>
+          </div>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={mergedProblems.map((p) => p._uid)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                {mergedProblems.map((p, index) => (
+                  <SortableProblemItem
+                    key={p._uid}
+                    id={p._uid}
+                    index={index}
+                    problem={p}
+                    onRemove={() => removeMergedProblem(index)}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+        </div>
+      )}
+
       {/* Problem Bank */}
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden shadow-sm">
         <button
@@ -635,6 +878,33 @@ export default function ProblemGeneratorPage() {
           </div>
           <ChevronDown className={`h-4 w-4 text-gray-400 dark:text-gray-500 transition-transform duration-200 ${showPast ? "rotate-180" : ""}`} />
         </button>
+
+        {/* Merge toolbar */}
+        {showPast && selectedSetIds.size >= 2 && (
+          <div className="px-6 py-3 bg-indigo-50 dark:bg-indigo-950 border-t border-b border-indigo-200 dark:border-indigo-800 flex items-center justify-between flex-wrap gap-2">
+            <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
+              {selectedSetIds.size} sets selected
+            </span>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => setSelectedSetIds(new Set())}
+                size="sm"
+                variant="outline"
+                className="text-xs rounded-lg"
+              >
+                Clear
+              </Button>
+              <Button
+                onClick={handleMergeSelected}
+                size="sm"
+                className="gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs"
+              >
+                <Layers className="h-3.5 w-3.5" />
+                Merge Selected
+              </Button>
+            </div>
+          </div>
+        )}
 
         {loadingPast && (
           <div className="px-6 py-8 text-center">
@@ -653,18 +923,33 @@ export default function ProblemGeneratorPage() {
             {pastSets.map((ps) => (
               <div
                 key={ps.id}
-                className="flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-b border-gray-50 dark:border-gray-800 last:border-b-0"
+                className={`flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-b border-gray-50 dark:border-gray-800 last:border-b-0 ${
+                  selectedSetIds.has(ps.id) ? "bg-indigo-50/50 dark:bg-indigo-950/30" : ""
+                }`}
               >
-                <button
-                  onClick={() => loadProblemSet(ps)}
-                  className="flex-1 px-6 py-3 text-left"
-                >
-                  <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{ps.topic}</p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                    {ps.problems.length} problems &middot; {ps.questionType} &middot; Difficulty {ps.difficulty}/5
-                    {ps.createdBy && ` \u00B7 by ${ps.createdBy}`}
-                  </p>
-                </button>
+                <div className="flex items-center flex-1 min-w-0">
+                  <label
+                    className="flex items-center pl-4 sm:pl-6 py-3 cursor-pointer shrink-0"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedSetIds.has(ps.id)}
+                      onChange={() => toggleSetSelection(ps.id)}
+                      className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+                    />
+                  </label>
+                  <button
+                    onClick={() => loadProblemSet(ps)}
+                    className="flex-1 px-3 py-3 text-left min-w-0"
+                  >
+                    <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{ps.topic}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                      {ps.problems.length} problems &middot; {ps.questionType} &middot; Difficulty {ps.difficulty}/5
+                      {ps.createdBy && ` \u00B7 by ${ps.createdBy}`}
+                    </p>
+                  </button>
+                </div>
                 <div className="flex items-center gap-2 pr-4">
                   <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0">
                     {new Date(ps.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}

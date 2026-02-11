@@ -11,7 +11,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import {
   Select,
   SelectContent,
@@ -230,7 +230,7 @@ export default function QAHistoryPage() {
                       <Loader2 className="h-5 w-5 animate-spin text-neutral-400 dark:text-neutral-500 mx-auto" />
                     </div>
                   ) : (
-                    <ScrollArea className="max-h-96 mt-3">
+                    <div className="mt-3">
                       <div className="space-y-3">
                         {conv.messages?.map((msg) => (
                           <div
@@ -249,7 +249,7 @@ export default function QAHistoryPage() {
                           </div>
                         ))}
                       </div>
-                    </ScrollArea>
+                    </div>
                   )}
                 </div>
               )}

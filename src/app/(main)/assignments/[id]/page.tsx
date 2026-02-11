@@ -156,6 +156,7 @@ export default function AssignmentDetailPage({
   const [uploadingImage, setUploadingImage] = useState(false);
   const [draftRestored, setDraftRestored] = useState(false);
   const draftRestoredRef = useRef(false);
+  const [exportingLatex, setExportingLatex] = useState(false);
 
   const userRole = effectiveSession.role;
 
@@ -491,6 +492,29 @@ export default function AssignmentDetailPage({
     }
   };
 
+  const handleExportLatex = async () => {
+    if (!assignment) return;
+    setExportingLatex(true);
+    try {
+      const res = await fetch(`/api/assignments/${assignment.id}/export-latex`);
+      if (!res.ok) throw new Error("Export failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${assignment.title.replace(/[^a-zA-Z0-9_\- ]/g, "").replace(/\s+/g, "_").slice(0, 60)}_latex.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to export LaTeX");
+    } finally {
+      setExportingLatex(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -524,14 +548,14 @@ export default function AssignmentDetailPage({
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-start gap-4">
         <Link href="/assignments">
           <Button variant="ghost" size="icon">
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-2xl font-bold tracking-tight">{assignment.title}</h1>
             {!assignment.published && <Badge variant="warning">Draft</Badge>}
           </div>
@@ -550,7 +574,7 @@ export default function AssignmentDetailPage({
           )}
         </div>
         {(userRole === "TA" || userRole === "ADMIN" || userRole === "PROFESSOR") && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Link href={`/assignments/${assignment.id}/edit`}>
               <Button variant="outline" size="sm">
                 <Pencil className="h-4 w-4 mr-2" />
@@ -566,6 +590,14 @@ export default function AssignmentDetailPage({
                 Grade ({assignment._count.submissions})
               </Button>
             </Link>
+            <Button variant="outline" size="sm" onClick={handleExportLatex} disabled={exportingLatex}>
+              {exportingLatex ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 mr-2" />
+              )}
+              {exportingLatex ? "Exporting..." : "Export LaTeX"}
+            </Button>
             <Button variant="outline" size="sm" onClick={handleDelete} disabled={deleting} className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950">
               <Trash2 className="h-4 w-4 mr-2" />
               {deleting ? "Deleting..." : "Delete"}

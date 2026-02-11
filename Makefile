@@ -4,8 +4,8 @@
 install:
 	npm install
 
-# Run development server (ensures deps, DB, and migrations are ready)
-dev: install prisma-generate db-migrate
+# Run development server (ensures deps, DB, and Prisma client are ready)
+dev: install prisma-generate db-push
 	npm run dev
 
 # Build for production
@@ -24,10 +24,14 @@ db-up:
 db-down:
 	docker compose down
 
-# Full database setup (start Docker, generate client, run migrations)
-db-setup: db-up prisma-generate db-migrate
+# Full database setup (start Docker, generate client, sync schema)
+db-setup: db-up prisma-generate db-push
 
-# Run Prisma migrations
+# Sync database schema with Prisma schema (no migration files needed)
+db-push:
+	npx prisma db push
+
+# Run Prisma migrations (for production or when using migration workflow)
 db-migrate:
 	npx prisma migrate dev
 
@@ -47,5 +51,5 @@ prisma-generate:
 clean:
 	rm -rf .next node_modules
 
-# First-time setup: install deps, start DB, generate prisma, migrate, start dev
-setup: install db-up prisma-generate db-migrate dev
+# First-time setup: install deps, start DB, generate prisma, sync schema, start dev
+setup: install db-up prisma-generate db-push dev
