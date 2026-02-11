@@ -130,7 +130,7 @@ async function streamOpenAI(
           { type: "input_text", text: msg.content },
           ...msg.imageUrls.map((url) => ({
             type: "input_image",
-            image_url: url.startsWith("data:") ? url : `${process.env.NEXTAUTH_URL || ""}${url}`,
+            image_url: url,
           })),
         ],
       });
