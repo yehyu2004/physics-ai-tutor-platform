@@ -12,6 +12,7 @@ import {
   FileText,
   ChevronUp,
   ChevronDown,
+  Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,6 +77,7 @@ export default function EditAssignmentPage({
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [exportingLatex, setExportingLatex] = useState(false);
 
   useEffect(() => {
     fetch(`/api/assignments/${params.id}`)
@@ -588,18 +590,52 @@ export default function EditAssignmentPage({
         </div>
       )}
 
-      <div className="flex justify-end gap-3 pb-8">
+      <div className="flex flex-wrap justify-end gap-3 pb-8">
         <Button
           variant="outline"
           onClick={() => handleSave(false)}
-          disabled={saving || !title.trim()}
+          disabled={saving || exportingLatex || !title.trim()}
         >
           {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
           Save
         </Button>
+        {type === "QUIZ" && (
+          <Button
+            variant="outline"
+            onClick={async () => {
+              setExportingLatex(true);
+              try {
+                const res = await fetch(`/api/assignments/${params.id}/export-latex`);
+                if (!res.ok) throw new Error("Export failed");
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `${title.replace(/[^a-zA-Z0-9_\- ]/g, "").replace(/\s+/g, "_").slice(0, 60)}_latex.zip`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+              } catch (err) {
+                console.error(err);
+                alert("Failed to export LaTeX");
+              } finally {
+                setExportingLatex(false);
+              }
+            }}
+            disabled={saving || exportingLatex}
+          >
+            {exportingLatex ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <Download className="h-4 w-4 mr-2" />
+            )}
+            Download LaTeX
+          </Button>
+        )}
         <Button
           onClick={() => handleSave(true)}
-          disabled={saving || !title.trim()}
+          disabled={saving || exportingLatex || !title.trim()}
         >
           {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
           Save &amp; Publish
