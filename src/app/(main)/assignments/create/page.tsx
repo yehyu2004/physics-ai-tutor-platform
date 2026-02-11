@@ -38,6 +38,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { MarkdownContent } from "@/components/ui/markdown-content";
 import Link from "next/link";
 
 interface Question {
@@ -540,6 +541,12 @@ export default function CreateAssignmentPage() {
                     placeholder="Enter the question (supports Markdown and LaTeX: $...$)"
                     rows={2}
                   />
+                  {q.questionText && (
+                    <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3 text-sm overflow-x-auto">
+                      <p className="text-xs text-gray-400 mb-1.5">Preview</p>
+                      <MarkdownContent content={q.questionText} />
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -608,15 +615,22 @@ export default function CreateAssignmentPage() {
                   <div className="space-y-2">
                     <Label>Options</Label>
                     {q.options.map((opt, oIndex) => (
-                      <div key={oIndex} className="flex items-center gap-2">
-                        <span className="text-sm font-medium w-6">
-                          {String.fromCharCode(65 + oIndex)}.
-                        </span>
-                        <Input
-                          value={opt}
-                          onChange={(e) => updateOption(qIndex, oIndex, e.target.value)}
-                          placeholder={`Option ${String.fromCharCode(65 + oIndex)}`}
-                        />
+                      <div key={oIndex}>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium w-6">
+                            {String.fromCharCode(65 + oIndex)}.
+                          </span>
+                          <Input
+                            value={opt}
+                            onChange={(e) => updateOption(qIndex, oIndex, e.target.value)}
+                            placeholder={`Option ${String.fromCharCode(65 + oIndex)}`}
+                          />
+                        </div>
+                        {opt.includes("$") && (
+                          <div className="ml-8 mt-1 text-sm overflow-x-auto">
+                            <MarkdownContent content={opt} />
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -635,6 +649,11 @@ export default function CreateAssignmentPage() {
                         : "Sample answer (for reference)"
                     }
                   />
+                  {q.correctAnswer.includes("$") && (
+                    <div className="text-sm mt-1 overflow-x-auto">
+                      <MarkdownContent content={q.correctAnswer} />
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
