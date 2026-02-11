@@ -155,7 +155,7 @@ export default function ConstantAcceleration() {
       ctx.font = "bold 10px ui-monospace";
       ctx.fillStyle = "#a855f7";
       ctx.textAlign = "center";
-      ctx.fillText(`Predicted: ${predictionLineRef.current.toFixed(0)}m`, predX, roadY - 34);
+      ctx.fillText(`Predicted: ${predictionLineRef.current.toFixed(1)}m`, predX, roadY - 34);
     }
 
     // Car position
@@ -533,6 +533,11 @@ export default function ConstantAcceleration() {
         const xStop = v0 * tStop + 0.5 * accel * tStop * tStop;
         scoreChallenge(xStop);
         playSFX("collision");
+        // Stop the simulation so the car doesn't reverse
+        cancelAnimationFrame(animRef.current);
+        setIsRunning(false);
+        draw();
+        return;
       }
     }
 
@@ -540,6 +545,11 @@ export default function ConstantAcceleration() {
     if (predictionMode && accel < 0 && predictionLineRef.current !== null && !showPredictionResult) {
       if (v <= 0) {
         setShowPredictionResult(true);
+        // Stop the simulation so the car doesn't reverse
+        cancelAnimationFrame(animRef.current);
+        setIsRunning(false);
+        draw();
+        return;
       }
     }
 
@@ -619,8 +629,9 @@ export default function ConstantAcceleration() {
             // Place prediction marker
             const dist = ((mx - margin) / trackW) * MAX_DIST;
             const clamped = Math.max(0, Math.min(MAX_DIST, dist));
-            predictionLineRef.current = Math.round(clamped);
-            setPrediction(Math.round(clamped));
+            const rounded = Math.round(clamped * 10) / 10; // round to 1 decimal
+            predictionLineRef.current = rounded;
+            setPrediction(rounded);
             playSFX("click");
             draw();
           }
@@ -767,6 +778,9 @@ export default function ConstantAcceleration() {
                 Stop the car at the target ({targetDistRef.current}m). Adjust v₀ and a, then press Play.
                 Click on the road to place the target.
               </p>
+              <p className="text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-1.5">
+                Tip: Use negative acceleration (braking) to stop the car at the target!
+              </p>
               <div className="flex gap-2">
                 <button onClick={handleNewTarget}
                   className="h-8 px-3 rounded-lg border border-amber-500/50 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 text-xs font-medium transition-colors">
@@ -780,11 +794,6 @@ export default function ConstantAcceleration() {
                   </div>
                 )}
               </div>
-              {accel >= 0 && (
-                <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-lg px-2 py-1">
-                  Hint: Use negative acceleration (braking) to stop the car!
-                </p>
-              )}
             </div>
           )}
         </div>
@@ -818,7 +827,7 @@ export default function ConstantAcceleration() {
                     type="number"
                     min={0}
                     max={MAX_DIST}
-                    step={1}
+                    step={0.1}
                     value={prediction ?? ""}
                     placeholder="Click road or type"
                     onChange={(e) => {

@@ -38,6 +38,13 @@ export default function WaveInterference() {
   // View mode
   const [viewMode, setViewMode] = useState<ViewMode>("normal");
 
+  // Track active preset ("constructive" | "destructive" | null)
+  const [activePreset, setActivePreset] = useState<string | null>(null);
+
+  // Highlight flash for Wave Physics section on mode/preset change
+  const [physicsHighlight, setPhysicsHighlight] = useState(false);
+  const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Measurement probes
   const [probes, setProbes] = useState<Probe[]>([]);
   const probeIdRef = useRef(0);
@@ -59,6 +66,26 @@ export default function WaveInterference() {
 
   // Particles
   const particlesRef = useRef(new ParticleSystem());
+
+  // Trigger highlight flash on the Wave Physics section
+  const triggerPhysicsHighlight = useCallback(() => {
+    if (highlightTimeoutRef.current) {
+      clearTimeout(highlightTimeoutRef.current);
+    }
+    setPhysicsHighlight(true);
+    highlightTimeoutRef.current = setTimeout(() => {
+      setPhysicsHighlight(false);
+    }, 1000);
+  }, []);
+
+  // Clean up highlight timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (highlightTimeoutRef.current) {
+        clearTimeout(highlightTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Start/stop audio
   useEffect(() => {
@@ -740,7 +767,7 @@ export default function WaveInterference() {
           <label className="text-xs font-medium text-red-500 uppercase tracking-wider">Wave 1 Freq</label>
           <div className="flex items-center gap-3 mt-2">
             <input type="range" min={0.5} max={5} step={0.1} value={freq1}
-              onChange={(e) => setFreq1(Number(e.target.value))}
+              onChange={(e) => { setFreq1(Number(e.target.value)); setActivePreset(null); }}
               className="flex-1 accent-red-500" />
             <span className="text-sm font-mono font-bold text-gray-900 dark:text-gray-100 min-w-[2.5rem] text-right">{freq1.toFixed(1)}</span>
           </div>
@@ -750,7 +777,7 @@ export default function WaveInterference() {
           <label className="text-xs font-medium text-red-500 uppercase tracking-wider">Wave 1 Amp</label>
           <div className="flex items-center gap-3 mt-2">
             <input type="range" min={10} max={80} value={amp1}
-              onChange={(e) => setAmp1(Number(e.target.value))}
+              onChange={(e) => { setAmp1(Number(e.target.value)); setActivePreset(null); }}
               className="flex-1 accent-red-500" />
             <span className="text-sm font-mono font-bold text-gray-900 dark:text-gray-100 min-w-[2.5rem] text-right">{amp1}</span>
           </div>
@@ -760,7 +787,7 @@ export default function WaveInterference() {
           <label className="text-xs font-medium text-blue-500 uppercase tracking-wider">Wave 2 Freq</label>
           <div className="flex items-center gap-3 mt-2">
             <input type="range" min={0.5} max={5} step={0.1} value={freq2}
-              onChange={(e) => setFreq2(Number(e.target.value))}
+              onChange={(e) => { setFreq2(Number(e.target.value)); setActivePreset(null); }}
               className="flex-1 accent-blue-500" />
             <span className="text-sm font-mono font-bold text-gray-900 dark:text-gray-100 min-w-[2.5rem] text-right">{freq2.toFixed(1)}</span>
           </div>
@@ -770,7 +797,7 @@ export default function WaveInterference() {
           <label className="text-xs font-medium text-blue-500 uppercase tracking-wider">Wave 2 Amp</label>
           <div className="flex items-center gap-3 mt-2">
             <input type="range" min={10} max={80} value={amp2}
-              onChange={(e) => setAmp2(Number(e.target.value))}
+              onChange={(e) => { setAmp2(Number(e.target.value)); setActivePreset(null); }}
               className="flex-1 accent-blue-500" />
             <span className="text-sm font-mono font-bold text-gray-900 dark:text-gray-100 min-w-[2.5rem] text-right">{amp2}</span>
           </div>
@@ -780,7 +807,7 @@ export default function WaveInterference() {
           <label className="text-xs font-medium text-purple-500 uppercase tracking-wider">Phase Diff</label>
           <div className="flex items-center gap-3 mt-2">
             <input type="range" min={0} max={6.28} step={0.01} value={phase}
-              onChange={(e) => setPhase(Number(e.target.value))}
+              onChange={(e) => { setPhase(Number(e.target.value)); setActivePreset(null); }}
               className="flex-1 accent-purple-500" />
             <span className="text-sm font-mono font-bold text-gray-900 dark:text-gray-100 min-w-[3rem] text-right">{(phase / Math.PI).toFixed(1)}{"\u03C0"}</span>
           </div>
@@ -804,31 +831,31 @@ export default function WaveInterference() {
 
         {/* View mode buttons */}
         <button
-          onClick={() => setViewMode("normal")}
+          onClick={() => { setViewMode("normal"); setActivePreset(null); triggerPhysicsHighlight(); }}
           className={`px-4 h-10 rounded-lg text-sm font-medium transition-colors border ${
-            viewMode === "normal"
+            viewMode === "normal" && activePreset === null
               ? "bg-purple-600 text-white border-purple-600"
-              : "border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300"
+              : "border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
           }`}
         >
           Normal
         </button>
         <button
-          onClick={() => { setViewMode("standing"); setFreq1(2); setFreq2(2); setAmp1(40); setAmp2(40); setPhase(0); }}
+          onClick={() => { setViewMode("standing"); setActivePreset(null); setFreq1(2); setFreq2(2); setAmp1(40); setAmp2(40); setPhase(0); triggerPhysicsHighlight(); }}
           className={`px-4 h-10 rounded-lg text-sm font-medium transition-colors border ${
             viewMode === "standing"
               ? "bg-purple-600 text-white border-purple-600"
-              : "border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300"
+              : "border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
           }`}
         >
           Standing Wave
         </button>
         <button
-          onClick={() => { setViewMode("beats"); setFreq1(2); setFreq2(2.2); setAmp1(40); setAmp2(40); setPhase(0); }}
+          onClick={() => { setViewMode("beats"); setActivePreset(null); setFreq1(2); setFreq2(2.2); setAmp1(40); setAmp2(40); setPhase(0); triggerPhysicsHighlight(); }}
           className={`px-4 h-10 rounded-lg text-sm font-medium transition-colors border ${
             viewMode === "beats"
               ? "bg-purple-600 text-white border-purple-600"
-              : "border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300"
+              : "border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
           }`}
         >
           Beats
@@ -837,12 +864,20 @@ export default function WaveInterference() {
         <div className="h-10 w-px bg-gray-200 dark:bg-gray-700" />
 
         {/* Preset buttons */}
-        <button onClick={() => { setFreq1(2); setFreq2(2); setAmp1(40); setAmp2(40); setPhase(0); }}
-          className="px-4 h-10 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-green-900/20 text-sm font-medium transition-colors">
+        <button onClick={() => { setViewMode("normal"); setActivePreset("constructive"); setFreq1(2); setFreq2(2); setAmp1(40); setAmp2(40); setPhase(0); triggerPhysicsHighlight(); }}
+          className={`px-4 h-10 rounded-lg text-sm font-medium transition-colors border ${
+            activePreset === "constructive"
+              ? "bg-green-600 text-white border-green-600"
+              : "border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-green-900/20"
+          }`}>
           Constructive
         </button>
-        <button onClick={() => { setFreq1(2); setFreq2(2); setAmp1(40); setAmp2(40); setPhase(Math.PI); }}
-          className="px-4 h-10 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm font-medium transition-colors">
+        <button onClick={() => { setViewMode("normal"); setActivePreset("destructive"); setFreq1(2); setFreq2(2); setAmp1(40); setAmp2(40); setPhase(Math.PI); triggerPhysicsHighlight(); }}
+          className={`px-4 h-10 rounded-lg text-sm font-medium transition-colors border ${
+            activePreset === "destructive"
+              ? "bg-red-600 text-white border-red-600"
+              : "border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/20"
+          }`}>
           Destructive
         </button>
 
@@ -898,7 +933,11 @@ export default function WaveInterference() {
         )}
       </div>
 
-      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
+      <div className={`rounded-xl border-2 bg-white dark:bg-gray-900 p-4 transition-all duration-500 ${
+        physicsHighlight
+          ? "border-purple-400 dark:border-purple-500 shadow-lg shadow-purple-500/10 bg-purple-50/50 dark:bg-purple-950/20"
+          : "border-gray-200 dark:border-gray-800"
+      }`}>
         <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Wave Physics</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-gray-600 dark:text-gray-400 font-mono">
           <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">y = A sin(kx - {"\u03C9"}t + {"\u03C6"})</div>
