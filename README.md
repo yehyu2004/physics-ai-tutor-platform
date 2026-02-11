@@ -4,7 +4,7 @@ AI-powered physics tutoring, assignment, and grading platform for NTHU General P
 
 ## Features
 
-- **AI Chat** - ChatGPT-style multi-turn conversations with GPT-5 Mini and Claude 4.5 Haiku. Supports image upload for problem analysis. LaTeX math rendering.
+- **AI Chat** - ChatGPT-style multi-turn conversations with GPT-5 Mini and Claude 4.5 Haiku. Supports image upload for problem analysis. LaTeX math rendering with click-to-copy formulas. Interactive code blocks with syntax highlighting, editing, and sandboxed execution (Python, JavaScript, TypeScript) via Piston API.
 - **Assignments & Quizzes** - Create quiz (MC, numeric, free-response) and file-upload assignments. Auto-grading for MC and numeric answers.
 - **Grading** - Gradescope-like grading interface with per-question scoring, feedback, and AI-assisted grading suggestions.
 - **Problem Generator** - AI-powered problem generation by topic, difficulty, and question type.
