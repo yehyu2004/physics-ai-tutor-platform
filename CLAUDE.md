@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-**See also**: [AGENTS.md](./AGENTS.md) for detailed testing documentation and E2E test setup.
+**See also**: [AGENTS.md](./docs/AGENTS.md) for detailed testing documentation and E2E test setup.
 
 ## Development Commands
 
