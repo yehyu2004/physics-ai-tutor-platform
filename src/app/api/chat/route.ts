@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { streamChat, SOCRATIC_SYSTEM_PROMPT, EXAM_MODE_SYSTEM_PROMPT, type ChatMessage, type AIProvider } from "@/lib/ai";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { checkContentFlags, handleContentFlag, trackRateLimitAbuse } from "@/lib/abuse-detection";
+import Anthropic from "@anthropic-ai/sdk";
 
 export async function POST(req: Request) {
   try {
@@ -187,6 +188,33 @@ export async function POST(req: Request) {
             where: { id: convId },
             data: { updatedAt: new Date() },
           });
+
+          // Generate AI title for new conversations
+          if (!conversationId && fullContent) {
+            try {
+              const titleClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+              const titleResponse = await titleClient.messages.create({
+                model: "claude-haiku-4-5-20251001",
+                max_tokens: 50,
+                messages: [{
+                  role: "user",
+                  content: `Generate a concise title (max 6 words) for this conversation based on the question and answer. Reply with ONLY the title, no quotes.\n\nQuestion: ${message}\n\nAnswer: ${fullContent.slice(0, 200)}`,
+                }],
+              });
+              const titleBlock = titleResponse.content[0];
+              const generatedTitle = titleBlock.type === "text" ? titleBlock.text.trim() : null;
+              if (generatedTitle) {
+                await prisma.conversation.update({
+                  where: { id: convId },
+                  data: { title: generatedTitle },
+                });
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "title", title: generatedTitle, conversationId: convId })}\n\n`));
+              }
+            } catch (titleError) {
+              console.error("Title generation error:", titleError);
+              // Keep original truncated title — no action needed
+            }
+          }
         } catch (dbError) {
           console.error("DB save error:", dbError);
         }

@@ -290,6 +290,14 @@ export default function ChatPageClient({
                 },
                 ...prev,
               ]);
+            } else if (event.type === "title" && event.title && event.conversationId) {
+              setConversations((prev) =>
+                prev.map((conv) =>
+                  conv.id === event.conversationId
+                    ? { ...conv, title: event.title }
+                    : conv
+                )
+              );
             } else if (event.type === "thinking") {
               setMessages((prev) =>
                 prev.map((msg) =>
