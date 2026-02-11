@@ -194,7 +194,7 @@ export function MarkdownContent({ content, className }: MarkdownContentProps) {
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Add copy buttons to all rendered math elements
+    // Make math elements clickable to copy
     // Use setTimeout to ensure ReactMarkdown and KaTeX have finished rendering
     const timer = setTimeout(() => {
       const container = contentRef.current;
@@ -202,46 +202,48 @@ export function MarkdownContent({ content, className }: MarkdownContentProps) {
 
       const mathElements = container.querySelectorAll('.katex-display, .katex:not(.katex-display .katex)');
 
-    mathElements.forEach((mathEl) => {
-      // Skip if already has a copy button
-      if (mathEl.parentElement?.classList.contains('math-wrapper')) return;
+      mathElements.forEach((mathEl) => {
+        // Skip if already processed
+        if (mathEl.parentElement?.classList.contains('math-wrapper')) return;
 
-      // Get the LaTeX source from the annotation element
-      const annotation = mathEl.querySelector('annotation[encoding="application/x-tex"]');
-      const latex = annotation?.textContent || '';
+        // Get the LaTeX source from the annotation element
+        const annotation = mathEl.querySelector('annotation[encoding="application/x-tex"]');
+        const latex = annotation?.textContent || '';
 
-      if (!latex) return;
+        if (!latex) return;
 
-      // Create wrapper
-      const wrapper = document.createElement('div');
-      wrapper.className = 'math-wrapper relative inline-block group';
-      if (mathEl.classList.contains('katex-display')) {
-        wrapper.className = 'math-wrapper relative block group my-4';
-      }
+        // Create wrapper
+        const wrapper = document.createElement('div');
+        wrapper.className = 'math-wrapper relative inline-block cursor-pointer transition-all hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded px-1';
+        wrapper.title = 'Click to copy formula';
 
-      // Create copy button
-      const copyBtn = document.createElement('button');
-      copyBtn.className = 'absolute top-1 right-1 p-1.5 rounded-md bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-all z-10';
-      copyBtn.title = 'Copy formula';
-      copyBtn.innerHTML = '<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>';
+        if (mathEl.classList.contains('katex-display')) {
+          wrapper.className = 'math-wrapper relative block cursor-pointer transition-all hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded px-2 py-1 my-4';
+        }
 
-      copyBtn.onclick = async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        await navigator.clipboard.writeText(latex);
+        // Create "Copied!" indicator
+        const copiedIndicator = document.createElement('span');
+        copiedIndicator.className = 'absolute top-1 right-1 text-xs font-medium text-green-600 dark:text-green-400 bg-white dark:bg-gray-900 px-2 py-1 rounded shadow-sm opacity-0 transition-opacity pointer-events-none';
+        copiedIndicator.textContent = 'Copied!';
 
-        // Update button to show check mark
-        copyBtn.innerHTML = '<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
-        setTimeout(() => {
-          copyBtn.innerHTML = '<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>';
-        }, 2000);
-      };
+        // Handle click to copy
+        wrapper.onclick = async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          await navigator.clipboard.writeText(latex);
 
-      // Wrap the math element
-      mathEl.parentNode?.insertBefore(wrapper, mathEl);
-      wrapper.appendChild(mathEl);
-      wrapper.appendChild(copyBtn);
-    });
+          // Show copied indicator
+          copiedIndicator.style.opacity = '1';
+          setTimeout(() => {
+            copiedIndicator.style.opacity = '0';
+          }, 1500);
+        };
+
+        // Wrap the math element
+        mathEl.parentNode?.insertBefore(wrapper, mathEl);
+        wrapper.appendChild(mathEl);
+        wrapper.appendChild(copiedIndicator);
+      });
     }, 100); // Delay to ensure ReactMarkdown has rendered
 
     return () => clearTimeout(timer);
