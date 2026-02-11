@@ -550,7 +550,12 @@ export default function ChatPageClient({
             {messages.length > 0 && (
               <button
                 onClick={copyConversationAsMarkdown}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs font-medium transition-colors"
+                className={cn(
+                  "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all",
+                  conversationCopied
+                    ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
+                    : "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400"
+                )}
                 title="Copy conversation as markdown"
               >
                 {conversationCopied ? (
@@ -588,14 +593,14 @@ export default function ChatPageClient({
             )}
 
             {/* Model Selector - Minimal Pill */}
-            <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-full p-0.5">
+            <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-full p-0.5 gap-0.5">
               <button
                 onClick={() => setModel("gpt-5.2")}
                 className={cn(
                   "flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 rounded-full text-xs font-medium transition-all",
                   model === "gpt-5.2"
-                    ? "bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 shadow-sm"
-                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700"
+                    ? "bg-blue-500 text-white shadow-md scale-105"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50"
                 )}
               >
                 <Sparkles className="h-3 w-3" />
@@ -607,8 +612,8 @@ export default function ChatPageClient({
                 className={cn(
                   "flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 rounded-full text-xs font-medium transition-all",
                   model === "claude-haiku-4-5-20251001"
-                    ? "bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 shadow-sm"
-                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700"
+                    ? "bg-purple-500 text-white shadow-md scale-105"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50"
                 )}
               >
                 <Atom className="h-3 w-3" />
@@ -706,7 +711,12 @@ export default function ChatPageClient({
                       {/* Copy button - shows on hover, positioned to the left of bubble */}
                       <button
                         onClick={() => copyMessage(msg.id, msg.content)}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity mt-2 p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+                        className={cn(
+                          "transition-all mt-2 p-1.5 rounded-md",
+                          copiedMessageId === msg.id
+                            ? "opacity-100 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
+                            : "opacity-0 group-hover:opacity-100 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+                        )}
                         title="Copy message"
                       >
                         {copiedMessageId === msg.id ? (
@@ -792,10 +802,18 @@ export default function ChatPageClient({
 
                       {/* Action bar - shows on hover */}
                       {msg.content && (
-                        <div className="flex items-center gap-2 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className={cn(
+                          "flex items-center gap-2 mt-1 transition-opacity",
+                          copiedMessageId === msg.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                        )}>
                           <button
                             onClick={() => copyMessage(msg.id, msg.content)}
-                            className="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 text-xs transition-colors"
+                            className={cn(
+                              "flex items-center gap-1.5 px-2 py-1 rounded-md text-xs transition-all",
+                              copiedMessageId === msg.id
+                                ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
+                                : "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                            )}
                             title="Copy message"
                           >
                             {copiedMessageId === msg.id ? (
