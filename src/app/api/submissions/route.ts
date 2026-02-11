@@ -37,7 +37,7 @@ export async function POST(req: Request) {
     }
 
     const userId = (session.user as { id: string }).id;
-    const { assignmentId, answers, fileUrl } = await req.json();
+    const { assignmentId, answers, fileUrl, isDraft } = await req.json();
 
     const assignment = await prisma.assignment.findUnique({
       where: { id: assignmentId },
@@ -48,11 +48,71 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Assignment not found" }, { status: 404 });
     }
 
-    // Delete existing submission if resubmitting
     const existingSubmission = await prisma.submission.findFirst({
       where: { assignmentId, userId },
     });
 
+    if (isDraft) {
+      // Draft save: upsert without auto-grading
+      if (existingSubmission && !existingSubmission.isDraft) {
+        return NextResponse.json(
+          { error: "Cannot overwrite a final submission with a draft" },
+          { status: 409 }
+        );
+      }
+
+      if (existingSubmission) {
+        // Update existing draft: delete old answers, create new ones
+        await prisma.submissionAnswer.deleteMany({
+          where: { submissionId: existingSubmission.id },
+        });
+        const submission = await prisma.submission.update({
+          where: { id: existingSubmission.id },
+          data: {
+            fileUrl,
+            submittedAt: new Date(),
+            answers: {
+              create: (answers || []).map((a: { questionId: string; answer: string }) => ({
+                questionId: a.questionId,
+                answer: a.answer,
+                autoGraded: false,
+                score: null,
+              })),
+            },
+          },
+          include: { answers: true },
+        });
+        return NextResponse.json({ submission });
+      }
+
+      // Create new draft
+      const submission = await prisma.submission.create({
+        data: {
+          assignmentId,
+          userId,
+          fileUrl,
+          isDraft: true,
+          answers: {
+            create: (answers || []).map((a: { questionId: string; answer: string }) => ({
+              questionId: a.questionId,
+              answer: a.answer,
+              autoGraded: false,
+              score: null,
+            })),
+          },
+        },
+        include: { answers: true },
+      });
+      return NextResponse.json({ submission });
+    }
+
+    // Final submission (isDraft false or omitted)
+    if (existingSubmission && !existingSubmission.isDraft && assignment.lockAfterSubmit) {
+      return NextResponse.json(
+        { error: "This assignment is locked after submission. You cannot resubmit." },
+        { status: 403 }
+      );
+    }
     if (existingSubmission) {
       await prisma.submission.delete({
         where: { id: existingSubmission.id },
@@ -64,6 +124,7 @@ export async function POST(req: Request) {
         assignmentId,
         userId,
         fileUrl,
+        isDraft: false,
         answers: {
           create: (answers || []).map((a: { questionId: string; answer: string }) => {
             const question = assignment.questions.find((q) => q.id === a.questionId);

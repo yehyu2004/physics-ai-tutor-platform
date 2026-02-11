@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useEffectiveSession } from "@/lib/effective-session-context";
 import {
   ArrowLeft,
@@ -30,6 +30,8 @@ import { MarkdownContent } from "@/components/ui/markdown-content";
 import { ImageUpload } from "@/components/ui/image-upload";
 import MermaidDiagram from "@/components/chat/MermaidDiagram";
 import { formatShortDate } from "@/lib/utils";
+import { useAutoSave } from "@/hooks/useAutoSave";
+import { SaveStatusIndicator } from "@/components/ui/save-status";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -71,6 +73,7 @@ interface Assignment {
   type: "QUIZ" | "FILE_UPLOAD";
   totalPoints: number;
   published: boolean;
+  lockAfterSubmit: boolean;
   pdfUrl: string | null;
   createdBy: { name: string | null };
   questions: Question[];
@@ -92,6 +95,7 @@ interface ExistingSubmission {
   fileUrl: string | null;
   submittedAt: string;
   totalScore: number | null;
+  isDraft?: boolean;
   answers: SubmissionAnswer[];
 }
 
@@ -150,8 +154,45 @@ export default function AssignmentDetailPage({
   const [appealFilter, setAppealFilter] = useState<"ALL" | "OPEN">("OPEN");
   const [appealImages, setAppealImages] = useState<Record<string, string[]>>({});
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [draftRestored, setDraftRestored] = useState(false);
+  const draftRestoredRef = useRef(false);
 
   const userRole = effectiveSession.role;
+
+  // Auto-save for quiz drafts
+  const isQuizInProgress = assignment?.type === "QUIZ" && (!existingSubmission || existingSubmission.isDraft === true) && !submitted;
+
+  const saveDraft = useCallback(async (data: Record<string, string>) => {
+    if (!assignment) return;
+    const answerEntries = Object.entries(data).filter(([, v]) => v.trim() !== "");
+    if (answerEntries.length === 0) return;
+    await fetch("/api/submissions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        assignmentId: assignment.id,
+        isDraft: true,
+        answers: answerEntries.map(([questionId, answer]) => ({ questionId, answer })),
+      }),
+    });
+  }, [assignment]);
+
+  const { status: autoSaveStatus, saveNow: flushAutoSave, markSaved } = useAutoSave({
+    data: answers,
+    saveFn: saveDraft,
+    delayMs: 2000,
+    enabled: isQuizInProgress,
+  });
+
+  // beforeunload warning when save is in progress
+  useEffect(() => {
+    if (autoSaveStatus !== "saving") return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [autoSaveStatus]);
 
   const handleUploadImage = useCallback(async (file: File): Promise<string | null> => {
     setUploadingImage(true);
@@ -186,6 +227,17 @@ export default function AssignmentDetailPage({
         .then((data) => {
           if (data.submission) {
             setExistingSubmission(data.submission);
+            // Restore draft answers
+            if (data.submission.isDraft && data.submission.answers?.length > 0 && !draftRestoredRef.current) {
+              const restored: Record<string, string> = {};
+              for (const a of data.submission.answers) {
+                if (a.answer) restored[a.questionId] = a.answer;
+              }
+              setAnswers(restored);
+              markSaved(restored);
+              setDraftRestored(true);
+              draftRestoredRef.current = true;
+            }
             // Fetch appeals for this submission (student view)
             fetch(`/api/appeals?submissionId=${data.submission.id}`)
               .then((r) => r.json())
@@ -246,6 +298,15 @@ export default function AssignmentDetailPage({
 
   const handleSubmit = async () => {
     if (!assignment) return;
+
+    // Warn student if assignment is locked after submission
+    if (assignment.lockAfterSubmit) {
+      const confirmed = window.confirm(
+        "Once you submit, you will NOT be able to change or resubmit your answers. Are you sure you want to submit?"
+      );
+      if (!confirmed) return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -267,11 +328,15 @@ export default function AssignmentDetailPage({
         }
       }
 
+      // Flush any pending auto-save before final submit
+      if (isQuizInProgress) flushAutoSave();
+
       const res = await fetch("/api/submissions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           assignmentId: assignment.id,
+          isDraft: false,
           answers: Object.entries(answers).map(([questionId, answer]) => ({
             questionId,
             answer,
@@ -543,7 +608,7 @@ export default function AssignmentDetailPage({
         </Card>
       )}
 
-      {assignment.type === "QUIZ" && !existingSubmission && (
+      {assignment.type === "QUIZ" && (!existingSubmission || existingSubmission.isDraft) && (
         <div className="space-y-4">
           {assignment.questions.map((q, index) => (
             <Card key={q.id}>
@@ -644,7 +709,7 @@ export default function AssignmentDetailPage({
         </div>
       )}
 
-      {assignment.type === "QUIZ" && !existingSubmission && (
+      {assignment.type === "QUIZ" && (!existingSubmission || existingSubmission.isDraft) && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Attach Your Work (Optional)</CardTitle>
@@ -671,8 +736,20 @@ export default function AssignmentDetailPage({
         </Card>
       )}
 
+      {/* Draft restored banner */}
+      {draftRestored && (!existingSubmission || existingSubmission.isDraft) && (
+        <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg px-4 py-3 flex items-center gap-2">
+          <CheckCircle className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" />
+          <p className="text-sm text-blue-700 dark:text-blue-300">Your previous answers were restored from an auto-saved draft.</p>
+          <button onClick={() => setDraftRestored(false)} className="ml-auto text-blue-400 hover:text-blue-600 dark:hover:text-blue-300">
+            <span className="sr-only">Dismiss</span>
+            &times;
+          </button>
+        </div>
+      )}
+
       {/* Existing submission display */}
-      {existingSubmission && !submitted && (
+      {existingSubmission && !existingSubmission.isDraft && !submitted && (
         <Card className="border-emerald-200 dark:border-emerald-800">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
@@ -712,22 +789,29 @@ export default function AssignmentDetailPage({
                 Download your submission
               </a>
             )}
-            <div className="flex gap-2 pt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleDeleteSubmission}
-                disabled={deletingSubmission}
-                className="gap-1.5 text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-950"
-              >
-                {deletingSubmission ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Trash2 className="h-3.5 w-3.5" />
-                )}
-                Delete & Resubmit
-              </Button>
-            </div>
+            {assignment.lockAfterSubmit ? (
+              <div className="flex items-center gap-2 pt-2 px-3 py-2 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg">
+                <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                <p className="text-xs text-amber-700 dark:text-amber-300">This assignment is locked. You cannot delete or resubmit.</p>
+              </div>
+            ) : (
+              <div className="flex gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDeleteSubmission}
+                  disabled={deletingSubmission}
+                  className="gap-1.5 text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-950"
+                >
+                  {deletingSubmission ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3.5 w-3.5" />
+                  )}
+                  Delete & Resubmit
+                </Button>
+              </div>
+            )}
 
             {/* Per-question feedback with appeal support */}
             {existingSubmission.answers && existingSubmission.answers.length > 0 && existingSubmission.totalScore !== null && (
@@ -1030,7 +1114,7 @@ export default function AssignmentDetailPage({
         </Card>
       )}
 
-      {assignment.type === "FILE_UPLOAD" && !existingSubmission && (
+      {assignment.type === "FILE_UPLOAD" && (!existingSubmission || existingSubmission.isDraft) && (
         <Card>
           <CardHeader>
             <CardTitle>Upload Your Submission</CardTitle>
@@ -1057,20 +1141,31 @@ export default function AssignmentDetailPage({
         </Card>
       )}
 
-      {!existingSubmission && (
-        <div className="flex justify-end pb-8">
-          <Button
-            onClick={handleSubmit}
-            disabled={submitting}
-            className="gap-2"
-          >
-            {submitting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-            Submit
-          </Button>
+      {(!existingSubmission || existingSubmission.isDraft) && (
+        <div className="space-y-3 pb-8">
+          {assignment.lockAfterSubmit && (
+            <div className="flex items-center gap-2 px-4 py-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg">
+              <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+              <p className="text-sm text-amber-700 dark:text-amber-300">
+                This assignment is locked after submission. You will <strong>not</strong> be able to change or resubmit your answers.
+              </p>
+            </div>
+          )}
+          <div className="flex items-center justify-end gap-3">
+            <SaveStatusIndicator status={autoSaveStatus} />
+            <Button
+              onClick={handleSubmit}
+              disabled={submitting}
+              className="gap-2"
+            >
+              {submitting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+              Submit
+            </Button>
+          </div>
         </div>
       )}
 

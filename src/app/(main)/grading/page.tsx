@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   Loader2,
@@ -34,6 +34,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatShortDate } from "@/lib/utils";
+import { useAutoSave } from "@/hooks/useAutoSave";
+import { SaveStatusIndicator } from "@/components/ui/save-status";
 
 interface AssignmentOption {
   id: string;
@@ -123,6 +125,64 @@ export default function GradingPage() {
   const [expandedAppeals, setExpandedAppeals] = useState<Record<string, boolean>>({});
   const [appealImages, setAppealImages] = useState<Record<string, string[]>>({});
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [gradingDraftRestored, setGradingDraftRestored] = useState(false);
+  const prevSubmissionIdRef = useRef<string | null>(null);
+
+  // localStorage helpers for grading drafts
+  const getLocalStorageKey = (submissionId: string) => `grading-draft-${submissionId}`;
+
+  const saveToLocalStorage = useCallback((submissionId: string, g: Record<string, { score: number; feedback: string }>) => {
+    try {
+      localStorage.setItem(getLocalStorageKey(submissionId), JSON.stringify(g));
+    } catch { /* quota exceeded or similar */ }
+  }, []);
+
+  const loadFromLocalStorage = useCallback((submissionId: string): Record<string, { score: number; feedback: string }> | null => {
+    try {
+      const data = localStorage.getItem(getLocalStorageKey(submissionId));
+      if (data) return JSON.parse(data);
+    } catch { /* parse error */ }
+    return null;
+  }, []);
+
+  const clearLocalStorage = useCallback((submissionId: string) => {
+    try {
+      localStorage.removeItem(getLocalStorageKey(submissionId));
+    } catch { /* ignore */ }
+  }, []);
+
+  // Save grades to localStorage on every change
+  useEffect(() => {
+    if (!selectedSubmission || Object.keys(grades).length === 0) return;
+    saveToLocalStorage(selectedSubmission.id, grades);
+  }, [grades, selectedSubmission, saveToLocalStorage]);
+
+  // Server auto-save for grading drafts (5-second debounce)
+  const saveGradingDraft = useCallback(async (data: Record<string, { score: number; feedback: string }>) => {
+    if (!selectedSubmission) return;
+    const gradeEntries = Object.entries(data);
+    if (gradeEntries.length === 0) return;
+    await fetch("/api/grading", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        submissionId: selectedSubmission.id,
+        isDraft: true,
+        grades: gradeEntries.map(([answerId, g]) => ({
+          answerId,
+          score: g.score,
+          feedback: g.feedback,
+        })),
+      }),
+    });
+  }, [selectedSubmission]);
+
+  const { status: gradingAutoSaveStatus, saveNow: flushGradingSave } = useAutoSave({
+    data: grades,
+    saveFn: saveGradingDraft,
+    delayMs: 5000,
+    enabled: !!selectedSubmission && gradingMode === "per-question",
+  });
 
   const handleUploadImage = useCallback(async (file: File): Promise<string | null> => {
     setUploadingImage(true);
@@ -181,17 +241,40 @@ export default function GradingPage() {
   }, [selectedAssignmentId, fetchSubmissions]);
 
   const selectSubmission = (sub: SubmissionForGrading) => {
+    // Flush pending auto-save for the previous submission
+    if (selectedSubmission && selectedSubmission.id !== sub.id) {
+      flushGradingSave();
+    }
+    prevSubmissionIdRef.current = sub.id;
+
     setSelectedSubmission(sub);
     setFeedbackFile(null);
     setFeedbackFileUrl(null);
+    setGradingDraftRestored(false);
+
+    // Try to restore from localStorage
+    const savedDraft = loadFromLocalStorage(sub.id);
     const initialGrades: Record<string, { score: number; feedback: string }> = {};
+    let restored = false;
+
     sub.answers.forEach((a) => {
-      initialGrades[a.id] = {
-        score: a.score || 0,
-        feedback: a.feedback || "",
-      };
+      if (savedDraft?.[a.id]) {
+        initialGrades[a.id] = savedDraft[a.id];
+        // Check if localStorage draft differs from server state
+        if (savedDraft[a.id].score !== (a.score || 0) || savedDraft[a.id].feedback !== (a.feedback || "")) {
+          restored = true;
+        }
+      } else {
+        initialGrades[a.id] = {
+          score: a.score || 0,
+          feedback: a.feedback || "",
+        };
+      }
     });
+
     setGrades(initialGrades);
+    if (restored) setGradingDraftRestored(true);
+
     setOverallScore(sub.totalScore || 0);
     setOverallFeedback("");
     // Auto-select grading mode
@@ -282,6 +365,9 @@ export default function GradingPage() {
 
       if (res.ok) {
         const data = await res.json();
+        // Clear localStorage on successful final save
+        clearLocalStorage(selectedSubmission.id);
+        setGradingDraftRestored(false);
         setSubmissions((prev) =>
           prev.map((s) => {
             if (s.id !== selectedSubmission.id) return s;
@@ -625,6 +711,7 @@ export default function GradingPage() {
                         </SelectContent>
                       </Select>
                     )}
+                    <SaveStatusIndicator status={gradingAutoSaveStatus} />
                     <Button
                       onClick={handleSaveGrades}
                       disabled={saving || allAutoGraded}
@@ -638,6 +725,17 @@ export default function GradingPage() {
 
                 {/* Panel Body */}
                 <div className="flex-1 overflow-auto p-6 space-y-5">
+                  {/* Draft restored banner */}
+                  {gradingDraftRestored && (
+                    <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg px-4 py-3 flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" />
+                      <p className="text-sm text-blue-700 dark:text-blue-300">Grading progress restored from a previous session.</p>
+                      <button onClick={() => setGradingDraftRestored(false)} className="ml-auto text-blue-400 hover:text-blue-600 dark:hover:text-blue-300">
+                        &times;
+                      </button>
+                    </div>
+                  )}
+
                   {/* Uploaded file (student submission) */}
                   {selectedSubmission.fileUrl && (
                     <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-4">

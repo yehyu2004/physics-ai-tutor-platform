@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     }
 
     const graderId = (session.user as { id: string }).id;
-    const { submissionId, grades, overallScore, overallFeedback, feedbackFileUrl, feedbackImages } = await req.json();
+    const { submissionId, grades, overallScore, overallFeedback, feedbackFileUrl, feedbackImages, isDraft } = await req.json();
 
     const submission = await prisma.submission.findUnique({
       where: { id: submissionId },
@@ -50,6 +50,18 @@ export async function POST(req: Request) {
         (sum, ans) => sum + (ans.score || 0),
         0
       );
+
+      if (isDraft) {
+        // Draft grading: save scores but don't mark as graded
+        await prisma.submission.update({
+          where: { id: submissionId },
+          data: {
+            totalScore,
+            ...(feedbackFileUrl !== undefined && { fileUrl: feedbackFileUrl }),
+          },
+        });
+        return NextResponse.json({ success: true, totalScore, isDraft: true });
+      }
 
       await prisma.submission.update({
         where: { id: submissionId },

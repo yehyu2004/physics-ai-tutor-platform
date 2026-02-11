@@ -16,6 +16,7 @@ export async function DELETE(
 
     const submission = await prisma.submission.findUnique({
       where: { id: params.id },
+      include: { assignment: { select: { lockAfterSubmit: true } } },
     });
 
     if (!submission) {
@@ -24,6 +25,13 @@ export async function DELETE(
 
     if (submission.userId !== userId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    if (submission.assignment.lockAfterSubmit && !submission.isDraft) {
+      return NextResponse.json(
+        { error: "This assignment is locked after submission. You cannot delete or resubmit." },
+        { status: 403 }
+      );
     }
 
     await prisma.submission.delete({

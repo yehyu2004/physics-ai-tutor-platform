@@ -55,6 +55,7 @@ export default function CreateAssignmentPage() {
   const [type, setType] = useState<"QUIZ" | "FILE_UPLOAD">("QUIZ");
   const [totalPoints, setTotalPoints] = useState(100);
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [lockAfterSubmit, setLockAfterSubmit] = useState(false);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [uploadingPdf, setUploadingPdf] = useState(false);
@@ -193,6 +194,7 @@ export default function CreateAssignmentPage() {
           type,
           totalPoints,
           pdfUrl: pdfUrl || null,
+          lockAfterSubmit,
           questions: type === "QUIZ" ? questionsWithUrls : [],
         }),
       });
@@ -326,6 +328,19 @@ export default function CreateAssignmentPage() {
               />
             </div>
           </div>
+
+          <label className="flex items-center gap-3 pt-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={lockAfterSubmit}
+              onChange={(e) => setLockAfterSubmit(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800"
+            />
+            <div>
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Lock after submission</span>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Students cannot delete or resubmit once they submit. Useful for timed quizzes.</p>
+            </div>
+          </label>
         </CardContent>
       </Card>
 

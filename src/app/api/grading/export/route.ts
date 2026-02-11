@@ -25,7 +25,9 @@ export async function GET(req: NextRequest) {
 
     const assignmentId = req.nextUrl.searchParams.get("assignmentId");
 
-    const where = assignmentId ? { assignmentId } : {};
+    const where = assignmentId
+      ? { assignmentId, isDraft: false }
+      : { isDraft: false };
 
     const submissions = await prisma.submission.findMany({
       where,

@@ -23,7 +23,7 @@ export async function GET(
     });
 
     const submissions = await prisma.submission.findMany({
-      where: { assignmentId: params.id },
+      where: { assignmentId: params.id, isDraft: false },
       include: {
         user: { select: { name: true, email: true } },
         gradedBy: { select: { name: true } },

@@ -18,7 +18,7 @@ export async function GET(
       include: {
         questions: { orderBy: { order: "asc" } },
         createdBy: { select: { name: true } },
-        _count: { select: { submissions: true } },
+        _count: { select: { submissions: { where: { isDraft: false } } } },
       },
     });
 
@@ -79,6 +79,7 @@ export async function PATCH(
         ...(data.published !== undefined && { published: data.published }),
         ...(data.totalPoints !== undefined && { totalPoints: data.totalPoints }),
         ...(data.pdfUrl !== undefined && { pdfUrl: data.pdfUrl || null }),
+        ...(data.lockAfterSubmit !== undefined && { lockAfterSubmit: data.lockAfterSubmit }),
       },
       include: {
         questions: { orderBy: { order: "asc" } },
