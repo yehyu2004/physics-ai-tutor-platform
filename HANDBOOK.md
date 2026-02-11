@@ -43,7 +43,7 @@ PhysTutor is a web-based platform designed for university-level physics courses.
 - User management with role-based access control
 - Platform analytics and student Q&A monitoring
 
-![Admin Dashboard](handbook-screenshots/01-dashboard-admin.png)
+![Admin Dashboard](docs/handbook/screenshots/01-dashboard-admin.png)
 *The admin dashboard showing platform-wide statistics, quick start tools, recent conversations, and open grade appeals.*
 
 ---
@@ -58,7 +58,7 @@ Students see a personalized dashboard with:
 - **Recent Conversations** with the AI tutor
 - **Upcoming Assignments** with due dates
 
-![Student Dashboard](handbook-screenshots/08-student-dashboard.png)
+![Student Dashboard](docs/handbook/screenshots/08-student-dashboard.png)
 *The student dashboard showing a clean, focused view with upcoming assignments and quick access to key tools.*
 
 ### AI Chat Tutor
@@ -79,7 +79,7 @@ Students can have unlimited conversations with the AI physics tutor. The chat su
 - **Message copy** — copy entire messages (user questions or AI responses) with one click
 - **Conversation history** — all past conversations are saved and searchable
 
-![AI Chat](handbook-screenshots/03-ai-chat-conversation.png)
+![AI Chat](docs/handbook/screenshots/03-ai-chat-conversation.png)
 *A conversation about Newton's Laws, showing LaTeX-rendered equations and structured explanations.*
 
 ### Taking Assignments
@@ -118,7 +118,7 @@ The Grades page gives students a complete view of their academic performance:
 - **Graded vs. pending** assignment counts
 - **Per-assignment breakdown** with score bars and percentages
 
-![Student Grades](handbook-screenshots/09-student-grades.png)
+![Student Grades](docs/handbook/screenshots/09-student-grades.png)
 *Student grades view showing overall average (70%, C-), total points, and individual assignment scores.*
 
 ### Grade Appeals
@@ -144,7 +144,7 @@ TAs and Professors see a specialized dashboard with:
 - **Open Appeals list** — recent appeals with student names and assignment titles
 - **Quick Start** tools — Create Assignment, Generate Problems, Grade Work, and more
 
-![AI Chat Interface](handbook-screenshots/02-ai-chat.png)
+![AI Chat Interface](docs/handbook/screenshots/02-ai-chat.png)
 *The AI Chat page showing conversation history on the left, suggested topics, and model selection (GPT-5.2, Claude Haiku, Socratic mode).*
 
 ### Creating Assignments
@@ -163,7 +163,7 @@ Instructors can create two types of assignments:
    - Manual grading with per-question feedback
    - Lock after submission also available for file uploads
 
-![Create Assignment](handbook-screenshots/10-create-assignment.png)
+![Create Assignment](docs/handbook/screenshots/10-create-assignment.png)
 *The assignment creation form with title, description, type selection, due date, total points, optional PDF upload, and question builder.*
 
 ### AI Problem Generator
@@ -179,7 +179,7 @@ One of the most powerful features — generate physics problems using AI:
 - **Problem Bank** — save and reuse generated problem sets
 - **One-click assignment creation** — convert generated problems directly into assignments
 
-![Problem Generator](handbook-screenshots/06-problem-generator.png)
+![Problem Generator](docs/handbook/screenshots/06-problem-generator.png)
 *The Problem Generator interface with topic selection (including Custom Topic option), difficulty slider, question type, and problem count controls.*
 
 ### Grading Submissions
@@ -199,7 +199,7 @@ The grading interface provides a streamlined workflow:
   - When you select a submission you previously started grading, a banner confirms: *"Grading progress restored from a previous session."*
   - Draft saves do **not** mark the submission as graded — click "Save Grades" to finalize
 
-![Grading](handbook-screenshots/05-grading.png)
+![Grading](docs/handbook/screenshots/05-grading.png)
 *The grading interface showing submissions for "Test 1" with scores, grading status, and CSV export button.*
 
 ### Grade Export
@@ -242,7 +242,7 @@ The admin panel provides full control over user accounts:
 - **Impersonation** — view the platform as any user for debugging
 - **Bulk selection** — select users by role for batch operations
 
-![User Management](handbook-screenshots/07-admin-users.png)
+![User Management](docs/handbook/screenshots/07-admin-users.png)
 *The User Management page showing all users with role selectors, verification status, and moderation actions (Verify, Restrict, Ban, Impersonate, Delete).*
 
 ### Q&A History Monitoring
