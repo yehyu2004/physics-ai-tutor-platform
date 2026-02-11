@@ -11,6 +11,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { MarkdownContent } from "@/components/ui/markdown-content";
 
 import {
   Select,
@@ -33,6 +34,7 @@ interface ConversationEntry {
     id: string;
     role: string;
     content: string;
+    imageUrls?: string[];
     createdAt: string;
   }[];
 }
@@ -245,7 +247,25 @@ export default function QAHistoryPage() {
                               {msg.role === "user" ? "Student" : "AI"} -{" "}
                               {formatShortDate(msg.createdAt)}
                             </p>
-                            <p className="whitespace-pre-wrap">{msg.content}</p>
+                            {msg.imageUrls && msg.imageUrls.length > 0 && (
+                              <div className={`mb-2 gap-2 ${msg.imageUrls.length === 1 ? "flex" : "grid grid-cols-2"}`}>
+                                {msg.imageUrls.map((url, idx) => (
+                                  <img
+                                    key={idx}
+                                    src={url}
+                                    alt={`Uploaded ${idx + 1}`}
+                                    className="max-w-full rounded-lg max-h-60 object-contain"
+                                  />
+                                ))}
+                              </div>
+                            )}
+                            {msg.role === "assistant" ? (
+                              <div className="prose-sm overflow-x-auto">
+                                <MarkdownContent content={msg.content} />
+                              </div>
+                            ) : (
+                              <p className="whitespace-pre-wrap">{msg.content}</p>
+                            )}
                           </div>
                         ))}
                       </div>
