@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { ArrowLeft, BookOpen } from "lucide-react";
 import { findSimulationById } from "@/data/halliday-chapters";
@@ -58,6 +59,13 @@ import GravitySandbox from "@/components/simulations/GravitySandbox";
 import MagneticField3D from "@/components/simulations/MagneticField3D";
 import DecayChain from "@/components/simulations/DecayChain";
 
+const MeasurementLab = dynamic(() => import("@/components/simulations/MeasurementLab"), { ssr: false });
+const BeamBalance = dynamic(() => import("@/components/simulations/BeamBalance"), { ssr: false });
+const CoulombLaw = dynamic(() => import("@/components/simulations/CoulombLaw"), { ssr: false });
+const GaussLaw = dynamic(() => import("@/components/simulations/GaussLaw"), { ssr: false });
+const MaxwellEquations = dynamic(() => import("@/components/simulations/MaxwellEquations"), { ssr: false });
+const BandStructure = dynamic(() => import("@/components/simulations/BandStructure"), { ssr: false });
+
 const simulationComponents: Record<string, React.ComponentType> = {
   "constant-acceleration": ConstantAcceleration,
   "projectile-motion": ProjectileMotion,
@@ -110,6 +118,12 @@ const simulationComponents: Record<string, React.ComponentType> = {
   "gravity-sandbox": GravitySandbox,
   "magnetic-field-3d": MagneticField3D,
   "decay-chain": DecayChain,
+  "measurement-lab": MeasurementLab,
+  "beam-balance": BeamBalance,
+  "coulomb-law": CoulombLaw,
+  "gauss-law": GaussLaw,
+  "maxwell-equations": MaxwellEquations,
+  "band-structure": BandStructure,
 };
 
 export default function SimulationViewClient({

@@ -37,7 +37,15 @@ export const textbookParts: Part[] = [
         number: 1,
         title: "Measurement",
         sections: [
-          { number: "1-1", title: "Measuring Things, Including Lengths" },
+          {
+            number: "1-1",
+            title: "Measuring Things, Including Lengths",
+            simulation: {
+              id: "measurement-lab",
+              title: "Measurement Precision Lab",
+              description: "Practice reading rulers and calipers. Learn about significant figures and measurement uncertainty.",
+            },
+          },
           { number: "1-2", title: "Time" },
           { number: "1-3", title: "Mass" },
         ],
@@ -289,7 +297,15 @@ export const textbookParts: Part[] = [
         number: 12,
         title: "Equilibrium and Elasticity",
         sections: [
-          { number: "12-1", title: "Equilibrium" },
+          {
+            number: "12-1",
+            title: "Equilibrium",
+            simulation: {
+              id: "beam-balance",
+              title: "Beam Balance & Hooke's Law",
+              description: "Balance weights on a beam to achieve rotational equilibrium. Explore Hooke's Law with springs.",
+            },
+          },
           { number: "12-2", title: "Some Examples of Static Equilibrium" },
           { number: "12-3", title: "Elasticity" },
         ],
@@ -515,7 +531,15 @@ export const textbookParts: Part[] = [
         number: 21,
         title: "Coulomb's Law",
         sections: [
-          { number: "21-1", title: "Coulomb's Law" },
+          {
+            number: "21-1",
+            title: "Coulomb's Law",
+            simulation: {
+              id: "coulomb-law",
+              title: "Coulomb Force Lab",
+              description: "Place point charges and see the Coulomb force vectors between every pair. Predict force magnitudes.",
+            },
+          },
           { number: "21-2", title: "Charge Is Quantized" },
           { number: "21-3", title: "Charge Is Conserved" },
         ],
@@ -546,7 +570,15 @@ export const textbookParts: Part[] = [
         title: "Gauss' Law",
         sections: [
           { number: "23-1", title: "Electric Flux" },
-          { number: "23-2", title: "Gauss' Law" },
+          {
+            number: "23-2",
+            title: "Gauss' Law",
+            simulation: {
+              id: "gauss-law",
+              title: "Gaussian Surface Explorer",
+              description: "Draw Gaussian surfaces around charge configurations and see how flux depends only on enclosed charge.",
+            },
+          },
           { number: "23-3", title: "A Charged Isolated Conductor" },
           { number: "23-4", title: "Applying Gauss' Law: Cylindrical Symmetry" },
           { number: "23-5", title: "Applying Gauss' Law: Planar Symmetry" },
@@ -740,7 +772,15 @@ export const textbookParts: Part[] = [
         sections: [
           { number: "32-1", title: "Gauss' Law for Magnetic Fields" },
           { number: "32-2", title: "Induced Magnetic Fields" },
-          { number: "32-3", title: "Displacement Current" },
+          {
+            number: "32-3",
+            title: "Displacement Current",
+            simulation: {
+              id: "maxwell-equations",
+              title: "Maxwell's Equations Explorer",
+              description: "Visualize displacement current, EM wave propagation, and electromagnetic induction with all four Maxwell's equations.",
+            },
+          },
           { number: "32-4", title: "Maxwell's Equations" },
           { number: "32-5", title: "Magnets" },
           { number: "32-6", title: "Magnetism and Electrons" },
@@ -954,7 +994,15 @@ export const textbookParts: Part[] = [
         title: "Conduction of Electricity in Solids",
         sections: [
           { number: "41-1", title: "The Electrical Properties of Metals" },
-          { number: "41-2", title: "Semiconductors and Doping" },
+          {
+            number: "41-2",
+            title: "Semiconductors and Doping",
+            simulation: {
+              id: "band-structure",
+              title: "Band Structure Visualizer",
+              description: "Explore energy bands in conductors, semiconductors, and insulators. See how temperature and doping affect conductivity.",
+            },
+          },
           { number: "41-3", title: "The p-n Junction and the Transistor" },
         ],
       },

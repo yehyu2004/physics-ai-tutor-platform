@@ -332,12 +332,8 @@ function ChapterRow({
         <span className="flex-1 text-sm font-medium text-gray-800 dark:text-gray-200">
           {chapter.title}
         </span>
-        {hasSims ? (
+        {hasSims && (
           <Play className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-        ) : (
-          <span className="text-xs text-gray-400 dark:text-gray-500 italic shrink-0">
-            Coming soon
-          </span>
         )}
         <ChevronRight
           className={`h-4 w-4 text-gray-400 transition-transform duration-200 shrink-0 ${
@@ -372,13 +368,6 @@ function ChapterRow({
                 )}
               </div>
             ))}
-            {!hasSims && (
-              <div className="py-4 px-3 text-center">
-                <p className="text-sm text-gray-400 dark:text-gray-500 italic">
-                  No simulations yet — coming soon!
-                </p>
-              </div>
-            )}
           </div>
         </div>
       )}
