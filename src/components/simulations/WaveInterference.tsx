@@ -14,6 +14,7 @@ import {
 } from "@/lib/simulation/scoring";
 import { getCanvasMousePos } from "@/lib/simulation/interaction";
 import { drawTarget } from "@/lib/simulation/drawing";
+import { SimMath } from "@/components/simulations/SimMath";
 
 type ChallengeType = "none" | "destructive" | "target-amplitude";
 type ViewMode = "normal" | "standing" | "beats";
@@ -940,9 +941,9 @@ export default function WaveInterference() {
       }`}>
         <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Wave Physics</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-gray-600 dark:text-gray-400 font-mono">
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">y = A sin(kx - {"\u03C9"}t + {"\u03C6"})</div>
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">f_beat = |f{"\u2081"} - f{"\u2082"}|</div>
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">{"\u0394\u03C6"} = {"\u03C0"}: destructive</div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"><SimMath math="y = A\sin(kx - \omega t + \varphi)" /></div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"><SimMath math="f_{beat} = |f_1 - f_2|" /></div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"><SimMath math="\Delta\varphi = \pi \text{: destructive}" /></div>
         </div>
       </div>
     </div>
