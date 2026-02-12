@@ -741,41 +741,43 @@ export default function MeasurementLab() {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
+    // Store initial ruler position at drag start for absolute positioning
+    const dragStartPos = { x: 0, y: 0 };
+
     const cleanup = createDragHandler(canvas, {
       onDragStart: (x, y) => {
         const rx = rulerPosRef.current.x;
         const ry = rulerPosRef.current.y;
         const rulerLen = getRulerLength();
         const rulerH = getRulerHeight();
-        // Check if click is on ruler area (expanded for easier grabbing)
+        // Check if click is anywhere on ruler area (generous hit zone)
         if (
-          x >= rx - 15 &&
-          x <= rx + rulerLen + 15 &&
-          y >= ry - 20 &&
-          y <= ry + rulerH + (precision === "caliper" ? 30 : 10)
+          x >= rx - 20 &&
+          x <= rx + rulerLen + 20 &&
+          y >= ry - 30 &&
+          y <= ry + rulerH + 30
         ) {
           isDraggingRulerRef.current = true;
+          dragStartPos.x = rx;
+          dragStartPos.y = ry;
           playSFX("click");
           return true;
         }
         return false;
       },
-      onDrag: (x, y, dx, dy) => {
+      onDrag: (_x, _y, dx, dy) => {
         if (isDraggingRulerRef.current) {
-          rulerPosRef.current.x += dx;
-          rulerPosRef.current.y += dy;
+          // Use absolute positioning from drag start (not incremental)
+          let newX = dragStartPos.x + dx;
+          let newY = dragStartPos.y + dy;
           // Clamp within canvas
-          const canvas = canvasRef.current;
-          if (canvas) {
-            rulerPosRef.current.x = Math.max(
-              -20,
-              Math.min(canvas.width - getRulerLength() + 20, rulerPosRef.current.x),
-            );
-            rulerPosRef.current.y = Math.max(
-              10,
-              Math.min(canvas.height - getRulerHeight() - 10, rulerPosRef.current.y),
-            );
+          const cvs = canvasRef.current;
+          if (cvs) {
+            newX = Math.max(-20, Math.min(cvs.width - getRulerLength() + 20, newX));
+            newY = Math.max(10, Math.min(cvs.height - getRulerHeight() - 10, newY));
           }
+          rulerPosRef.current.x = newX;
+          rulerPosRef.current.y = newY;
         }
       },
       onDragEnd: () => {
