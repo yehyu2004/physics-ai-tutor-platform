@@ -84,8 +84,8 @@ export async function GET(req: Request) {
     const days = range === "all" ? 365 : parseInt(range, 10);
 
     // Run queries in parallel
-    const [activities, categoryGroups, userGroups] = await Promise.all([
-      // Raw activities for daily trend + CSV
+    const [activities, categoryGroups] = await Promise.all([
+      // Raw activities for daily trend + CSV + timeslot/role aggregation
       prisma.userActivity.findMany({
         where,
         select: {
@@ -95,7 +95,7 @@ export async function GET(req: Request) {
           detail: true,
           durationMs: true,
           createdAt: true,
-          user: { select: { name: true, email: true } },
+          user: { select: { name: true, email: true, role: true } },
         },
         orderBy: { createdAt: "desc" },
         take: 5000,
@@ -107,26 +107,7 @@ export async function GET(req: Request) {
         _count: { id: true },
         _sum: { durationMs: true },
       }),
-      // Group by user for top users
-      prisma.userActivity.groupBy({
-        by: ["userId"],
-        where,
-        _count: { id: true },
-        _sum: { durationMs: true },
-        orderBy: { _count: { id: "desc" } },
-        take: 10,
-      }),
     ]);
-
-    // Fetch user info for top users
-    const topUserIds = userGroups.map((g) => g.userId);
-    const topUsersInfo = topUserIds.length > 0
-      ? await prisma.user.findMany({
-          where: { id: { in: topUserIds } },
-          select: { id: true, name: true, email: true },
-        })
-      : [];
-    const userMap = new Map(topUsersInfo.map((u) => [u.id, u]));
 
     // Summary
     const uniqueUserIds = new Set(activities.map((a) => a.userId));
@@ -191,17 +172,53 @@ export async function GET(req: Request) {
       color: CATEGORY_COLORS[g.category] || "#94a3b8",
     })).sort((a, b) => b.totalMs - a.totalMs);
 
-    // Top users
-    const topUsers = userGroups.map((g) => {
-      const user = userMap.get(g.userId);
-      return {
-        userId: g.userId,
-        userName: user?.name || "Unknown",
-        userEmail: user?.email || "",
-        activityCount: g._count.id,
-        totalTimeMs: g._sum.durationMs || 0,
-      };
-    });
+    // Time by weekly timeslot
+    const weekMap: Record<string, { count: number; totalMs: number; start: Date; end: Date }> = {};
+    for (const a of activities) {
+      const d = new Date(a.createdAt);
+      // Get Monday of that week
+      const day = d.getDay();
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+      const monday = new Date(d);
+      monday.setDate(diff);
+      monday.setHours(0, 0, 0, 0);
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+      const key = monday.toISOString().split("T")[0];
+      if (!weekMap[key]) weekMap[key] = { count: 0, totalMs: 0, start: monday, end: sunday };
+      weekMap[key].count++;
+      weekMap[key].totalMs += a.durationMs || 0;
+    }
+    const timeByTimeslot = Object.entries(weekMap)
+      .sort(([a], [b]) => b.localeCompare(a))
+      .map(([, data]) => {
+        const fmt = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+        return {
+          label: `${fmt(data.start)} – ${fmt(data.end)}`,
+          count: data.count,
+          totalMs: data.totalMs,
+        };
+      });
+
+    // Time by role
+    const ROLE_LABELS: Record<string, string> = {
+      STUDENT: "Student",
+      TA: "TA",
+      PROFESSOR: "Professor",
+      ADMIN: "Admin",
+    };
+    const roleMap: Record<string, { count: number; totalMs: number }> = {};
+    for (const a of activities) {
+      const role = (a.user as { role?: string }).role || "STUDENT";
+      if (!roleMap[role]) roleMap[role] = { count: 0, totalMs: 0 };
+      roleMap[role].count++;
+      roleMap[role].totalMs += a.durationMs || 0;
+    }
+    const timeByRole = Object.entries(roleMap).map(([role, data]) => ({
+      label: ROLE_LABELS[role] || role,
+      count: data.count,
+      totalMs: data.totalMs,
+    })).sort((a, b) => b.totalMs - a.totalMs);
 
     // CSV data
     const csvData = activities.map((a) => ({
@@ -219,7 +236,8 @@ export async function GET(req: Request) {
       dailyTrend,
       trendCategories,
       timeByCategory,
-      topUsers,
+      timeByTimeslot,
+      timeByRole,
       csvData,
     });
   } catch (error) {
