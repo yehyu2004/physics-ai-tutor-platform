@@ -32,6 +32,9 @@ export default function ConstantAcceleration() {
   // Challenge mode state
   const [challengeMode, setChallengeMode] = useState(false);
   const challengeRef = useRef<ChallengeState>(createChallengeState());
+  const [challengeScore, setChallengeScore] = useState(0);
+  const [challengeAttempts, setChallengeAttempts] = useState(0);
+  const [lastStopDistance, setLastStopDistance] = useState<number | null>(null);
   const targetDistRef = useRef(80); // target distance in meters
   const scorePopupRef = useRef<ScorePopup | null>(null);
   const particlesRef = useRef(new ParticleSystem());
@@ -482,6 +485,9 @@ export default function ConstantAcceleration() {
 
     // Update challenge state
     challengeRef.current = updateChallengeState(challengeRef.current, result);
+    setChallengeScore(challengeRef.current.score);
+    setChallengeAttempts(challengeRef.current.attempts);
+    setLastStopDistance(currentX);
 
     // Create score popup
     scorePopupRef.current = {
@@ -666,6 +672,9 @@ export default function ConstantAcceleration() {
     setChallengeMode(next);
     if (next) {
       challengeRef.current = createChallengeState();
+      setChallengeScore(0);
+      setChallengeAttempts(0);
+      setLastStopDistance(null);
       randomizeTarget();
       setPredictionMode(false);
       predictionLineRef.current = null;
@@ -788,16 +797,30 @@ export default function ConstantAcceleration() {
               <p className="text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-1.5">
                 Tip: Use negative acceleration (braking) to stop the car at the target!
               </p>
+              {lastStopDistance !== null && (
+                <div className="text-xs bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2 mt-1">
+                  <span className="text-gray-500 dark:text-gray-400">Stopped at: </span>
+                  <strong className="text-gray-900 dark:text-gray-100">{lastStopDistance.toFixed(1)}m</strong>
+                  <span className="text-gray-500 dark:text-gray-400 mx-2">|</span>
+                  <span className="text-gray-500 dark:text-gray-400">Target: </span>
+                  <strong className="text-amber-500">{targetDistRef.current}m</strong>
+                  <span className="text-gray-500 dark:text-gray-400 mx-2">|</span>
+                  <span className="text-gray-500 dark:text-gray-400">Error: </span>
+                  <strong className={Math.abs(lastStopDistance - targetDistRef.current) < 5 ? "text-green-500" : "text-red-500"}>
+                    {Math.abs(lastStopDistance - targetDistRef.current).toFixed(1)}m
+                  </strong>
+                </div>
+              )}
               <div className="flex gap-2">
                 <button onClick={handleNewTarget}
                   className="h-8 px-3 rounded-lg border border-amber-500/50 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 text-xs font-medium transition-colors">
                   New Target
                 </button>
-                {challengeRef.current.attempts > 0 && (
+                {challengeAttempts > 0 && (
                   <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 ml-auto">
-                    <span>Score: <strong className="text-gray-900 dark:text-gray-100">{challengeRef.current.score}</strong></span>
+                    <span>Score: <strong className="text-gray-900 dark:text-gray-100">{challengeScore}</strong></span>
                     <span>Streak: <strong className="text-amber-500">{challengeRef.current.streak}</strong></span>
-                    <span>Attempts: {challengeRef.current.attempts}</span>
+                    <span>Attempts: {challengeAttempts}</span>
                   </div>
                 )}
               </div>
