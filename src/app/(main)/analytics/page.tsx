@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { Loader2, Brain, MessageSquare, Clock, FileCheck } from "lucide-react";
+import React, { useEffect, useState, useCallback } from "react";
+import { Loader2, Brain, MessageSquare, Clock, FileCheck, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   BarChart,
@@ -14,6 +14,9 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import ContributionGraph from "@/components/activity/ContributionGraph";
+import ActivityBreakdown from "@/components/activity/ActivityBreakdown";
+import { useTrackTime } from "@/lib/use-track-time";
 
 interface AnalyticsData {
   overview: {
@@ -36,16 +39,67 @@ interface AnalyticsData {
 export default function AnalyticsPage() {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [heatmapData, setHeatmapData] = useState<{ date: string; count: number }[]>([]);
+  const [breakdownData, setBreakdownData] = useState<{ category: string; count: number; totalMs?: number }[]>([]);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [dayActivities, setDayActivities] = useState<{ id: string; category: string; detail: string | null; durationMs: number | null; time: string }[]>([]);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+
+  useTrackTime("ANALYTICS_VIEW");
 
   useEffect(() => {
-    fetch("/api/analytics")
-      .then((res) => res.json())
-      .then((json) => {
-        setData(json);
+    Promise.all([
+      fetch("/api/analytics").then((r) => r.json()),
+      fetch("/api/activity/heatmap").then((r) => r.json()),
+      fetch("/api/activity/breakdown").then((r) => r.json()),
+    ])
+      .then(([analyticsJson, heatmapJson, breakdownJson]) => {
+        setData(analyticsJson);
+        setHeatmapData(heatmapJson.data || []);
+        setBreakdownData(breakdownJson.data || []);
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, []);
+
+  const formatDuration = (ms: number): string => {
+    if (ms < 1000) return "0s";
+    const totalSeconds = Math.floor(ms / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    if (hours > 0) return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+    if (minutes > 0) return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
+    return `${seconds}s`;
+  };
+
+  const CATEGORY_LABELS: Record<string, string> = {
+    AI_CHAT: "AI Chat",
+    ASSIGNMENT_VIEW: "View Assignments",
+    ASSIGNMENT_SUBMIT: "Submit Work",
+    GRADING: "Grading",
+    SIMULATION: "Simulations",
+    PROBLEM_GEN: "Problem Generator",
+    ANALYTICS_VIEW: "Analytics",
+    ADMIN_ACTION: "Admin",
+  };
+
+  const handleSelectDate = useCallback((date: string) => {
+    if (selectedDate === date) {
+      setSelectedDate(null);
+      setDayActivities([]);
+      return;
+    }
+    setSelectedDate(date);
+    setLoadingDetail(true);
+    fetch(`/api/activity/detail?date=${date}`)
+      .then((r) => r.json())
+      .then((json) => {
+        setDayActivities(json.activities || []);
+        setLoadingDetail(false);
+      })
+      .catch(() => setLoadingDetail(false));
+  }, [selectedDate]);
 
   if (loading) {
     return (
@@ -219,6 +273,99 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Activity Heatmap */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Activity Heatmap</CardTitle>
+          <p className="text-xs text-neutral-500 dark:text-neutral-400">Your feature usage over the past year — just like GitHub</p>
+        </CardHeader>
+        <CardContent>
+          <ContributionGraph
+            data={heatmapData}
+            selectedDate={selectedDate}
+            onSelectDate={handleSelectDate}
+          />
+
+          {/* Day Detail Panel */}
+          {selectedDate && (
+            <div className="mt-4 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                    {new Date(selectedDate + "T00:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+                  </h4>
+                  {dayActivities.length > 0 && (
+                    <p className="text-[11px] text-gray-400 dark:text-gray-500">
+                      {dayActivities.length} {dayActivities.length === 1 ? "activity" : "activities"}
+                      {(() => {
+                        const totalMs = dayActivities.reduce((sum, a) => sum + (a.durationMs || 0), 0);
+                        return totalMs > 0 ? ` \u00b7 Total time: ${formatDuration(totalMs)}` : "";
+                      })()}
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={() => { setSelectedDate(null); setDayActivities([]); }}
+                  className="p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <X className="h-4 w-4 text-gray-400" />
+                </button>
+              </div>
+              <div className="max-h-[300px] overflow-y-auto">
+                {loadingDetail ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                  </div>
+                ) : dayActivities.length === 0 ? (
+                  <div className="py-8 text-center text-sm text-gray-400 dark:text-gray-500">
+                    No activities on this day
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                    {dayActivities.map((activity) => (
+                      <div key={activity.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
+                        <div className="shrink-0 w-[72px] text-right">
+                          <span className="text-xs font-mono font-semibold text-indigo-600 dark:text-indigo-400">
+                            {new Date(activity.time).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })}
+                          </span>
+                        </div>
+                        <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                            {CATEGORY_LABELS[activity.category] || activity.category}
+                          </span>
+                          {activity.detail && (
+                            <span className="text-xs text-gray-400 dark:text-gray-500 ml-2 truncate">
+                              \u2014 {activity.detail}
+                            </span>
+                          )}
+                        </div>
+                        {activity.durationMs != null && activity.durationMs > 0 && (
+                          <span className="shrink-0 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950 px-2 py-0.5 rounded-full">
+                            {formatDuration(activity.durationMs)}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Feature Usage Breakdown */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Feature Usage Breakdown</CardTitle>
+          <p className="text-xs text-neutral-500 dark:text-neutral-400">How you spend your time across different features</p>
+        </CardHeader>
+        <CardContent>
+          <ActivityBreakdown data={breakdownData} />
+        </CardContent>
+      </Card>
     </div>
   );
 }
