@@ -2,6 +2,7 @@
 
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useTrackTime } from "@/lib/use-track-time";
 import {
   Sparkles,
   Loader2,
@@ -199,6 +200,7 @@ function SortableProblemItem({
 }
 
 export default function ProblemGeneratorPage() {
+  useTrackTime("PROBLEM_GEN");
   const router = useRouter();
   const [topic, setTopic] = useState("");
   const [customTopic, setCustomTopic] = useState("");

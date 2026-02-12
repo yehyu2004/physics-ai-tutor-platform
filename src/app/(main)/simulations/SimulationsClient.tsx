@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import { useTrackTime } from "@/lib/use-track-time";
 import Link from "next/link";
 import {
   Search,
@@ -28,6 +29,7 @@ const partIcons: Record<number, React.ElementType> = {
 };
 
 export default function SimulationsClient() {
+  useTrackTime("SIMULATION");
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedPart, setExpandedPart] = useState<number | null>(null);
   const [expandedChapter, setExpandedChapter] = useState<number | null>(null);

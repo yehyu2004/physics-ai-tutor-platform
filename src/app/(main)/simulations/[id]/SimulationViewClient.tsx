@@ -4,6 +4,7 @@ import React from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { ArrowLeft, BookOpen } from "lucide-react";
+import { useTrackTime } from "@/lib/use-track-time";
 import { findSimulationById } from "@/data/halliday-chapters";
 
 // Simulation components
@@ -131,6 +132,7 @@ export default function SimulationViewClient({
 }: {
   simulationId: string;
 }) {
+  useTrackTime("SIMULATION");
   const data = findSimulationById(simulationId);
   const SimComponent = simulationComponents[simulationId];
 

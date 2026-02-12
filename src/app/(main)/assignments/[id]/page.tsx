@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useEffectiveSession } from "@/lib/effective-session-context";
+import { useTrackTime } from "@/lib/use-track-time";
 import {
   ArrowLeft,
   Clock,
@@ -132,6 +133,7 @@ export default function AssignmentDetailPage({
 }: {
   params: { id: string };
 }) {
+  useTrackTime("ASSIGNMENT_VIEW");
   const router = useRouter();
   const effectiveSession = useEffectiveSession();
   const [assignment, setAssignment] = useState<Assignment | null>(null);

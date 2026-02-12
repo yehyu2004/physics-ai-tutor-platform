@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
+import { useTrackTime } from "@/lib/use-track-time";
 import {
   Loader2,
   ClipboardList,
@@ -98,6 +99,7 @@ type GradingMode = "per-question" | "overall";
 type FilterMode = "all" | "ungraded" | "graded" | "appeals";
 
 export default function GradingPage() {
+  useTrackTime("GRADING");
   const searchParams = useSearchParams();
   const initialAssignmentId = searchParams.get("assignmentId");
 

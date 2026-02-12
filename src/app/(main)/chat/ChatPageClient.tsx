@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { upload } from "@vercel/blob/client";
 import { MarkdownContent } from "@/components/ui/markdown-content";
+import { useTrackTime } from "@/lib/use-track-time";
 import {
   Plus,
   Send,
@@ -75,6 +76,7 @@ const SUGGESTED_TOPICS = [
 export default function ChatPageClient({
   conversations: initialConversations,
 }: ChatPageClientProps) {
+  useTrackTime("AI_CHAT");
   const [conversations, setConversations] = useState<Conversation[]>(initialConversations);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);

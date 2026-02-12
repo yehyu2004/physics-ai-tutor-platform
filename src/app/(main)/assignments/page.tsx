@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useEffectiveSession } from "@/lib/effective-session-context";
+import { useTrackTime } from "@/lib/use-track-time";
 import {
   FileText,
   Plus,
@@ -36,6 +37,7 @@ interface Assignment {
 }
 
 export default function AssignmentsPage() {
+  useTrackTime("ASSIGNMENT_VIEW");
   const effectiveSession = useEffectiveSession();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
