@@ -89,6 +89,10 @@ make db-studio
 
 Then edit the user's `role` field from `STUDENT` to `ADMIN`.
 
+## Architecture
+
+![Architecture Diagram](docs/architecture.png)
+
 ## Project Structure
 
 ```
