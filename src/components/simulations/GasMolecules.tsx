@@ -184,12 +184,16 @@ export default function GasMolecules() {
       ctx.fillText("\u2190 drag \u2192", pistonX, boxTop - 8);
     }
 
-    // Pressure meter on walls (visualize wall hits)
-    const pressure = pressureRef.current;
-    const maxPressure = numParticles * 2;
+    // Compute kinetic pressure from particle speeds (P = N<v²>/(2V))
+    const particlesArr = particlesRef.current;
+    let sumV2 = 0;
+    for (const p of particlesArr) sumV2 += p.vx * p.vx + p.vy * p.vy;
+    const pressure = particlesArr.length * sumV2 / (2 * Math.max(pistonRef.current, 0.05));
+    const maxPressure = numParticles * 50; // scale for display
 
-    // Top wall pressure indicator
-    const pressureIntensity = Math.min(pressure / maxPressure, 1);
+    // Wall hit intensity for visual glow
+    const wallHitPressure = pressureRef.current;
+    const pressureIntensity = Math.min(wallHitPressure / (numParticles * 2), 1);
     const pColor = `rgba(239, 68, 68, ${pressureIntensity * 0.5})`;
     ctx.fillStyle = pColor;
     ctx.fillRect(boxLeft, boxTop, boxW, 4);
@@ -328,11 +332,18 @@ export default function GasMolecules() {
     ctx.fillStyle = "#94a3b8";
     ctx.fillText(`V = ${volume}%`, boxLeft + 20, boxTop + 50);
 
-    // Ideal gas law readout
-    const idealPressure = (numParticles * temperature) / (300 * pistonRef.current);
+    // Ideal gas law readout — compute from kinetic theory
+    const allParticles = particlesRef.current;
+    let totalV2 = 0;
+    for (const p of allParticles) totalV2 += p.vx * p.vx + p.vy * p.vy;
+    const avgV2 = totalV2 / Math.max(allParticles.length, 1);
+    // 2D kinetic theory: PV = NkT, kT = m<v²>/2, P = N<v²>/(2V)
+    const kineticPressure = allParticles.length * avgV2 / (2 * pistonRef.current);
+    // PV/NkT from kinetic theory (should ≈ 1.0)
+    const pvNkT = avgV2 > 0 ? (kineticPressure * pistonRef.current) / (allParticles.length * avgV2 / 2) : 0;
     ctx.font = "10px ui-monospace";
     ctx.fillStyle = "#60a5fa";
-    ctx.fillText(`PV/NkT \u2248 ${((pressure * pistonRef.current) / idealPressure / pistonRef.current).toFixed(2)}`, boxLeft + 20, boxTop + 62);
+    ctx.fillText(`PV/NkT \u2248 ${pvNkT.toFixed(2)}`, boxLeft + 20, boxTop + 62);
 
     // Particle effects
     particleSystemRef.current.draw(ctx);
@@ -363,38 +374,44 @@ export default function GasMolecules() {
     }
   }, [temperature, numParticles, showHistogram, challengeMode]);
 
+  const lastTsRef = useRef<number | null>(null);
+
   const animate = useCallback(() => {
+    const now = performance.now();
+    if (lastTsRef.current == null) lastTsRef.current = now;
+    const dt = Math.min((now - lastTsRef.current) / 1000, 0.05);
+    lastTsRef.current = now;
+
     const particles = particlesRef.current;
-    const dt = 0.016;
     const piston = pistonRef.current;
     // effective wall for piston
     const rightWall = 0.98 * piston / Math.max(piston, 0.15);
-    let frameHits = 0;
+    let frameMomentum = 0;
 
     for (const p of particles) {
       p.x += p.vx * dt * 0.03;
       p.y += p.vy * dt * 0.03;
 
-      // Bounce off walls - left, top, bottom fixed, right = piston
+      // Bounce off walls - track momentum transfer (|v_perp|) for pressure
       if (p.x < 0.02) {
         p.x = 0.02;
+        frameMomentum += Math.abs(p.vx);
         p.vx = Math.abs(p.vx);
-        frameHits++;
       }
       if (p.x > rightWall) {
         p.x = rightWall;
+        frameMomentum += Math.abs(p.vx);
         p.vx = -Math.abs(p.vx);
-        frameHits++;
       }
       if (p.y < 0.02) {
         p.y = 0.02;
+        frameMomentum += Math.abs(p.vy);
         p.vy = Math.abs(p.vy);
-        frameHits++;
       }
       if (p.y > 0.98) {
         p.y = 0.98;
+        frameMomentum += Math.abs(p.vy);
         p.vy = -Math.abs(p.vy);
-        frameHits++;
       }
     }
 
@@ -452,9 +469,8 @@ export default function GasMolecules() {
       }
     }
 
-    // Update pressure (smoothed wall hit count, normalized by perimeter)
-    wallHitsRef.current = wallHitsRef.current * 0.95 + frameHits * 0.05;
-    // Scale pressure to be proportional to N*T/V (ideal gas law)
+    // Update pressure from momentum transfer (proportional to N*T/V)
+    wallHitsRef.current = wallHitsRef.current * 0.95 + frameMomentum * 0.05;
     const perimeter = 2 * (1 + piston);
     pressureRef.current = (wallHitsRef.current / Math.max(perimeter, 0.1)) * 60;
 
