@@ -748,6 +748,7 @@ export default function InclinedPlane() {
 
     // Next question after delay
     setTimeout(() => {
+      setIsRunning(false);
       randomizeQuiz();
       reset();
     }, 3000);
