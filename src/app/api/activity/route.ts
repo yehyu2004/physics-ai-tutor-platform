@@ -13,6 +13,16 @@ const VALID_CATEGORIES = [
   "ADMIN_ACTION",
 ] as const;
 
+// Probabilistic cleanup: delete records older than 1 year (~1% of requests)
+async function maybeCleanupOldRecords() {
+  if (Math.random() > 0.01) return;
+  const oneYearAgo = new Date();
+  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+  await prisma.userActivity.deleteMany({
+    where: { createdAt: { lt: oneYearAgo } },
+  }).catch(() => {}); // silently ignore errors
+}
+
 export async function POST(req: Request) {
   try {
     const session = await getEffectiveSession();
@@ -39,6 +49,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid category" }, { status: 400 });
     }
 
+    // Rate limit: skip if same user+category was created in last 3 seconds
+    const recentDuplicate = await prisma.userActivity.findFirst({
+      where: {
+        userId,
+        category,
+        createdAt: { gte: new Date(Date.now() - 3000) },
+      },
+      select: { id: true },
+    });
+    if (recentDuplicate) {
+      return NextResponse.json({ ok: true, id: recentDuplicate.id });
+    }
+
     const activity = await prisma.userActivity.create({
       data: {
         userId,
@@ -46,6 +69,9 @@ export async function POST(req: Request) {
         detail: detail || null,
       },
     });
+
+    // Trigger cleanup in background (non-blocking)
+    maybeCleanupOldRecords();
 
     return NextResponse.json({ ok: true, id: activity.id });
   } catch (error) {

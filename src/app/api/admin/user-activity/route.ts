@@ -83,9 +83,9 @@ export async function GET(req: Request) {
 
     const days = range === "all" ? 365 : parseInt(range, 10);
 
-    // Run queries in parallel
-    const [activities, categoryGroups] = await Promise.all([
-      // Raw activities for daily trend + CSV + timeslot/role aggregation
+    // Run queries in parallel — use DB aggregations for summary, raw fetch only for trend/CSV
+    const [activities, categoryGroups, totalCount, totalDuration, uniqueUsers] = await Promise.all([
+      // Raw activities for daily trend + CSV + role aggregation
       prisma.userActivity.findMany({
         where,
         select: {
@@ -107,16 +107,20 @@ export async function GET(req: Request) {
         _count: { id: true },
         _sum: { durationMs: true },
       }),
+      // Efficient count via DB
+      prisma.userActivity.count({ where }),
+      // Efficient sum via DB
+      prisma.userActivity.aggregate({ where, _sum: { durationMs: true } }),
+      // Efficient distinct user count via DB
+      prisma.userActivity.groupBy({ by: ["userId"], where }).then((g) => g.length),
     ]);
 
-    // Summary
-    const uniqueUserIds = new Set(activities.map((a) => a.userId));
-    const totalTimeMs = activities.reduce((sum, a) => sum + (a.durationMs || 0), 0);
+    // Summary from DB aggregations (accurate even if raw fetch is capped at 5000)
     const summary = {
-      totalActivities: activities.length,
-      uniqueUsers: uniqueUserIds.size,
-      totalTimeMs,
-      avgDailyActivities: days > 0 ? Math.round(activities.length / days) : activities.length,
+      totalActivities: totalCount,
+      uniqueUsers,
+      totalTimeMs: totalDuration._sum.durationMs || 0,
+      avgDailyActivities: days > 0 ? Math.round(totalCount / days) : totalCount,
     };
 
     // Daily trend — build date→category→count map
