@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
+import { upload } from "@vercel/blob/client";
 import { MarkdownContent } from "@/components/ui/markdown-content";
 import {
   Plus,
@@ -224,14 +225,16 @@ export default function ChatPageClient({
     const uploadedUrls: string[] = [];
 
     for (const file of imageFiles) {
-      // Convert to base64 data URL so the AI API can access the image
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-      uploadedUrls.push(dataUrl);
+      try {
+        const blob = await upload(file.name, file, {
+          access: "public",
+          handleUploadUrl: "/api/upload/client",
+        });
+        uploadedUrls.push(blob.url);
+      } catch {
+        setImageError("Failed to upload image. Please try again.");
+        return;
+      }
     }
 
     const userMessage: Message = {

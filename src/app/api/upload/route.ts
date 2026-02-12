@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getEffectiveSession } from "@/lib/impersonate";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
+import { put } from "@vercel/blob";
 
 export async function POST(req: Request) {
   try {
@@ -22,20 +21,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "File exceeds the 20 MB size limit" }, { status: 413 });
     }
 
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-
-    const uploadDir = path.join(process.cwd(), "public", "uploads");
-    await mkdir(uploadDir, { recursive: true });
-
     const uniqueName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
-    const filePath = path.join(uploadDir, uniqueName);
 
-    await writeFile(filePath, buffer);
+    const blob = await put(uniqueName, file, { access: "public" });
 
-    const url = `/uploads/${uniqueName}`;
-
-    return NextResponse.json({ url });
+    return NextResponse.json({ url: blob.url });
   } catch (error) {
     console.error("Upload error:", error);
     return NextResponse.json(
