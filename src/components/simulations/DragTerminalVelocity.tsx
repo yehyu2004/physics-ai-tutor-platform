@@ -13,6 +13,7 @@ import {
   type ChallengeState,
 } from "@/lib/simulation/scoring";
 import { drawInfoPanel, drawMeter } from "@/lib/simulation/drawing";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import { SimMath } from "@/components/simulations/SimMath";
 
 type Mode = "sandbox" | "predict-vt" | "target-landing";
@@ -140,8 +141,8 @@ export default function DragTerminalVelocity() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
 
     ctx.clearRect(0, 0, W, H);
     ctx.fillStyle = "#0f172a";
@@ -611,9 +612,9 @@ export default function DragTerminalVelocity() {
     if (velRef.current > terminalVel * 0.5 && Math.random() < 0.2) {
       const canvas = canvasRef.current;
       if (canvas) {
-        const splitX = canvas.width * 0.4;
+        const splitX = canvas.clientWidth * 0.4;
         const objX = splitX * 0.5;
-        const objY = canvas.height * 0.4;
+        const objY = canvas.clientHeight * 0.4;
         particleSystemRef.current.emitTrail(objX, objY - 12 - mass * 0.5, -Math.PI / 2, "#60a5fa");
       }
     }
@@ -626,8 +627,8 @@ export default function DragTerminalVelocity() {
 
       const canvas = canvasRef.current;
       if (canvas) {
-        const splitX = canvas.width * 0.4;
-        particleSystemRef.current.emitSparks(splitX * 0.5, canvas.height * 0.85, 15, "#f59e0b");
+        const splitX = canvas.clientWidth * 0.4;
+        particleSystemRef.current.emitSparks(splitX * 0.5, canvas.clientHeight * 0.85, 15, "#f59e0b");
       }
 
       // Check target landing
@@ -650,12 +651,12 @@ export default function DragTerminalVelocity() {
           scorePopupsRef.current.push({
             text: `${result.label} ${velRef.current.toFixed(1)} m/s`,
             points: result.points,
-            x: canvas.width * 0.2,
-            y: canvas.height * 0.3,
+            x: canvas.clientWidth * 0.2,
+            y: canvas.clientHeight * 0.3,
             startTime: performance.now(),
           });
           if (result.points >= 2) {
-            particleSystemRef.current.emitConfetti(canvas.width * 0.2, canvas.height * 0.3, 25);
+            particleSystemRef.current.emitConfetti(canvas.clientWidth * 0.2, canvas.clientHeight * 0.3, 25);
           }
         }
       }
@@ -674,10 +675,9 @@ export default function DragTerminalVelocity() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480);
-      initWindStreaks(canvas.height, canvas.width * 0.4);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480));
+      initWindStreaks(canvas.clientHeight, canvas.clientWidth * 0.4);
       draw();
     };
     resize();
@@ -721,8 +721,8 @@ export default function DragTerminalVelocity() {
 
     const canvas = canvasRef.current;
     if (canvas) {
-      const splitX = canvas.width * 0.4;
-      particleSystemRef.current.emitGlow(splitX * 0.5, canvas.height * 0.3, 8, "#a855f7");
+      const splitX = canvas.clientWidth * 0.4;
+      particleSystemRef.current.emitGlow(splitX * 0.5, canvas.clientHeight * 0.3, 8, "#a855f7");
     }
   };
 
@@ -751,12 +751,12 @@ export default function DragTerminalVelocity() {
       scorePopupsRef.current.push({
         text: result.label,
         points: result.points,
-        x: canvas.width / 2,
-        y: canvas.height * 0.3,
+        x: canvas.clientWidth / 2,
+        y: canvas.clientHeight * 0.3,
         startTime: performance.now(),
       });
       if (result.points >= 2) {
-        particleSystemRef.current.emitConfetti(canvas.width / 2, canvas.height * 0.3, 20);
+        particleSystemRef.current.emitConfetti(canvas.clientWidth / 2, canvas.clientHeight * 0.3, 20);
       }
       draw();
     }

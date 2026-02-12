@@ -14,6 +14,7 @@ import {
 } from "@/lib/simulation/scoring";
 import { drawMeter } from "@/lib/simulation/drawing";
 import { createDragHandler } from "@/lib/simulation/interaction";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import { SimMath } from "@/components/simulations/SimMath";
 
 type SimMode = "sandbox" | "break" | "predict" | "release";
@@ -77,8 +78,8 @@ export default function CircularMotion() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const cx = W * 0.45;
     const cy = H * 0.5;
 
@@ -478,8 +479,8 @@ export default function CircularMotion() {
     const canvas = canvasRef.current;
     if (!canvas) { animRef.current = requestAnimationFrame(animate); return; }
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const cx = W * 0.45;
     const cy = H * 0.5;
 
@@ -579,9 +580,8 @@ export default function CircularMotion() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480));
       draw();
     };
     resize();
@@ -604,9 +604,9 @@ export default function CircularMotion() {
     const cleanup = createDragHandler(canvas, {
       onClick: () => {
         if (!stringBrokenRef.current && isRunning) {
-          const R2 = Math.min(radius, Math.min(canvas.width, canvas.height) * 0.35);
-          const cx = canvas.width * 0.45;
-          const cy = canvas.height * 0.5;
+          const R2 = Math.min(radius, Math.min(canvas.clientWidth, canvas.clientHeight) * 0.35);
+          const cx = canvas.clientWidth * 0.45;
+          const cy = canvas.clientHeight * 0.5;
           const theta = angleRef.current;
           const bx = cx + R2 * Math.cos(theta);
           const by = cy - R2 * Math.sin(theta);
@@ -668,8 +668,8 @@ export default function CircularMotion() {
 
     challengeRef.current = updateChallengeState(challengeRef.current, result);
     const canvas = canvasRef.current;
-    const cx = canvas ? canvas.width * 0.45 : 300;
-    const cy = canvas ? canvas.height * 0.5 : 200;
+    const cx = canvas ? canvas.clientWidth * 0.45 : 300;
+    const cy = canvas ? canvas.clientHeight * 0.5 : 200;
     scorePopupsRef.current.push({
       text: `${result.label} (${actual.toFixed(1)} m/s\u00B2)`,
       points: result.points,

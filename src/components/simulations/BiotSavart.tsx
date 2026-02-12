@@ -14,6 +14,7 @@ import {
 import { drawTarget, drawInfoPanel } from "@/lib/simulation/drawing";
 import { playSFX, playScore } from "@/lib/simulation/sound";
 import { ParticleSystem } from "@/lib/simulation/particles";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import { SimMath } from "@/components/simulations/SimMath";
 
 type WireConfig = "single" | "parallel" | "antiparallel" | "loop" | "solenoid";
@@ -118,8 +119,8 @@ export default function BiotSavart() {
   const generateChallenge = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const cx = W * 0.5;
     const cy = H * 0.5;
 
@@ -193,8 +194,8 @@ export default function BiotSavart() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const t = timeRef.current;
 
     ctx.clearRect(0, 0, W, H);
@@ -626,8 +627,8 @@ export default function BiotSavart() {
       onClick: (x, y) => {
         if (challengeMode) return; // Don't place probe in challenge mode
 
-        const W = canvas.width;
-        const H = canvas.height;
+        const W = canvas.clientWidth;
+        const H = canvas.clientHeight;
         const cx = W * 0.5;
         const cy = H * 0.5;
         const wires = getWires(cx, cy);
@@ -666,9 +667,8 @@ export default function BiotSavart() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480));
       draw();
     };
     resize();

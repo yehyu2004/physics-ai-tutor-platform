@@ -13,6 +13,7 @@ import {
 } from "@/lib/simulation/scoring";
 import { drawInfoPanel } from "@/lib/simulation/drawing";
 import { createDragHandler, getCanvasMousePos } from "@/lib/simulation/interaction";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import { SimMath } from "@/components/simulations/SimMath";
 
 // ---- Types ----
@@ -236,8 +237,8 @@ export default function MeasurementLab() {
     const obj = generateObject(
       Date.now() % 1000,
       precision,
-      canvas.width,
-      canvas.height,
+      canvas.clientWidth,
+      canvas.clientHeight,
       difficulty,
     );
     objectRef.current = obj;
@@ -259,8 +260,8 @@ export default function MeasurementLab() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
 
     // Background
     ctx.fillStyle = "#0f172a";
@@ -723,9 +724,8 @@ export default function MeasurementLab() {
     const resizeCanvas = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 500);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 500));
       draw();
     };
     resizeCanvas();
@@ -898,8 +898,8 @@ export default function MeasurementLab() {
     // Effects
     const canvas = canvasRef.current;
     if (canvas) {
-      const cx = canvas.width / 2;
-      const cy = canvas.height * 0.3;
+      const cx = canvas.clientWidth / 2;
+      const cy = canvas.clientHeight * 0.3;
 
       if (points >= 3) {
         particlesRef.current.emitConfetti(cx, cy, 40);

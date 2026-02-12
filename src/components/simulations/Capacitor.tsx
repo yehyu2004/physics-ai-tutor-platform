@@ -13,6 +13,7 @@ import {
 } from "@/lib/simulation/scoring";
 import { drawMeter } from "@/lib/simulation/drawing";
 import { createDragHandler } from "@/lib/simulation/interaction";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import { SimMath } from "@/components/simulations/SimMath";
 
 // Charge particle on a plate
@@ -133,8 +134,8 @@ export default function Capacitor() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const time = timeRef.current;
 
     ctx.clearRect(0, 0, W, H);
@@ -631,9 +632,8 @@ export default function Capacitor() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480));
       draw();
     };
     resize();
@@ -779,8 +779,8 @@ export default function Capacitor() {
       popupsRef.current.push({
         text: result.label,
         points: result.points,
-        x: canvas.width * 0.35,
-        y: canvas.height * 0.3,
+        x: canvas.clientWidth * 0.35,
+        y: canvas.clientHeight * 0.3,
         startTime: performance.now(),
       });
     }
@@ -789,7 +789,7 @@ export default function Capacitor() {
       playSFX("correct");
       playScore(result.points);
       if (canvas) {
-        particlesRef.current.emitConfetti(canvas.width * 0.35, canvas.height * 0.3, 25);
+        particlesRef.current.emitConfetti(canvas.clientWidth * 0.35, canvas.clientHeight * 0.3, 25);
       }
     } else {
       playSFX("incorrect");

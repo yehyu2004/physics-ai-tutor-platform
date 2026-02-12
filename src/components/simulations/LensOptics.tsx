@@ -13,6 +13,7 @@ import {
 import { playSFX, playScore } from "@/lib/simulation/sound";
 import { ParticleSystem } from "@/lib/simulation/particles";
 import { drawInfoPanel } from "@/lib/simulation/drawing";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import { SimMath } from "@/components/simulations/SimMath";
 
 type Mode = "sandbox" | "focus-challenge" | "microscope" | "identify";
@@ -147,12 +148,12 @@ export default function LensOptics() {
       popupsRef.current.push({
         text: `${result.label} (error: ${(error * PX_TO_CM).toFixed(1)}cm)`,
         points: result.points,
-        x: canvas.width / 2,
-        y: canvas.height / 2,
+        x: canvas.clientWidth / 2,
+        y: canvas.clientHeight / 2,
         startTime: Date.now(),
       });
       if (result.points >= 2) {
-        particlesRef.current.emitConfetti(canvas.width / 2, canvas.height / 2);
+        particlesRef.current.emitConfetti(canvas.clientWidth / 2, canvas.clientHeight / 2);
         playSFX("success");
       } else if (result.points > 0) {
         playSFX("correct");
@@ -179,12 +180,12 @@ export default function LensOptics() {
       popupsRef.current.push({
         text: result.label,
         points: result.points,
-        x: canvas.width / 2,
-        y: canvas.height / 2,
+        x: canvas.clientWidth / 2,
+        y: canvas.clientHeight / 2,
         startTime: Date.now(),
       });
       if (isCorrect) {
-        particlesRef.current.emitConfetti(canvas.width / 2, canvas.height / 2);
+        particlesRef.current.emitConfetti(canvas.clientWidth / 2, canvas.clientHeight / 2);
         playSFX("success");
         playScore(3);
       } else {
@@ -199,8 +200,8 @@ export default function LensOptics() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const now = Date.now();
 
     ctx.clearRect(0, 0, W, H);
@@ -658,9 +659,8 @@ export default function LensOptics() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.5), _isMobile ? 500 : 440);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.5), _isMobile ? 500 : 440));
       draw();
     };
     resize();
@@ -673,15 +673,15 @@ export default function LensOptics() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
+    const scaleX = canvas.clientWidth / rect.width;
     const mx = (e.clientX - rect.left) * scaleX;
-    const my = (e.clientY - rect.top) * (canvas.height / rect.height);
-    const lensX = canvas.width * lensPosition;
+    const my = (e.clientY - rect.top) * (canvas.clientHeight / rect.height);
+    const lensX = canvas.clientWidth * lensPosition;
     const objX = lensX - objectDist;
-    const axisY = canvas.height * 0.5;
+    const axisY = canvas.clientHeight * 0.5;
 
     // Check lens first (vertical hit area)
-    if (Math.abs(mx - lensX) < 20 && Math.abs(my - axisY) < canvas.height * 0.35) {
+    if (Math.abs(mx - lensX) < 20 && Math.abs(my - axisY) < canvas.clientHeight * 0.35) {
       setIsDraggingLens(true);
       return;
     }
@@ -696,14 +696,14 @@ export default function LensOptics() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
+    const scaleX = canvas.clientWidth / rect.width;
     const mx = (e.clientX - rect.left) * scaleX;
 
     if (isDraggingLens) {
-      const newPos = Math.max(0.2, Math.min(0.8, mx / canvas.width));
+      const newPos = Math.max(0.2, Math.min(0.8, mx / canvas.clientWidth));
       setLensPosition(newPos);
     } else if (isDraggingObject) {
-      const lensX = canvas.width * lensPosition;
+      const lensX = canvas.clientWidth * lensPosition;
       const newDist = Math.max(30, lensX - mx);
       setObjectDist(Math.min(newDist, lensX - 20));
     }

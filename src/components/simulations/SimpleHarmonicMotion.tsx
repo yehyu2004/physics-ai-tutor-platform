@@ -14,6 +14,7 @@ import {
 } from "@/lib/simulation/scoring";
 import { drawInfoPanel } from "@/lib/simulation/drawing";
 import { createDragHandler } from "@/lib/simulation/interaction";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import { SimMath } from "@/components/simulations/SimMath";
 
 type SimMode = "sandbox" | "challenge" | "resonance";
@@ -152,8 +153,8 @@ export default function SimpleHarmonicMotion() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const midY = H * 0.35;
     const graphY = H * 0.65;
     const graphH = H * 0.3;
@@ -578,8 +579,8 @@ export default function SimpleHarmonicMotion() {
       if (stretchRatio > 0.92 && Math.abs(s.velocity) < 30 && s.time - s.lastExtreme > 0.3) {
         const canvas = canvasRef.current;
         if (canvas) {
-          const midY = canvas.height * 0.35;
-          const eqX = canvas.width * 0.5;
+          const midY = canvas.clientHeight * 0.35;
+          const eqX = canvas.clientWidth * 0.5;
           const massX = eqX + s.position;
           const sparkColor = s.position > 0 ? "#ef4444" : "#3b82f6";
           s.particles.emitSparks(massX, midY, 8, sparkColor);
@@ -607,9 +608,8 @@ export default function SimpleHarmonicMotion() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.6), _isMobile ? 500 : 520);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.6), _isMobile ? 500 : 520));
       draw();
     };
     resize();
@@ -632,8 +632,8 @@ export default function SimpleHarmonicMotion() {
 
     const cleanup = createDragHandler(canvas, {
       onClick: (x, y) => {
-        const W = canvas.width;
-        const H = canvas.height;
+        const W = canvas.clientWidth;
+        const H = canvas.clientHeight;
         const midY = H * 0.35;
         const eqX = W * 0.5;
         const s = stateRef.current;
@@ -704,8 +704,8 @@ export default function SimpleHarmonicMotion() {
       popupsRef.current.push({
         text: result.label,
         points: result.points,
-        x: canvas.width / 2,
-        y: canvas.height * 0.35 - 50,
+        x: canvas.clientWidth / 2,
+        y: canvas.clientHeight * 0.35 - 50,
         startTime: performance.now(),
       });
     }
@@ -716,7 +716,7 @@ export default function SimpleHarmonicMotion() {
       playScore(result.points);
       // Confetti for perfect
       if (canvas) {
-        stateRef.current.particles.emitConfetti(canvas.width / 2, canvas.height * 0.35, 25);
+        stateRef.current.particles.emitConfetti(canvas.clientWidth / 2, canvas.clientHeight * 0.35, 25);
       }
     } else if (result.points > 0) {
       playSFX("correct");

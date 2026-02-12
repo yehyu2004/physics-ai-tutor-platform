@@ -3,6 +3,7 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import { ParticleSystem } from "@/lib/simulation/particles";
 import { playSFX, playScore } from "@/lib/simulation/sound";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import { SimMath } from "@/components/simulations/SimMath";
 
 interface Trail {
@@ -148,8 +149,8 @@ export default function ProjectileChallenge() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const gY = H * groundY;
     const scale = getScale(W);
 
@@ -522,8 +523,8 @@ export default function ProjectileChallenge() {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const gY = canvas.height * groundY;
-    const scale = getScale(canvas.width);
+    const gY = canvas.clientHeight * groundY;
+    const scale = getScale(canvas.clientWidth);
 
     const now = performance.now();
     if (lastTsRef.current == null) {
@@ -703,9 +704,8 @@ export default function ProjectileChallenge() {
     const resizeCanvas = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 500);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 500));
       draw();
     };
     resizeCanvas();
@@ -742,7 +742,7 @@ export default function ProjectileChallenge() {
     lastTsRef.current = null;
     lastSmokeTimeRef.current = 0;
     smokeParticlesRef.current = [];
-    posRef.current = { x: originX, y: canvas.height * groundY, vx, vy };
+    posRef.current = { x: originX, y: canvas.clientHeight * groundY, vx, vy };
     scorePopupRef.current = null;
     particleSystemRef.current.clear();
     cancelAnimationFrame(popupAnimRef.current);

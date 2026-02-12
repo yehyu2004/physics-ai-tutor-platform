@@ -2,6 +2,7 @@
 
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import { SimMath } from "@/components/simulations/SimMath";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 
 export default function EnergyConservation() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -41,8 +42,8 @@ export default function EnergyConservation() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const g = 9.8;
 
     ctx.clearRect(0, 0, W, H);
@@ -241,9 +242,8 @@ export default function EnergyConservation() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480));
       draw();
     };
     resize();

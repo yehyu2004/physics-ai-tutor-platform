@@ -13,6 +13,7 @@ import {
 import { playSFX, playScore } from "@/lib/simulation/sound";
 import { ParticleSystem } from "@/lib/simulation/particles";
 import { drawMeter } from "@/lib/simulation/drawing";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import { SimMath } from "@/components/simulations/SimMath";
 
 type Mode = "sandbox" | "date-sample" | "predict-halflife" | "compare";
@@ -232,12 +233,12 @@ export default function RadioactiveDecay() {
       popupsRef.current.push({
         text: `${result.label} (age=${dateChallenge.actualAge.toFixed(1)}s)`,
         points: result.points,
-        x: canvas.width / 2,
-        y: canvas.height / 2,
+        x: canvas.clientWidth / 2,
+        y: canvas.clientHeight / 2,
         startTime: Date.now(),
       });
       if (result.points >= 2) {
-        particlesRef.current.emitConfetti(canvas.width / 2, canvas.height / 2);
+        particlesRef.current.emitConfetti(canvas.clientWidth / 2, canvas.clientHeight / 2);
         playSFX("success");
       } else if (result.points > 0) {
         playSFX("correct");
@@ -263,12 +264,12 @@ export default function RadioactiveDecay() {
       popupsRef.current.push({
         text: `${result.label} (t\u00bd=${halfLifeChallenge.actualHalfLife.toFixed(1)}s)`,
         points: result.points,
-        x: canvas.width / 2,
-        y: canvas.height / 2,
+        x: canvas.clientWidth / 2,
+        y: canvas.clientHeight / 2,
         startTime: Date.now(),
       });
       if (result.points >= 2) {
-        particlesRef.current.emitConfetti(canvas.width / 2, canvas.height / 2);
+        particlesRef.current.emitConfetti(canvas.clientWidth / 2, canvas.clientHeight / 2);
         playSFX("success");
       } else if (result.points > 0) {
         playSFX("correct");
@@ -285,8 +286,8 @@ export default function RadioactiveDecay() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const t = timeRef.current;
     const now = Date.now();
 
@@ -756,9 +757,8 @@ export default function RadioactiveDecay() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480));
       draw();
     };
     resize();
@@ -786,15 +786,15 @@ export default function RadioactiveDecay() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
+    const scaleX = canvas.clientWidth / rect.width;
+    const scaleY = canvas.clientHeight / rect.height;
     const mx = (e.clientX - rect.left) * scaleX;
     const my = (e.clientY - rect.top) * scaleY;
 
-    const splitX = canvas.width * 0.45;
+    const splitX = canvas.clientWidth * 0.45;
     const gridMargin = 20;
     const gridW = splitX - gridMargin * 2;
-    const gridH = canvas.height - gridMargin * 2;
+    const gridH = canvas.clientHeight - gridMargin * 2;
     const atomR = Math.max(2, Math.min(6, gridW / Math.sqrt(numAtoms) / 2.5));
 
     // Find clicked atom

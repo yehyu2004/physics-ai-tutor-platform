@@ -3,6 +3,7 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import { playSFX, playScore } from "@/lib/simulation/sound";
 import { getCanvasMousePos } from "@/lib/simulation/interaction";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import { SimMath } from "@/components/simulations/SimMath";
 
 type BFieldDir = "into" | "outof" | "right" | "up";
@@ -145,8 +146,8 @@ export default function MagneticField3D() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const cx = W * 0.5;
     const cy = H * 0.48;
     const scale = Math.min(W, H) * 0.08;
@@ -626,9 +627,8 @@ export default function MagneticField3D() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.6), _isMobile ? 500 : 540);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.6), _isMobile ? 500 : 540));
       draw();
     };
     resize();
@@ -650,8 +650,8 @@ export default function MagneticField3D() {
     const handleClick = (e: MouseEvent) => {
       const pos = getCanvasMousePos(canvas, e);
       // Convert 2D click to approximate 3D position (on z=0 plane)
-      const W = canvas.width;
-      const H = canvas.height;
+      const W = canvas.clientWidth;
+      const H = canvas.clientHeight;
       const cx2 = W * 0.5;
       const cy2 = H * 0.48;
       const s = Math.min(W, H) * 0.08;

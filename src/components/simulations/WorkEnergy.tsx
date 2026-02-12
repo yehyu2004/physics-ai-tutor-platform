@@ -14,6 +14,7 @@ import {
 } from "@/lib/simulation/scoring";
 import { drawArrow, drawInfoPanel, drawMeter } from "@/lib/simulation/drawing";
 import { createDragHandler, isPointInCircle } from "@/lib/simulation/interaction";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import { SimMath } from "@/components/simulations/SimMath";
 
 type Mode = "sandbox" | "predict-work" | "target-ke";
@@ -115,8 +116,8 @@ export default function WorkEnergy() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const groundY = H * 0.55;
 
     ctx.clearRect(0, 0, W, H);
@@ -446,8 +447,8 @@ export default function WorkEnergy() {
     if (isRunning && Math.random() < 0.15 && velRef.current > 0.5) {
       const canvas = canvasRef.current;
       if (canvas) {
-        const W = canvas.width;
-        const groundY = canvas.height * 0.55;
+        const W = canvas.clientWidth;
+        const groundY = canvas.clientHeight * 0.55;
         const startXP = 60;
         const boxX = startXP + Math.min(posRef.current * 64, W - 140);
         const boxY = groundY - 40;
@@ -482,13 +483,13 @@ export default function WorkEnergy() {
         playScore(result.points);
         const canvas = canvasRef.current;
         if (canvas) {
-          const W = canvas.width;
-          particleSystemRef.current.emitConfetti(W / 2, canvas.height * 0.3, 25);
+          const W = canvas.clientWidth;
+          particleSystemRef.current.emitConfetti(W / 2, canvas.clientHeight * 0.3, 25);
           scorePopupsRef.current.push({
             text: `${result.label} KE = ${ke.toFixed(1)} J`,
             points: result.points,
             x: W / 2,
-            y: canvas.height * 0.3,
+            y: canvas.clientHeight * 0.3,
             startTime: performance.now(),
           });
         }
@@ -517,12 +518,12 @@ export default function WorkEnergy() {
           scorePopupsRef.current.push({
             text: `${result.label} KE = ${ke.toFixed(1)} J (target: ${targetKE} J)`,
             points: result.points,
-            x: canvas.width / 2,
-            y: canvas.height * 0.3,
+            x: canvas.clientWidth / 2,
+            y: canvas.clientHeight * 0.3,
             startTime: performance.now(),
           });
           if (result.points >= 2) {
-            particleSystemRef.current.emitConfetti(canvas.width / 2, canvas.height * 0.3, 20);
+            particleSystemRef.current.emitConfetti(canvas.clientWidth / 2, canvas.clientHeight * 0.3, 20);
           }
         }
         challengeReachedRef.current = true;
@@ -537,9 +538,8 @@ export default function WorkEnergy() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 500);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 500));
       draw();
     };
     resize();
@@ -556,11 +556,11 @@ export default function WorkEnergy() {
       onDragStart: (x, y) => {
         if (isRunning) return false;
         // Check if near the force arrow tip
-        const groundY = canvas.height * 0.55;
+        const groundY = canvas.clientHeight * 0.55;
         const boxW = 50;
         const boxH = 40;
         const startXPos = 60;
-        const boxX = startXPos + Math.min(posRef.current * 64, canvas.width - 140);
+        const boxX = startXPos + Math.min(posRef.current * 64, canvas.clientWidth - 140);
         const boxY = groundY - boxH;
         const angleRad = -(angle * Math.PI) / 180;
         const arrowLen = Math.min(force * 2.5, 120);
@@ -578,11 +578,11 @@ export default function WorkEnergy() {
       },
       onDrag: (x, y) => {
         if (!isDraggingArrowRef.current) return;
-        const groundY = canvas.height * 0.55;
+        const groundY = canvas.clientHeight * 0.55;
         const boxW = 50;
         const boxH = 40;
         const startXPos = 60;
-        const boxX = startXPos + Math.min(posRef.current * 64, canvas.width - 140);
+        const boxX = startXPos + Math.min(posRef.current * 64, canvas.clientWidth - 140);
         const boxY = groundY - boxH;
         const arrowStartX = boxX + boxW + 5;
         const arrowStartY = boxY + boxH / 2;
@@ -675,12 +675,12 @@ export default function WorkEnergy() {
       scorePopupsRef.current.push({
         text: result.label,
         points: result.points,
-        x: canvas.width / 2,
-        y: canvas.height * 0.3,
+        x: canvas.clientWidth / 2,
+        y: canvas.clientHeight * 0.3,
         startTime: performance.now(),
       });
       if (result.points >= 2) {
-        particleSystemRef.current.emitConfetti(canvas.width / 2, canvas.height * 0.3, 20);
+        particleSystemRef.current.emitConfetti(canvas.clientWidth / 2, canvas.clientHeight * 0.3, 20);
       }
       draw();
     }

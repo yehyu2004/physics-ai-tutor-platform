@@ -12,6 +12,7 @@ import {
   type ChallengeState,
 } from "@/lib/simulation/scoring";
 import { createDragHandler } from "@/lib/simulation/interaction";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import { SimMath } from "@/components/simulations/SimMath";
 
 // Spectral line colors mapped to wavelength ranges
@@ -144,11 +145,11 @@ export default function HydrogenAtom() {
     const wl = transitionWavelength(targetN, currentN);
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const W = canvas.width;
+    const W = canvas.clientWidth;
 
     photonsRef.current.push({
       x: W * 0.6,
-      y: canvas.height * 0.5,
+      y: canvas.clientHeight * 0.5,
       targetN,
       sourceN: currentN,
       angle: Math.PI,
@@ -168,9 +169,9 @@ export default function HydrogenAtom() {
     const wl = transitionWavelength(currentN, targetN);
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const atomX = canvas.width * 0.32;
-    const atomY = canvas.height * 0.5;
-    const maxR = Math.min(canvas.width * 0.28, canvas.height * 0.42);
+    const atomX = canvas.clientWidth * 0.32;
+    const atomY = canvas.clientHeight * 0.5;
+    const maxR = Math.min(canvas.clientWidth * 0.28, canvas.clientHeight * 0.42);
     const bohrR = (currentN * currentN) * maxR / 25;
     const t = timeRef.current;
     const eAngle = t * (3 / currentN);
@@ -247,8 +248,8 @@ export default function HydrogenAtom() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const t = timeRef.current;
     const currentElectronN = electronNRef.current;
 
@@ -585,8 +586,8 @@ export default function HydrogenAtom() {
 
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const atomX = canvas.width * 0.32;
-    const atomY = canvas.height * 0.5;
+    const atomX = canvas.clientWidth * 0.32;
+    const atomY = canvas.clientHeight * 0.5;
 
     // Update transition animation
     const trans = transitionAnimRef.current;
@@ -607,7 +608,7 @@ export default function HydrogenAtom() {
         photon.x += Math.cos(photon.angle) * photon.speed * dt;
         photon.y += Math.sin(photon.angle) * photon.speed * dt;
         // Remove when offscreen
-        if (photon.x < -20 || photon.x > canvas.width + 20 || photon.y < -20 || photon.y > canvas.height + 20) {
+        if (photon.x < -20 || photon.x > canvas.clientWidth + 20 || photon.y < -20 || photon.y > canvas.clientHeight + 20) {
           photon.alive = false;
         }
       } else {
@@ -658,7 +659,7 @@ export default function HydrogenAtom() {
 
     const cleanup = createDragHandler(canvas, {
       onClick: (x, y) => {
-        const W = canvas.width;
+        const W = canvas.clientWidth;
         const elvX = W * 0.68;
         const elvW = W * 0.28;
 
@@ -678,9 +679,8 @@ export default function HydrogenAtom() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480));
       draw();
     };
     resize();
@@ -721,8 +721,8 @@ export default function HydrogenAtom() {
       scorePopupsRef.current.push({
         text: result.label,
         points: result.points,
-        x: canvas.width / 2,
-        y: canvas.height / 2,
+        x: canvas.clientWidth / 2,
+        y: canvas.clientHeight / 2,
         startTime: performance.now(),
       });
     }

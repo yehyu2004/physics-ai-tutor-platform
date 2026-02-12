@@ -5,6 +5,7 @@ import { ParticleSystem } from "@/lib/simulation/particles";
 import { playSFX } from "@/lib/simulation/sound";
 import { drawInfoPanel, drawMeter } from "@/lib/simulation/drawing";
 import { renderScoreboard, renderScorePopup, createChallengeState, updateChallengeState, type ScorePopup, type ChallengeState } from "@/lib/simulation/scoring";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import { SimMath } from "@/components/simulations/SimMath";
 
 interface Body {
@@ -208,8 +209,8 @@ export default function GravitySandbox() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const bodies = bodiesRef.current;
     const G = BASE_G * gravityScaleRef.current;
 
@@ -574,8 +575,8 @@ export default function GravitySandbox() {
     const bodies = bodiesRef.current;
     const G = BASE_G * gravityScaleRef.current;
     const ts = timeScaleRef.current;
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
 
     if (isRunningRef.current && bodies.length > 0) {
       const now = performance.now();
@@ -613,7 +614,7 @@ export default function GravitySandbox() {
             const dist = Math.sqrt(dx * dx + dy * dy);
             const ri = bodyRadius(bodies[i].mass);
             const rj = bodyRadius(bodies[j].mass);
-            const minDist = (ri + rj) / Math.max(canvas.width, 1) * 0.8;
+            const minDist = (ri + rj) / Math.max(canvas.clientWidth, 1) * 0.8;
 
             if (dist < minDist) {
               // Merge position for sparkle effects
@@ -714,9 +715,8 @@ export default function GravitySandbox() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.6), _isMobile ? 500 : 560);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.6), _isMobile ? 500 : 560));
       draw();
     };
     resize();
@@ -738,8 +738,8 @@ export default function GravitySandbox() {
     const getCanvasPos = (e: MouseEvent) => {
       const rect = canvas.getBoundingClientRect();
       return {
-        x: (e.clientX - rect.left) / canvas.width,
-        y: (e.clientY - rect.top) / canvas.height,
+        x: (e.clientX - rect.left) / canvas.clientWidth,
+        y: (e.clientY - rect.top) / canvas.clientHeight,
       };
     };
 

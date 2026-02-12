@@ -12,6 +12,7 @@ import {
 } from "@/lib/simulation/scoring";
 import { playSFX, playScore } from "@/lib/simulation/sound";
 import { ParticleSystem } from "@/lib/simulation/particles";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import { SimMath } from "@/components/simulations/SimMath";
 
 type ChallengeType = "time_dilation" | "length_contraction" | "gamma" | "relativistic_energy";
@@ -114,13 +115,13 @@ export default function SpecialRelativity() {
       popupsRef.current.push({
         text: result.label,
         points: result.points,
-        x: canvas.width / 2,
-        y: canvas.height / 3,
+        x: canvas.clientWidth / 2,
+        y: canvas.clientHeight / 3,
         startTime: performance.now(),
       });
 
       if (result.points >= 2) {
-        particlesRef.current.emitConfetti(canvas.width / 2, canvas.height / 3, 25);
+        particlesRef.current.emitConfetti(canvas.clientWidth / 2, canvas.clientHeight / 3, 25);
         playSFX("correct");
         playScore(result.points);
       } else if (result.points === 1) {
@@ -140,8 +141,8 @@ export default function SpecialRelativity() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const t = timeRef.current;
 
     ctx.clearRect(0, 0, W, H);
@@ -886,9 +887,8 @@ export default function SpecialRelativity() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.65), _isMobile ? 500 : 560);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.65), _isMobile ? 500 : 560));
       draw();
     };
     resize();

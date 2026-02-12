@@ -13,6 +13,7 @@ import {
   type ChallengeState,
 } from "@/lib/simulation/scoring";
 import { drawTarget } from "@/lib/simulation/drawing";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import { SimMath } from "@/components/simulations/SimMath";
 
 type SimMode = "sandbox" | "detector" | "spectrometer" | "cyclotron";
@@ -125,8 +126,8 @@ export default function ChargedParticleMagnetic() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
 
     ctx.clearRect(0, 0, W, H);
     ctx.fillStyle = "#0f172a";
@@ -581,7 +582,7 @@ export default function ChargedParticleMagnetic() {
         playSFX("success");
         const canvas = canvasRef.current;
         if (canvas) {
-          particlesRef.current.emitConfetti(pos.x * canvas.width, pos.y * canvas.height, 25);
+          particlesRef.current.emitConfetti(pos.x * canvas.clientWidth, pos.y * canvas.clientHeight, 25);
         }
         initCyclotron();
       }
@@ -593,7 +594,7 @@ export default function ChargedParticleMagnetic() {
       if (Math.random() < 0.2) {
         const canvas = canvasRef.current;
         if (canvas) {
-          particlesRef.current.emitTrail(pos.x * canvas.width, pos.y * canvas.height, Math.atan2(vel.vy, vel.vx), "#a855f7");
+          particlesRef.current.emitTrail(pos.x * canvas.clientWidth, pos.y * canvas.clientHeight, Math.atan2(vel.vy, vel.vx), "#a855f7");
         }
       }
     } else if (mode === "spectrometer") {
@@ -661,11 +662,11 @@ export default function ChargedParticleMagnetic() {
             popupsRef.current.push({
               text: "Target Hit!",
               points: 3,
-              x: det.x * canvas.width,
-              y: det.y * canvas.height,
+              x: det.x * canvas.clientWidth,
+              y: det.y * canvas.clientHeight,
               startTime: performance.now(),
             });
-            particlesRef.current.emitConfetti(det.x * canvas.width, det.y * canvas.height, 30);
+            particlesRef.current.emitConfetti(det.x * canvas.clientWidth, det.y * canvas.clientHeight, 30);
           }
 
           setTimeout(() => newDetectorTarget(), 1500);
@@ -703,9 +704,8 @@ export default function ChargedParticleMagnetic() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480));
       draw();
     };
     resize();
@@ -734,8 +734,8 @@ export default function ChargedParticleMagnetic() {
     challengeRef.current = updateChallengeState(challengeRef.current, result);
 
     const canvas = canvasRef.current;
-    const cx = canvas ? canvas.width / 2 : 400;
-    const cy2 = canvas ? canvas.height / 2 : 200;
+    const cx = canvas ? canvas.clientWidth / 2 : 400;
+    const cy2 = canvas ? canvas.clientHeight / 2 : 200;
     popupsRef.current.push({
       text: `${result.label} (mass = ${actual.toFixed(1)})`,
       points: result.points,

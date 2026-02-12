@@ -14,6 +14,7 @@ import {
 } from "@/lib/simulation/scoring";
 import { drawMeter } from "@/lib/simulation/drawing";
 import { createDragHandler } from "@/lib/simulation/interaction";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import { SimMath } from "@/components/simulations/SimMath";
 
 type SimMode = "sandbox" | "challenge" | "ambulance";
@@ -97,8 +98,8 @@ export default function DopplerEffect() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const t = timeRef.current;
 
     ctx.clearRect(0, 0, W, H);
@@ -465,9 +466,8 @@ export default function DopplerEffect() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.45), _isMobile ? 500 : 400);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.45), _isMobile ? 500 : 400));
       draw();
     };
     resize();
@@ -514,8 +514,8 @@ export default function DopplerEffect() {
     challengeRef.current = updateChallengeState(challengeRef.current, result);
 
     const canvas = canvasRef.current;
-    const W = canvas ? canvas.width / 2 : 400;
-    const H = canvas ? canvas.height / 2 : 200;
+    const W = canvas ? canvas.clientWidth / 2 : 400;
+    const H = canvas ? canvas.clientHeight / 2 : 200;
     popupsRef.current.push({
       text: `${result.label} (actual: ${actual.toFixed(1)})`,
       points: result.points,

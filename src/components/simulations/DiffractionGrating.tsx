@@ -13,6 +13,7 @@ import {
 } from "@/lib/simulation/scoring";
 import { playSFX, playScore } from "@/lib/simulation/sound";
 import { ParticleSystem } from "@/lib/simulation/particles";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import { SimMath } from "@/components/simulations/SimMath";
 
 interface Measurement {
@@ -85,13 +86,13 @@ export default function DiffractionGrating() {
       popupsRef.current.push({
         text: result.label,
         points: result.points,
-        x: canvas.width / 2,
-        y: canvas.height / 2,
+        x: canvas.clientWidth / 2,
+        y: canvas.clientHeight / 2,
         startTime: performance.now(),
       });
 
       if (result.points >= 2) {
-        particlesRef.current.emitConfetti(canvas.width / 2, canvas.height / 2, 20);
+        particlesRef.current.emitConfetti(canvas.clientWidth / 2, canvas.clientHeight / 2, 20);
         playSFX("correct");
         playScore(result.points);
       } else if (result.points === 1) {
@@ -113,8 +114,8 @@ export default function DiffractionGrating() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
 
     ctx.clearRect(0, 0, W, H);
     ctx.fillStyle = "#020617";
@@ -455,8 +456,8 @@ export default function DiffractionGrating() {
       onClick: (x, y) => {
         if (!challengeMode) return;
 
-        const W = canvas.width;
-        const H = canvas.height;
+        const W = canvas.clientWidth;
+        const H = canvas.clientHeight;
         const screenX = W * 0.75;
         const barW = 24;
         const midY2 = H / 2;
@@ -521,9 +522,8 @@ export default function DiffractionGrating() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480));
       draw();
     };
     resize();

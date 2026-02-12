@@ -13,6 +13,7 @@ import {
 } from "@/lib/simulation/scoring";
 import { drawInfoPanel, drawMeter } from "@/lib/simulation/drawing";
 import { createDragHandler, isPointInRect } from "@/lib/simulation/interaction";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import { SimMath } from "@/components/simulations/SimMath";
 
 export default function FaradayLaw() {
@@ -51,8 +52,8 @@ export default function FaradayLaw() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const t = timeRef.current;
 
     ctx.clearRect(0, 0, W, H);
@@ -410,8 +411,8 @@ export default function FaradayLaw() {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const coilX = canvas.width * 0.4;
-    const coilY = canvas.height * 0.4;
+    const coilX = canvas.clientWidth * 0.4;
+    const coilY = canvas.clientHeight * 0.4;
 
     let magnetX: number;
     if (mode === "drag") {
@@ -473,14 +474,14 @@ export default function FaradayLaw() {
         popupsRef.current.push({
           text: `${label} (Peak: ${peak.toFixed(1)}V)`,
           points,
-          x: canvas.width * 0.5,
-          y: canvas.height * 0.5,
+          x: canvas.clientWidth * 0.5,
+          y: canvas.clientHeight * 0.5,
           startTime: performance.now(),
         });
 
         if (points > 0) {
           playScore(points);
-          particlesRef.current.emitConfetti(canvas.width * 0.5, canvas.height * 0.4, points * 10);
+          particlesRef.current.emitConfetti(canvas.clientWidth * 0.5, canvas.clientHeight * 0.4, points * 10);
         } else {
           playSFX("fail");
         }
@@ -508,13 +509,12 @@ export default function FaradayLaw() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480));
       // Initialize magnet position in drag mode
       if (mode === "drag" && magnetPosRef.current.x === 0) {
-        magnetPosRef.current.x = canvas.width * 0.4 + 180;
-        magnetPosRef.current.y = canvas.height * 0.4;
+        magnetPosRef.current.x = canvas.clientWidth * 0.4 + 180;
+        magnetPosRef.current.y = canvas.clientHeight * 0.4;
       }
       draw();
     };
@@ -570,8 +570,8 @@ export default function FaradayLaw() {
     if (mode === "drag") {
       const canvas = canvasRef.current;
       if (canvas) {
-        magnetPosRef.current.x = canvas.width * 0.4 + 180;
-        magnetPosRef.current.y = canvas.height * 0.4;
+        magnetPosRef.current.x = canvas.clientWidth * 0.4 + 180;
+        magnetPosRef.current.y = canvas.clientHeight * 0.4;
       }
     }
     draw();

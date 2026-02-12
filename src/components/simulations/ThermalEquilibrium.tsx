@@ -12,6 +12,7 @@ import {
   type ChallengeState,
 } from "@/lib/simulation/scoring";
 import { drawMeter } from "@/lib/simulation/drawing";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import { SimMath } from "@/components/simulations/SimMath";
 
 // Material definitions with real specific heats
@@ -157,8 +158,8 @@ export default function ThermalEquilibrium() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const cur1 = temp1Ref.current;
     const cur2 = temp2Ref.current;
     const time = timeRef.current;
@@ -673,15 +674,15 @@ export default function ThermalEquilibrium() {
             popupsRef.current.push({
               text: `${result.label} (T_eq = ${tEq.toFixed(1)}\u00B0C)`,
               points: result.points,
-              x: canvas.width / 2,
-              y: canvas.height * 0.3,
+              x: canvas.clientWidth / 2,
+              y: canvas.clientHeight * 0.3,
               startTime: performance.now(),
             });
 
             if (result.points > 0) {
               playSFX("correct");
               playScore(result.points);
-              particlesRef.current.emitConfetti(canvas.width / 2, canvas.height * 0.3, 30);
+              particlesRef.current.emitConfetti(canvas.clientWidth / 2, canvas.clientHeight * 0.3, 30);
             } else {
               playSFX("incorrect");
             }
@@ -717,9 +718,8 @@ export default function ThermalEquilibrium() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480));
       draw();
     };
     resize();

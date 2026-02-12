@@ -14,6 +14,7 @@ import {
 } from "@/lib/simulation/scoring";
 import { getCanvasMousePos } from "@/lib/simulation/interaction";
 import { drawTarget } from "@/lib/simulation/drawing";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import { SimMath } from "@/components/simulations/SimMath";
 
 type ChallengeType = "none" | "destructive" | "target-amplitude";
@@ -156,8 +157,8 @@ export default function WaveInterference() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
 
     ctx.clearRect(0, 0, W, H);
     ctx.fillStyle = "#0f172a";
@@ -530,8 +531,8 @@ export default function WaveInterference() {
 
     const handleClick = (e: MouseEvent) => {
       const pos = getCanvasMousePos(canvas, e);
-      const W = canvas.width;
-      const H = canvas.height;
+      const W = canvas.clientWidth;
+      const H = canvas.clientHeight;
       const margin = 50;
       const graphW = W - margin * 2;
 
@@ -566,9 +567,8 @@ export default function WaveInterference() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.6), _isMobile ? 500 : 520);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.6), _isMobile ? 500 : 520));
       draw();
     };
     resize();
@@ -626,8 +626,8 @@ export default function WaveInterference() {
       scorePopupsRef.current.push({
         text: result.label,
         points: result.points,
-        x: canvas.width / 2,
-        y: canvas.height * 0.4,
+        x: canvas.clientWidth / 2,
+        y: canvas.clientHeight * 0.4,
         startTime: performance.now(),
       });
     }
@@ -635,7 +635,7 @@ export default function WaveInterference() {
     if (result.points >= 2) {
       playSFX("success");
       playScore(result.points);
-      if (canvas) particlesRef.current.emitConfetti(canvas.width / 2, canvas.height * 0.4, 20);
+      if (canvas) particlesRef.current.emitConfetti(canvas.clientWidth / 2, canvas.clientHeight * 0.4, 20);
     } else if (result.points > 0) {
       playSFX("correct");
     } else {
@@ -658,12 +658,12 @@ export default function WaveInterference() {
 
     const canvas = canvasRef.current;
     if (canvas) {
-      const probeScreenX = 50 + targetX * (canvas.width - 100);
+      const probeScreenX = 50 + targetX * (canvas.clientWidth - 100);
       scorePopupsRef.current.push({
         text: `${result.label} (A=${maxAmp.toFixed(0)})`,
         points: result.points,
         x: probeScreenX,
-        y: canvas.height * 0.7,
+        y: canvas.clientHeight * 0.7,
         startTime: performance.now(),
       });
     }
@@ -671,7 +671,7 @@ export default function WaveInterference() {
     if (result.points >= 2) {
       playSFX("success");
       playScore(result.points);
-      if (canvas) particlesRef.current.emitConfetti(canvas.width / 2, canvas.height * 0.4, 20);
+      if (canvas) particlesRef.current.emitConfetti(canvas.clientWidth / 2, canvas.clientHeight * 0.4, 20);
     } else if (result.points > 0) {
       playSFX("correct");
     } else {

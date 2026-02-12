@@ -13,6 +13,7 @@ import {
   type ChallengeState,
 } from "@/lib/simulation/scoring";
 import { drawMeter } from "@/lib/simulation/drawing";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import { SimMath } from "@/components/simulations/SimMath";
 
 interface Particle {
@@ -102,8 +103,8 @@ export default function GasMolecules() {
       popupsRef.current.push({
         text: result.label,
         points: result.points,
-        x: canvas.width / 2,
-        y: canvas.height / 2,
+        x: canvas.clientWidth / 2,
+        y: canvas.clientHeight / 2,
         startTime: performance.now(),
       });
     }
@@ -112,7 +113,7 @@ export default function GasMolecules() {
       playSFX("correct");
       playScore(result.points);
       if (result.tier === "perfect" && canvas) {
-        particleSystemRef.current.emitConfetti(canvas.width / 2, canvas.height / 2, 20);
+        particleSystemRef.current.emitConfetti(canvas.clientWidth / 2, canvas.clientHeight / 2, 20);
       }
       // Generate new target
       setTimeout(() => {
@@ -135,8 +136,8 @@ export default function GasMolecules() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const now = performance.now();
 
     ctx.clearRect(0, 0, W, H);
@@ -447,10 +448,10 @@ export default function GasMolecules() {
             if (relSpeed > 3) {
               const canvas = canvasRef.current;
               if (canvas) {
-                const boxLeft = canvas.width * 0.05;
-                const boxTop = canvas.height * 0.05;
-                const boxW = canvas.width * 0.6 * pistonRef.current;
-                const boxH = canvas.height * 0.9;
+                const boxLeft = canvas.clientWidth * 0.05;
+                const boxTop = canvas.clientHeight * 0.05;
+                const boxW = canvas.clientWidth * 0.6 * pistonRef.current;
+                const boxH = canvas.clientHeight * 0.9;
                 const sparkX = boxLeft + ((particles[i].x + particles[j].x) / 2) * boxW;
                 const sparkY = boxTop + ((particles[i].y + particles[j].y) / 2) * boxH;
                 const sparkIntensity = Math.min(relSpeed / 8, 1);
@@ -508,9 +509,8 @@ export default function GasMolecules() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480));
       draw();
     };
     resize();
@@ -532,9 +532,9 @@ export default function GasMolecules() {
 
     const handleMouseDown = (e: MouseEvent) => {
       const rect = canvas.getBoundingClientRect();
-      const scaleX = canvas.width / rect.width;
+      const scaleX = canvas.clientWidth / rect.width;
       const mx = (e.clientX - rect.left) * scaleX;
-      const W = canvas.width;
+      const W = canvas.clientWidth;
       const boxLeft = W * 0.05;
       const boxMaxW = W * 0.6;
       const pistonX = boxLeft + boxMaxW * pistonRef.current;
@@ -549,9 +549,9 @@ export default function GasMolecules() {
     const handleMouseMove = (e: MouseEvent) => {
       if (!pistonDraggingRef.current) return;
       const rect = canvas.getBoundingClientRect();
-      const scaleX = canvas.width / rect.width;
+      const scaleX = canvas.clientWidth / rect.width;
       const mx = (e.clientX - rect.left) * scaleX;
-      const W = canvas.width;
+      const W = canvas.clientWidth;
       const boxLeft = W * 0.05;
       const boxMaxW = W * 0.6;
 

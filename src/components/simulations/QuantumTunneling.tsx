@@ -13,6 +13,7 @@ import {
 } from "@/lib/simulation/scoring";
 import { drawMeter } from "@/lib/simulation/drawing";
 import { createDragHandler } from "@/lib/simulation/interaction";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import { SimMath } from "@/components/simulations/SimMath";
 
 interface ShotParticle {
@@ -182,8 +183,8 @@ export default function QuantumTunneling() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const t = timeRef.current;
 
     ctx.clearRect(0, 0, W, H);
@@ -569,7 +570,7 @@ export default function QuantumTunneling() {
 
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const W = canvas.width;
+    const W = canvas.clientWidth;
     const { barrierX, bWidth, margin } = barrierGeomRef.current;
 
     // Update shot particles
@@ -718,9 +719,8 @@ export default function QuantumTunneling() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480));
       draw();
     };
     resize();
@@ -762,8 +762,8 @@ export default function QuantumTunneling() {
       scorePopupsRef.current.push({
         text: result.label,
         points: result.points,
-        x: canvas.width / 2,
-        y: canvas.height / 2,
+        x: canvas.clientWidth / 2,
+        y: canvas.clientHeight / 2,
         startTime: performance.now(),
       });
     }

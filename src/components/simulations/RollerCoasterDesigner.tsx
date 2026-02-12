@@ -5,6 +5,7 @@ import { ParticleSystem } from "@/lib/simulation/particles";
 import { playSFX } from "@/lib/simulation/sound";
 import { drawMeter, drawInfoPanel as drawInfoPanelUtil } from "@/lib/simulation/drawing";
 import { renderScoreboard, createChallengeState, updateChallengeState, renderScorePopup, type ScorePopup, type ChallengeState } from "@/lib/simulation/scoring";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import { SimMath } from "@/components/simulations/SimMath";
 
 interface Point {
@@ -289,8 +290,8 @@ export default function RollerCoasterDesigner() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const margin = 30;
     const trackH = H * 0.65;
     const trackTop = H * 0.05;
@@ -681,8 +682,8 @@ export default function RollerCoasterDesigner() {
     const dt = 0.3;
     const g = 9.8;
     const totalPts = pts.length;
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const margin = 30;
     const trackH = H * 0.65;
 
@@ -819,9 +820,8 @@ export default function RollerCoasterDesigner() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.6), _isMobile ? 500 : 520);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.6), _isMobile ? 500 : 520));
       computeSpline(controlPoints);
       draw();
     };
@@ -838,8 +838,8 @@ export default function RollerCoasterDesigner() {
 
     const getMousePos = (e: MouseEvent): { cx: number; cy: number } => {
       const rect = canvas.getBoundingClientRect();
-      const scaleX = canvas.width / rect.width;
-      const scaleY = canvas.height / rect.height;
+      const scaleX = canvas.clientWidth / rect.width;
+      const scaleY = canvas.clientHeight / rect.height;
       return {
         cx: (e.clientX - rect.left) * scaleX,
         cy: (e.clientY - rect.top) * scaleY,
@@ -849,7 +849,7 @@ export default function RollerCoasterDesigner() {
     const margin = 30;
     const findNearPoint = (cx: number, cy: number): number => {
       for (let i = 0; i < controlPoints.length; i++) {
-        const sp = toCanvas(controlPoints[i], canvas.width, canvas.height, margin);
+        const sp = toCanvas(controlPoints[i], canvas.clientWidth, canvas.clientHeight, margin);
         const dx = cx - sp.x;
         const dy = cy - sp.y;
         if (dx * dx + dy * dy < 225) return i;
@@ -864,7 +864,7 @@ export default function RollerCoasterDesigner() {
       if (nearIdx >= 0) {
         dragIndexRef.current = nearIdx;
       } else if (controlPoints.length < MAX_POINTS) {
-        const newPt = fromCanvas(cx, cy, canvas.width, canvas.height, margin);
+        const newPt = fromCanvas(cx, cy, canvas.clientWidth, canvas.clientHeight, margin);
         const newPoints = [...controlPoints];
         let insertIdx = newPoints.length;
         for (let i = 0; i < newPoints.length; i++) {
@@ -883,14 +883,14 @@ export default function RollerCoasterDesigner() {
       const { cx, cy } = getMousePos(e);
 
       if (dragIndexRef.current !== null) {
-        const newPt = fromCanvas(cx, cy, canvas.width, canvas.height, margin);
+        const newPt = fromCanvas(cx, cy, canvas.clientWidth, canvas.clientHeight, margin);
         setControlPoints(prev => {
           const updated = [...prev];
           updated[dragIndexRef.current!] = newPt;
           return updated;
         });
         if (dragIndexRef.current === 0) {
-          setStartHeight(fromCanvas(cx, cy, canvas.width, canvas.height, margin).y);
+          setStartHeight(fromCanvas(cx, cy, canvas.clientWidth, canvas.clientHeight, margin).y);
         }
         setPreset("custom");
       } else {

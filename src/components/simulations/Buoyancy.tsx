@@ -13,6 +13,7 @@ import {
   type ChallengeState,
 } from "@/lib/simulation/scoring";
 import { createDragHandler, getCanvasMousePos } from "@/lib/simulation/interaction";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import { SimMath } from "@/components/simulations/SimMath";
 
 // Material presets for challenges and multi-object mode
@@ -137,8 +138,8 @@ export default function Buoyancy() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const now = performance.now();
 
     ctx.clearRect(0, 0, W, H);
@@ -536,8 +537,8 @@ export default function Buoyancy() {
     lastTsRef.current = now;
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const waterLevel = H * 0.35;
     const objR = objectSize / 2;
     const objY = posRef.current * H;
@@ -643,9 +644,8 @@ export default function Buoyancy() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.6), _isMobile ? 500 : 500);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.6), _isMobile ? 500 : 500));
       draw();
     };
     resize();
@@ -680,12 +680,12 @@ export default function Buoyancy() {
         playScore(3);
         const canvas = canvasRef.current;
         if (canvas) {
-          particlesRef.current.emitConfetti(canvas.width / 2, canvas.height / 3, 25);
+          particlesRef.current.emitConfetti(canvas.clientWidth / 2, canvas.clientHeight / 3, 25);
           popupsRef.current.push({
             text: "Correct! +3",
             points: 3,
-            x: canvas.width / 2,
-            y: canvas.height / 3,
+            x: canvas.clientWidth / 2,
+            y: canvas.clientHeight / 3,
             startTime: performance.now(),
           });
         }
@@ -709,8 +709,8 @@ export default function Buoyancy() {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const waterLevel = H * 0.35;
 
     const cleanup = createDragHandler(canvas, {
@@ -773,7 +773,7 @@ export default function Buoyancy() {
       onClick: (x, y) => {
         // Predict mode button clicks
         if (gameMode === "predict" && challengeMaterial && !predictionMade) {
-          const W = canvas.width;
+          const W = canvas.clientWidth;
           const floatBtnX = W - 218;
           const floatBtnY = 100;
           const sinkBtnX = W - 110;
@@ -793,7 +793,7 @@ export default function Buoyancy() {
 
         // Next challenge button
         if (gameMode === "predict" && revealResult) {
-          const W = canvas.width;
+          const W = canvas.clientWidth;
           const nextBtnX = W - 218;
           const nextBtnY = 155;
           const nextBtnW = 200;
@@ -832,7 +832,7 @@ export default function Buoyancy() {
       playScore(result.points);
       const canvas = canvasRef.current;
       if (canvas) {
-        particlesRef.current.emitConfetti(canvas.width / 2, canvas.height / 3, result.points * 8);
+        particlesRef.current.emitConfetti(canvas.clientWidth / 2, canvas.clientHeight / 3, result.points * 8);
       }
     } else if (result.points === 1) {
       playSFX("pop");

@@ -3,6 +3,7 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import { ParticleSystem } from "@/lib/simulation/particles";
 import { playSFX, playScore } from "@/lib/simulation/sound";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import {
   calculateAccuracy,
   renderScorePopup,
@@ -109,8 +110,8 @@ export default function NuclearFission() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const stats = statsRef.current;
 
     ctx.clearRect(0, 0, W, H);
@@ -361,8 +362,8 @@ export default function NuclearFission() {
     const stats = statsRef.current;
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
 
     // Update particles
     particlesRef.current.update(dt);
@@ -542,9 +543,8 @@ export default function NuclearFission() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480));
       draw();
     };
     resize();

@@ -13,6 +13,7 @@ import {
   type ChallengeState,
 } from "@/lib/simulation/scoring";
 import { createDragHandler, getCanvasMousePos } from "@/lib/simulation/interaction";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import { SimMath } from "@/components/simulations/SimMath";
 
 type GameMode = "sandbox" | "target_omega" | "platform";
@@ -96,8 +97,8 @@ export default function AngularMomentum() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
 
     ctx.clearRect(0, 0, W, H);
     ctx.fillStyle = "#0f172a";
@@ -582,9 +583,8 @@ export default function AngularMomentum() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.5), _isMobile ? 500 : 440);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.5), _isMobile ? 500 : 440));
       draw();
     };
     resize();
@@ -604,8 +604,8 @@ export default function AngularMomentum() {
 
     const cleanup = createDragHandler(canvas, {
       onDragStart: (x, y) => {
-        const W = canvas.width;
-        const H = canvas.height;
+        const W = canvas.clientWidth;
+        const H = canvas.clientHeight;
 
         if (gameMode === "platform") {
           // In platform mode, clicks handled separately
@@ -633,8 +633,8 @@ export default function AngularMomentum() {
       },
       onDrag: (x, y) => {
         if (!isDraggingArmsRef.current) return;
-        const W = canvas.width;
-        const H = canvas.height;
+        const W = canvas.clientWidth;
+        const H = canvas.clientHeight;
         const cx = W * 0.35;
         const cy = H * 0.45;
 
@@ -662,13 +662,13 @@ export default function AngularMomentum() {
               popupsRef.current.push({
                 text: result.label,
                 points: result.points,
-                x: canvas.width / 2,
-                y: canvas.height / 2,
+                x: canvas.clientWidth / 2,
+                y: canvas.clientHeight / 2,
                 startTime: performance.now(),
               });
               if (result.points > 0) {
                 playScore(result.points);
-                particlesRef.current.emitConfetti(canvas.width / 2, canvas.height / 2, 15);
+                particlesRef.current.emitConfetti(canvas.clientWidth / 2, canvas.clientHeight / 2, 15);
               } else {
                 playSFX("incorrect");
               }
@@ -682,8 +682,8 @@ export default function AngularMomentum() {
       },
       onClick: (x, y) => {
         if (gameMode !== "platform") return;
-        const W = canvas.width;
-        const H = canvas.height;
+        const W = canvas.clientWidth;
+        const H = canvas.clientHeight;
         const cx = W * 0.35;
         const cy = H * 0.45;
         const platformR = 120;
@@ -721,8 +721,8 @@ export default function AngularMomentum() {
       if (gameMode !== "platform") return;
       e.preventDefault();
       const pos = getCanvasMousePos(canvas, e);
-      const W = canvas.width;
-      const H = canvas.height;
+      const W = canvas.clientWidth;
+      const H = canvas.clientHeight;
       const cx = W * 0.35;
       const cy = H * 0.45;
       const platformR = 120;
@@ -767,14 +767,14 @@ export default function AngularMomentum() {
       popupsRef.current.push({
         text: result.label,
         points: result.points,
-        x: canvas.width / 2,
-        y: canvas.height / 2,
+        x: canvas.clientWidth / 2,
+        y: canvas.clientHeight / 2,
         startTime: performance.now(),
       });
     }
     if (result.points > 0) {
       playScore(result.points);
-      if (canvas) particlesRef.current.emitConfetti(canvas.width / 2, canvas.height / 2, 15);
+      if (canvas) particlesRef.current.emitConfetti(canvas.clientWidth / 2, canvas.clientHeight / 2, 15);
     } else {
       playSFX("incorrect");
     }

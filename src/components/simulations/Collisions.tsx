@@ -3,6 +3,7 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import { ParticleSystem } from "@/lib/simulation/particles";
 import { playSFX, playScore } from "@/lib/simulation/sound";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import {
   calculateAccuracy,
   renderScorePopup,
@@ -146,8 +147,8 @@ export default function Collisions() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const balls = ballsRef.current;
 
     ctx.clearRect(0, 0, W, H);
@@ -512,8 +513,8 @@ export default function Collisions() {
       scorePopupsRef.current.push({
         text: combinedResult.label,
         points: combinedResult.points,
-        x: canvas.width / 2,
-        y: canvas.height * 0.3,
+        x: canvas.clientWidth / 2,
+        y: canvas.clientHeight * 0.3,
         startTime: performance.now(),
       });
     }
@@ -523,7 +524,7 @@ export default function Collisions() {
       playScore(combinedPoints);
       playSFX("success");
       if (canvas) {
-        particlesRef.current.emitConfetti(canvas.width / 2, canvas.height * 0.3, 25);
+        particlesRef.current.emitConfetti(canvas.clientWidth / 2, canvas.clientHeight * 0.3, 25);
       }
     } else if (combinedPoints > 0) {
       playSFX("correct");
@@ -661,9 +662,8 @@ export default function Collisions() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 460);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 460));
       draw();
     };
     resize();

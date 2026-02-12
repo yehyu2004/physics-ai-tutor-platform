@@ -13,6 +13,7 @@ import {
 } from "@/lib/simulation/scoring";
 import { createDragHandler } from "@/lib/simulation/interaction";
 import { drawInfoPanel, drawArrow } from "@/lib/simulation/drawing";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import { SimMath } from "@/components/simulations/SimMath";
 
 type SimMode = "beam" | "hooke" | "challenge";
@@ -567,8 +568,8 @@ export default function BeamBalance() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
 
     ctx.clearRect(0, 0, W, H);
     ctx.fillStyle = "#0f172a";
@@ -664,8 +665,8 @@ export default function BeamBalance() {
         /* Award points only once per stable period */
         if (!challengeRef.current.lastResult || challengeRef.current.lastResult.label !== "checking") {
           const canvas = canvasRef.current;
-          const cx = canvas ? canvas.width / 2 : 300;
-          const cy = canvas ? canvas.height / 2 : 200;
+          const cx = canvas ? canvas.clientWidth / 2 : 300;
+          const cy = canvas ? canvas.clientHeight / 2 : 200;
 
           const result = { points: 3, tier: "perfect" as const, label: "Balanced!" };
           challengeRef.current = updateChallengeState(challengeRef.current, result);
@@ -708,9 +709,8 @@ export default function BeamBalance() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480));
       draw();
     };
     resize();
@@ -737,7 +737,7 @@ export default function BeamBalance() {
 
     const cleanup = createDragHandler(canvas, {
       onDragStart: (x, y) => {
-        const { beamCx, beamCy, beamPixelLen, pxPerMeter } = computeBeamGeometry(canvas.width, canvas.height);
+        const { beamCx, beamCy, beamPixelLen, pxPerMeter } = computeBeamGeometry(canvas.clientWidth, canvas.clientHeight);
         const angle = angleArray.current;
 
         /* Check if clicking on an existing weight */
@@ -761,7 +761,7 @@ export default function BeamBalance() {
       },
       onDrag: (x) => {
         if (draggingWeightRef.current == null) return;
-        const { beamCx, pxPerMeter } = computeBeamGeometry(canvas.width, canvas.height);
+        const { beamCx, pxPerMeter } = computeBeamGeometry(canvas.clientWidth, canvas.clientHeight);
         const newPosM = pixelToMeter(x - beamCx, pxPerMeter);
         const clampedPos = Math.max(-BEAM_HALF, Math.min(BEAM_HALF, newPosM));
 
@@ -780,7 +780,7 @@ export default function BeamBalance() {
       },
       onClick: (x, y) => {
         if (draggingWeightRef.current != null) return;
-        const { beamCx, beamCy, beamPixelLen, pxPerMeter } = computeBeamGeometry(canvas.width, canvas.height);
+        const { beamCx, beamCy, beamPixelLen, pxPerMeter } = computeBeamGeometry(canvas.clientWidth, canvas.clientHeight);
 
         /* Check if near the beam to place */
         if (Math.abs(y - beamCy) < 50 && Math.abs(x - beamCx) < beamPixelLen / 2) {
@@ -804,12 +804,12 @@ export default function BeamBalance() {
     const handleContextMenu = (e: MouseEvent) => {
       e.preventDefault();
       const rect = canvas.getBoundingClientRect();
-      const scaleX = canvas.width / rect.width;
-      const scaleY = canvas.height / rect.height;
+      const scaleX = canvas.clientWidth / rect.width;
+      const scaleY = canvas.clientHeight / rect.height;
       const x = (e.clientX - rect.left) * scaleX;
       const y = (e.clientY - rect.top) * scaleY;
 
-      const { beamCx, beamCy, pxPerMeter } = computeBeamGeometry(canvas.width, canvas.height);
+      const { beamCx, beamCy, pxPerMeter } = computeBeamGeometry(canvas.clientWidth, canvas.clientHeight);
       const angle = angleArray.current;
 
       for (let i = weightsArray.current.length - 1; i >= 0; i--) {

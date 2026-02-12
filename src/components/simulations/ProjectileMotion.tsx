@@ -6,7 +6,6 @@ import { playSFX, playScore } from "@/lib/simulation/sound";
 import {
   calculateAccuracy,
   renderScorePopup,
-  renderScoreboard,
   createChallengeState,
   updateChallengeState,
   type ScorePopup,
@@ -15,6 +14,7 @@ import {
 import { drawTarget } from "@/lib/simulation/drawing";
 import { SimMath } from "@/components/simulations/SimMath";
 import { createDragHandler } from "@/lib/simulation/interaction";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 
 interface Trail {
   x: number;
@@ -88,7 +88,7 @@ export default function ProjectileMotion() {
   const getScale = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return 1;
-    const gY = canvas.height * groundY;
+    const gY = canvas.clientHeight * groundY;
     return (gY - 40) / ((100 * 100) / (2 * gravity) + 10);
   }, [gravity]);
 
@@ -98,8 +98,8 @@ export default function ProjectileMotion() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const gY = H * groundY;
     const scale = getScale();
     const originX = 60;
@@ -162,10 +162,6 @@ export default function ProjectileMotion() {
       ctx.lineTo(windBarX + windLen - dir * 8, windBarY + 4);
       ctx.closePath();
       ctx.fill();
-      ctx.font = "10px ui-monospace, monospace";
-      ctx.fillStyle = "rgba(100,200,255,0.6)";
-      ctx.textAlign = "center";
-      ctx.fillText(`Wind: ${wind > 0 ? "+" : ""}${wind.toFixed(0)} m/s`, windBarX, windBarY + 15);
 
       // Wind particles (small streaks)
       const windTime = performance.now() / 1000;
@@ -374,55 +370,7 @@ export default function ProjectileMotion() {
       renderScorePopup(ctx, p, now),
     );
 
-    // Info overlay
-    const noWindRange = (speed * speed * Math.sin(2 * rad)) / gravity;
-    const maxH = (vy0 * vy0) / (2 * gravity);
-    const totalTimeNoWind = (2 * vy0) / gravity;
-
-    ctx.fillStyle = "rgba(0,0,0,0.6)";
-    const infoPanelH = wind !== 0 ? 108 : 90;
-    ctx.beginPath();
-    (ctx as CanvasRenderingContext2D).roundRect(W - 200, 12, 188, infoPanelH, 8);
-    ctx.fill();
-    ctx.strokeStyle = "rgba(255,255,255,0.1)";
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    ctx.font = "bold 11px ui-monospace, monospace";
-    ctx.fillStyle = "#94a3b8";
-    ctx.textAlign = "left";
-    ctx.fillText("PROJECTILE DATA", W - 190, 30);
-    ctx.font = "12px ui-monospace, monospace";
-    ctx.fillStyle = "#e2e8f0";
-    ctx.fillText(`Range:  ${noWindRange.toFixed(1)} m`, W - 190, 50);
-    ctx.fillText(`Max H:  ${maxH.toFixed(1)} m`, W - 190, 67);
-    ctx.fillText(`Time:   ${totalTimeNoWind.toFixed(2)} s`, W - 190, 84);
-    if (wind !== 0) {
-      ctx.fillStyle = "rgba(100,200,255,0.8)";
-      ctx.fillText(`Wind:   ${wind > 0 ? "+" : ""}${wind.toFixed(0)} m/s`, W - 190, 101);
-    }
-
-    // Challenge scoreboard
-    if (mode === "target") {
-      renderScoreboard(ctx, 12, 12, 150, 110, challengeRef.current);
-    }
-
-    // Mode badge
-    if (mode !== "sandbox") {
-      const badgeText = mode === "target" ? "TARGET MODE" : "PREDICT MODE";
-      const badgeColor = mode === "target" ? "#ef4444" : "#f59e0b";
-      ctx.fillStyle = `${badgeColor}33`;
-      ctx.beginPath();
-      const tw = ctx.measureText(badgeText).width + 20;
-      (ctx as CanvasRenderingContext2D).roundRect(W / 2 - tw / 2, H - 30, tw, 22, 6);
-      ctx.fill();
-      ctx.strokeStyle = badgeColor;
-      ctx.lineWidth = 1;
-      ctx.stroke();
-      ctx.fillStyle = badgeColor;
-      ctx.font = "bold 11px ui-monospace, monospace";
-      ctx.textAlign = "center";
-      ctx.fillText(badgeText, W / 2, H - 15);
-    }
+    // HUD text is rendered as HTML overlays (see JSX below)
   }, [angle, speed, gravity, wind, isRunning, mode, showPrediction, getScale]);
 
   const animate = useCallback(() => {
@@ -436,7 +384,7 @@ export default function ProjectileMotion() {
     const dt = Math.min((now - lastTsRef.current) / 1000, 0.05);
     lastTsRef.current = now;
 
-    const gY = canvas.height * groundY;
+    const gY = canvas.clientHeight * groundY;
     const scale = getScale();
     const originX = 60;
 
@@ -569,9 +517,8 @@ export default function ProjectileMotion() {
     const resizeCanvas = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 500);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 500));
       draw();
     };
     resizeCanvas();
@@ -598,7 +545,7 @@ export default function ProjectileMotion() {
     const cleanup = createDragHandler(canvas, {
       onClick: (x, y) => {
         if (mode === "predict" && !isRunning) {
-          const gY = canvas.height * groundY;
+          const gY = canvas.clientHeight * groundY;
           // Only accept clicks near the ground level
           if (Math.abs(y - gY) < 30) {
             predictionMarkerRef.current = x;
@@ -659,10 +606,57 @@ export default function ProjectileMotion() {
     }
   };
 
+  const rad = (angle * Math.PI) / 180;
+  const vy0 = speed * Math.sin(rad);
+  const noWindRange = (speed * speed * Math.sin(2 * rad)) / gravity;
+  const maxH = (vy0 * vy0) / (2 * gravity);
+  const totalTimeNoWind = (2 * vy0) / gravity;
+
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden bg-gray-950">
+      <div className="relative rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden bg-gray-950">
         <canvas ref={canvasRef} className="w-full cursor-crosshair" />
+
+        {/* HUD: Info panel (top-right) */}
+        <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm rounded-lg border border-white/10 px-3 py-2 pointer-events-none">
+          <p className="text-[11px] font-bold font-mono text-slate-400 uppercase tracking-wider mb-1">Projectile Data</p>
+          <div className="space-y-0.5 text-xs font-mono text-slate-200">
+            <p>Range: <span className="font-semibold">{noWindRange.toFixed(1)} m</span></p>
+            <p>Max H: <span className="font-semibold">{maxH.toFixed(1)} m</span></p>
+            <p>Time: <span className="font-semibold">{totalTimeNoWind.toFixed(2)} s</span></p>
+            {wind !== 0 && (
+              <p className="text-cyan-300/80">Wind: <span className="font-semibold">{wind > 0 ? "+" : ""}{wind.toFixed(0)} m/s</span></p>
+            )}
+          </div>
+        </div>
+
+        {/* HUD: Scoreboard (top-left, target mode) */}
+        {mode === "target" && (
+          <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm rounded-lg border border-white/10 px-3 py-2 pointer-events-none">
+            <p className="text-[11px] font-bold font-mono text-slate-400 uppercase tracking-wider mb-1">Challenge</p>
+            <p className="text-lg font-bold font-mono text-slate-100">{challengeRef.current.score}</p>
+            <div className="space-y-0.5 text-[10px] font-mono text-slate-400 mt-1">
+              <p>Attempts: {challengeRef.current.attempts}</p>
+              {challengeRef.current.streak > 0 && (
+                <p className="text-amber-400">Streak: {challengeRef.current.streak}</p>
+              )}
+              <p>Accuracy: {challengeRef.current.attempts > 0 ? Math.round((challengeRef.current.score / (challengeRef.current.attempts * 3)) * 100) : 0}%</p>
+            </div>
+          </div>
+        )}
+
+        {/* HUD: Mode badge (bottom-center) */}
+        {mode !== "sandbox" && (
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 pointer-events-none">
+            <span className={`px-3 py-1 rounded-md text-[11px] font-bold font-mono uppercase tracking-wider border ${
+              mode === "target"
+                ? "text-red-400 bg-red-500/20 border-red-500/50"
+                : "text-amber-400 bg-amber-500/20 border-amber-500/50"
+            }`}>
+              {mode === "target" ? "Target Mode" : "Predict Mode"}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Mode selector */}

@@ -14,6 +14,7 @@ import {
 } from "@/lib/simulation/scoring";
 import { createDragHandler } from "@/lib/simulation/interaction";
 import { drawArrow, drawInfoPanel } from "@/lib/simulation/drawing";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import { SimMath } from "@/components/simulations/SimMath";
 
 // Coulomb constant in visual units (scaled for canvas)
@@ -140,8 +141,8 @@ export default function CoulombLaw() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const now = performance.now();
     const currentCharges = chargesRef.current;
     const currentSelected = selectedRef.current;
@@ -464,16 +465,15 @@ export default function CoulombLaw() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 500);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 500));
 
       // Re-position default charges if they are off-screen
       setCharges((prev) =>
         prev.map((c) => ({
           ...c,
-          x: Math.min(c.x, canvas.width - 30),
-          y: Math.min(c.y, canvas.height - 30),
+          x: Math.min(c.x, canvas.clientWidth - 30),
+          y: Math.min(c.y, canvas.clientHeight - 30),
         }))
       );
 
@@ -517,8 +517,8 @@ export default function CoulombLaw() {
             c.id === draggingIdRef.current
               ? {
                   ...c,
-                  x: Math.max(20, Math.min(canvas.width - 20, x)),
-                  y: Math.max(20, Math.min(canvas.height - 20, y)),
+                  x: Math.max(20, Math.min(canvas.clientWidth - 20, x)),
+                  y: Math.max(20, Math.min(canvas.clientHeight - 20, y)),
                 }
               : c
           )
@@ -579,8 +579,8 @@ export default function CoulombLaw() {
 
     // Place the two challenge charges on canvas
     const canvas = canvasRef.current;
-    const cW = canvas ? canvas.width : 800;
-    const cH = canvas ? canvas.height : 440;
+    const cW = canvas ? canvas.clientWidth : 800;
+    const cH = canvas ? canvas.clientHeight : 440;
     const cx = cW / 2;
     const cy = cH / 2;
     const halfDist = distPx / 2;
@@ -601,8 +601,8 @@ export default function CoulombLaw() {
     setPredictionSubmitted(true);
 
     const canvas = canvasRef.current;
-    const popX = canvas ? canvas.width / 2 : 400;
-    const popY = canvas ? canvas.height / 3 : 150;
+    const popX = canvas ? canvas.clientWidth / 2 : 400;
+    const popY = canvas ? canvas.clientHeight / 3 : 150;
 
     if (result.points >= 2) {
       playSFX("correct");
@@ -759,8 +759,8 @@ export default function CoulombLaw() {
             <button
               onClick={() => {
                 const canvas = canvasRef.current;
-                const cW = canvas ? canvas.width : 800;
-                const cH = canvas ? canvas.height : 440;
+                const cW = canvas ? canvas.clientWidth : 800;
+                const cH = canvas ? canvas.clientHeight : 440;
                 setCharges([
                   { id: nextId.current++, x: cW * 0.35, y: cH * 0.5, q: 1, magnitude: 3 },
                   { id: nextId.current++, x: cW * 0.65, y: cH * 0.5, q: -1, magnitude: 3 },
@@ -774,8 +774,8 @@ export default function CoulombLaw() {
             <button
               onClick={() => {
                 const canvas = canvasRef.current;
-                const cW = canvas ? canvas.width : 800;
-                const cH = canvas ? canvas.height : 440;
+                const cW = canvas ? canvas.clientWidth : 800;
+                const cH = canvas ? canvas.clientHeight : 440;
                 const cx = cW / 2;
                 const cy = cH / 2;
                 const r = 120;

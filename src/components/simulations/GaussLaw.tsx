@@ -14,6 +14,7 @@ import {
 } from "@/lib/simulation/scoring";
 import { drawInfoPanel } from "@/lib/simulation/drawing";
 import { createDragHandler } from "@/lib/simulation/interaction";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import { SimMath } from "@/components/simulations/SimMath";
 
 type ChargeConfig = "point" | "line" | "sphere" | "plane";
@@ -166,8 +167,8 @@ export default function GaussLaw() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const now = performance.now();
     const cfg = configRef.current;
     const qNano = chargeMagRef.current;
@@ -608,9 +609,8 @@ export default function GaussLaw() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 500);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 500));
       draw();
     };
     resize();
@@ -631,8 +631,8 @@ export default function GaussLaw() {
 
     const cleanup = createDragHandler(canvas, {
       onDragStart: (x, y) => {
-        const W = canvas.width;
-        const H = canvas.height;
+        const W = canvas.clientWidth;
+        const H = canvas.clientHeight;
         const scx = surfaceCenterRef.current.x * W;
         const scy = surfaceCenterRef.current.y * H;
         const dist = Math.sqrt((x - scx) * (x - scx) + (y - scy) * (y - scy));
@@ -645,8 +645,8 @@ export default function GaussLaw() {
       },
       onDrag: (x, y) => {
         if (surfaceDraggingRef.current) {
-          const W = canvas.width;
-          const H = canvas.height;
+          const W = canvas.clientWidth;
+          const H = canvas.clientHeight;
           surfaceCenterRef.current = {
             x: Math.max(0.1, Math.min(0.9, x / W)),
             y: Math.max(0.1, Math.min(0.9, y / H)),
@@ -696,8 +696,8 @@ export default function GaussLaw() {
     popupsRef.current.push({
       text: result.label,
       points: result.points,
-      x: canvas.width / 2,
-      y: canvas.height / 2,
+      x: canvas.clientWidth / 2,
+      y: canvas.clientHeight / 2,
       startTime: performance.now(),
     });
 
@@ -705,9 +705,9 @@ export default function GaussLaw() {
       playSFX("correct");
       playScore(result.points);
       if (result.tier === "perfect") {
-        particlesRef.current.emitConfetti(canvas.width / 2, canvas.height / 2, 20);
+        particlesRef.current.emitConfetti(canvas.clientWidth / 2, canvas.clientHeight / 2, 20);
       } else {
-        particlesRef.current.emitGlow(canvas.width / 2, canvas.height / 2, 10, "#22c55e");
+        particlesRef.current.emitGlow(canvas.clientWidth / 2, canvas.clientHeight / 2, 10, "#22c55e");
       }
       setFeedback(
         `${result.label} Actual \u03A6 = ${actualFlux.toExponential(2)} N\u00B7m\u00B2/C`

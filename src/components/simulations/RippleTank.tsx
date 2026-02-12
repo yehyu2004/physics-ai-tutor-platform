@@ -5,6 +5,7 @@ import { ParticleSystem } from "@/lib/simulation/particles";
 import { playSFX } from "@/lib/simulation/sound";
 import { drawInfoPanel } from "@/lib/simulation/drawing";
 import { renderScoreboard, renderScorePopup, createChallengeState, updateChallengeState, calculateAccuracy, type ScorePopup, type ChallengeState } from "@/lib/simulation/scoring";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import { SimMath } from "@/components/simulations/SimMath";
 
 interface WaveSource {
@@ -272,8 +273,8 @@ export default function RippleTank() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
 
     ctx.fillStyle = "#020617";
     ctx.fillRect(0, 0, W, H);
@@ -624,8 +625,8 @@ export default function RippleTank() {
           const dy = getAmplitudeAt(rx, ry + 0.01, t) - getAmplitudeAt(rx, ry - 0.01, t);
           const gradMag = Math.sqrt(dx * dx + dy * dy);
           if (gradMag > 0.01) {
-            const px = rx * canvas.width;
-            const py = ry * canvas.height;
+            const px = rx * canvas.clientWidth;
+            const py = ry * canvas.clientHeight;
             const angle = Math.atan2(dy, dx);
             const color = amp > 0 ? "rgba(239,68,68,0.4)" : "rgba(59,130,246,0.4)";
             particleSystemRef.current.emitTrail(px, py, angle + Math.PI, color);
@@ -653,9 +654,8 @@ export default function RippleTank() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.6), _isMobile ? 500 : 520);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.6), _isMobile ? 500 : 520));
       draw();
     };
     resize();
@@ -764,7 +764,7 @@ export default function RippleTank() {
       challengeRef.current = updateChallengeState(challengeRef.current, result);
       const canvas = canvasRef.current;
       if (canvas) {
-        scorePopupsRef.current.push({ text: result.label, points: 0, x: canvas.width / 2, y: canvas.height / 2, startTime: performance.now() });
+        scorePopupsRef.current.push({ text: result.label, points: 0, x: canvas.clientWidth / 2, y: canvas.clientHeight / 2, startTime: performance.now() });
       }
       if (soundEnabledRef.current) playSFX("incorrect");
       return;
@@ -797,7 +797,7 @@ export default function RippleTank() {
     challengeRef.current = updateChallengeState(challengeRef.current, result);
     const canvas = canvasRef.current;
     if (canvas) {
-      scorePopupsRef.current.push({ text: result.label, points: result.points, x: canvas.width / 2, y: canvas.height / 2, startTime: performance.now() });
+      scorePopupsRef.current.push({ text: result.label, points: result.points, x: canvas.clientWidth / 2, y: canvas.clientHeight / 2, startTime: performance.now() });
     }
     if (soundEnabledRef.current) playSFX(result.points > 0 ? "correct" : "incorrect");
 

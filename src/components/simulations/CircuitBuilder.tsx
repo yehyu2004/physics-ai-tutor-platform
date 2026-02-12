@@ -5,6 +5,7 @@ import { ParticleSystem } from "@/lib/simulation/particles";
 import { playSFX } from "@/lib/simulation/sound";
 import { drawMeter } from "@/lib/simulation/drawing";
 import { renderScoreboard, renderScorePopup, createChallengeState, updateChallengeState, type ScorePopup, type ChallengeState } from "@/lib/simulation/scoring";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import { SimMath } from "@/components/simulations/SimMath";
 
 // --- Types ---
@@ -380,8 +381,8 @@ export default function CircuitBuilder() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const cell = getCellSize(W, H);
     const t = timeRef.current;
     const analysis = analysisRef.current;
@@ -1031,9 +1032,9 @@ export default function CircuitBuilder() {
       const canvas = canvasRef.current;
       if (!canvas) return;
       const rect = canvas.getBoundingClientRect();
-      const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
-      const my = (e.clientY - rect.top) * (canvas.height / rect.height);
-      const gp = pixelToGrid(mx, my, canvas.width, canvas.height);
+      const mx = (e.clientX - rect.left) * (canvas.clientWidth / rect.width);
+      const my = (e.clientY - rect.top) * (canvas.clientHeight / rect.height);
+      const gp = pixelToGrid(mx, my, canvas.clientWidth, canvas.clientHeight);
       if (!gp) return;
 
       if (tool === "delete") {
@@ -1135,9 +1136,9 @@ export default function CircuitBuilder() {
       const canvas = canvasRef.current;
       if (!canvas) return;
       const rect = canvas.getBoundingClientRect();
-      const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
-      const my = (e.clientY - rect.top) * (canvas.height / rect.height);
-      const gp = pixelToGrid(mx, my, canvas.width, canvas.height);
+      const mx = (e.clientX - rect.left) * (canvas.clientWidth / rect.width);
+      const my = (e.clientY - rect.top) * (canvas.clientHeight / rect.height);
+      const gp = pixelToGrid(mx, my, canvas.clientWidth, canvas.clientHeight);
       if (gp) {
         const dr = Math.abs(gp.row - wireDragStart.current.row);
         const dc = Math.abs(gp.col - wireDragStart.current.col);
@@ -1310,7 +1311,7 @@ export default function CircuitBuilder() {
       challengeRef.current = updateChallengeState(challengeRef.current, result);
       const canvas = canvasRef.current;
       if (canvas) {
-        scorePopupsRef.current.push({ text: result.label, points: 0, x: canvas.width / 2, y: canvas.height / 2, startTime: performance.now() });
+        scorePopupsRef.current.push({ text: result.label, points: 0, x: canvas.clientWidth / 2, y: canvas.clientHeight / 2, startTime: performance.now() });
       }
       playSFX("incorrect");
       return;
@@ -1321,7 +1322,7 @@ export default function CircuitBuilder() {
       challengeRef.current = updateChallengeState(challengeRef.current, result);
       const canvas = canvasRef.current;
       if (canvas) {
-        scorePopupsRef.current.push({ text: result.label, points: 0, x: canvas.width / 2, y: canvas.height / 2, startTime: performance.now() });
+        scorePopupsRef.current.push({ text: result.label, points: 0, x: canvas.clientWidth / 2, y: canvas.clientHeight / 2, startTime: performance.now() });
       }
       playSFX("fail");
       return;
@@ -1334,7 +1335,7 @@ export default function CircuitBuilder() {
       challengeRef.current = updateChallengeState(challengeRef.current, result);
       const canvas = canvasRef.current;
       if (canvas) {
-        scorePopupsRef.current.push({ text: result.label, points: 0, x: canvas.width / 2, y: canvas.height / 2, startTime: performance.now() });
+        scorePopupsRef.current.push({ text: result.label, points: 0, x: canvas.clientWidth / 2, y: canvas.clientHeight / 2, startTime: performance.now() });
       }
       playSFX("incorrect");
       return;
@@ -1346,7 +1347,7 @@ export default function CircuitBuilder() {
       challengeRef.current = updateChallengeState(challengeRef.current, result);
       const canvas = canvasRef.current;
       if (canvas) {
-        scorePopupsRef.current.push({ text: result.label, points: 0, x: canvas.width / 2, y: canvas.height / 2, startTime: performance.now() });
+        scorePopupsRef.current.push({ text: result.label, points: 0, x: canvas.clientWidth / 2, y: canvas.clientHeight / 2, startTime: performance.now() });
       }
       playSFX("incorrect");
       return;
@@ -1373,9 +1374,9 @@ export default function CircuitBuilder() {
     challengeRef.current = updateChallengeState(challengeRef.current, result);
     const canvas = canvasRef.current;
     if (canvas) {
-      scorePopupsRef.current.push({ text: `${label} (${data.current.toFixed(2)}A)`, points, x: canvas.width / 2, y: canvas.height / 2, startTime: performance.now() });
+      scorePopupsRef.current.push({ text: `${label} (${data.current.toFixed(2)}A)`, points, x: canvas.clientWidth / 2, y: canvas.clientHeight / 2, startTime: performance.now() });
       if (points >= 2) {
-        particleSystemRef.current.emitConfetti(canvas.width / 2, canvas.height / 2, 25);
+        particleSystemRef.current.emitConfetti(canvas.clientWidth / 2, canvas.clientHeight / 2, 25);
       }
     }
     playSFX(points > 0 ? "correct" : "incorrect");
@@ -1402,7 +1403,7 @@ export default function CircuitBuilder() {
         for (const comp of components) {
           if (comp.type === "battery") {
             const terms = getTerminals(comp);
-            const p = gridToPixel(terms[0].row, terms[0].col, canvas.width, canvas.height);
+            const p = gridToPixel(terms[0].row, terms[0].col, canvas.clientWidth, canvas.clientHeight);
             particleSystemRef.current.emitSparks(p.x, p.y, 30, "#ef4444");
           }
         }
@@ -1433,9 +1434,8 @@ export default function CircuitBuilder() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 520);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 520));
       draw();
     };
     resize();

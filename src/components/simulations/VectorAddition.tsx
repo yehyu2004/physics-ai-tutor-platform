@@ -13,6 +13,7 @@ import {
   type ChallengeState,
 } from "@/lib/simulation/scoring";
 import { drawTarget } from "@/lib/simulation/drawing";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import { SimMath } from "@/components/simulations/SimMath";
 
 interface Vec {
@@ -117,12 +118,12 @@ export default function VectorAddition() {
       popupsRef.current.push({
         text: `${finalResult.label} (err: ${error.toFixed(0)}px)`,
         points: finalResult.points,
-        x: canvas.width / 2,
-        y: canvas.height / 2,
+        x: canvas.clientWidth / 2,
+        y: canvas.clientHeight / 2,
         startTime: performance.now(),
       });
       if (finalResult.points >= 2) {
-        particleSystemRef.current.emitConfetti(canvas.width / 2, canvas.height * 0.4, 20);
+        particleSystemRef.current.emitConfetti(canvas.clientWidth / 2, canvas.clientHeight * 0.4, 20);
       }
     }
 
@@ -147,8 +148,8 @@ export default function VectorAddition() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const ox = W * 0.3;
     const oy = H * 0.55;
 
@@ -576,9 +577,8 @@ export default function VectorAddition() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480));
       draw();
     };
     resize();
@@ -612,8 +612,8 @@ export default function VectorAddition() {
     const rect = canvas.getBoundingClientRect();
     const mx = e.clientX - rect.left;
     const my = e.clientY - rect.top;
-    const ox = canvas.width * 0.3;
-    const oy = canvas.height * 0.55;
+    const ox = canvas.clientWidth * 0.3;
+    const oy = canvas.clientHeight * 0.55;
 
     for (let i = 0; i < vectors.length; i++) {
       const tipX = ox + vectors[i].x;
@@ -632,8 +632,8 @@ export default function VectorAddition() {
     const rect = canvas.getBoundingClientRect();
     const mx = e.clientX - rect.left;
     const my = e.clientY - rect.top;
-    const ox = canvas.width * 0.3;
-    const oy = canvas.height * 0.55;
+    const ox = canvas.clientWidth * 0.3;
+    const oy = canvas.clientHeight * 0.55;
 
     setVectors((prev) =>
       prev.map((v, i) => (i === dragging ? { ...v, x: mx - ox, y: my - oy } : v))

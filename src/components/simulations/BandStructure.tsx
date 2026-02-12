@@ -13,6 +13,7 @@ import {
   type ChallengeState,
 } from "@/lib/simulation/scoring";
 import { drawInfoPanel } from "@/lib/simulation/drawing";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import { SimMath } from "@/components/simulations/SimMath";
 
 // --- Types ---
@@ -183,8 +184,8 @@ export default function BandStructure() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const now = performance.now();
     const mat = materialRef.current;
     const T = temperatureRef.current;
@@ -699,8 +700,8 @@ export default function BandStructure() {
           // Particle effect
           const canvas = canvasRef.current;
           if (canvas) {
-            const ex = 40 + 10 + el.x * (canvas.width * 0.55 - 40 - 20);
-            const midY = canvas.height * 0.45;
+            const ex = 40 + 10 + el.x * (canvas.clientWidth * 0.55 - 40 - 20);
+            const midY = canvas.clientHeight * 0.45;
             particlesRef.current.emitGlow(ex, midY, 3, "#60a5fa");
           }
         } else if (el.band === "donor" && Math.random() < exciteProb * 20) {
@@ -768,9 +769,8 @@ export default function BandStructure() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480));
       draw();
     };
     resize();
@@ -811,7 +811,7 @@ export default function BandStructure() {
       playScore(result.points);
       const canvas = canvasRef.current;
       if (canvas) {
-        particlesRef.current.emitConfetti(canvas.width / 2, canvas.height / 3, result.points * 8);
+        particlesRef.current.emitConfetti(canvas.clientWidth / 2, canvas.clientHeight / 3, result.points * 8);
       }
     } else if (result.points === 1) {
       playSFX("pop");

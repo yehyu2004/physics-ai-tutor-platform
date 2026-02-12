@@ -14,6 +14,7 @@ import {
 } from "@/lib/simulation/scoring";
 import { drawArrow } from "@/lib/simulation/drawing";
 import { createDragHandler, getCanvasMousePos } from "@/lib/simulation/interaction";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import { SimMath } from "@/components/simulations/SimMath";
 
 type GameMode = "sandbox" | "balance_beam" | "target_alpha";
@@ -76,8 +77,8 @@ export default function TorqueRotation() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const cx = W * 0.4;
     const cy = H * 0.5;
 
@@ -520,11 +521,11 @@ export default function TorqueRotation() {
             popupsRef.current.push({
               text: result.label,
               points: result.points,
-              x: canvas.width / 2,
-              y: canvas.height / 2,
+              x: canvas.clientWidth / 2,
+              y: canvas.clientHeight / 2,
               startTime: performance.now(),
             });
-            particlesRef.current.emitConfetti(canvas.width / 2, canvas.height / 3, 25);
+            particlesRef.current.emitConfetti(canvas.clientWidth / 2, canvas.clientHeight / 3, 25);
           }
           playScore(result.points);
         }
@@ -558,9 +559,8 @@ export default function TorqueRotation() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480));
       draw();
     };
     resize();
@@ -582,8 +582,8 @@ export default function TorqueRotation() {
       onDragStart: (x, y) => {
         if (gameMode === "balance_beam") return false;
 
-        const W = canvas.width;
-        const H = canvas.height;
+        const W = canvas.clientWidth;
+        const H = canvas.clientHeight;
         const cx = W * 0.4;
         const cy = H * 0.5;
         const R = Math.min(radius, Math.min(W * 0.3, H * 0.38));
@@ -621,8 +621,8 @@ export default function TorqueRotation() {
       },
       onDrag: (x, y) => {
         if (!isDraggingForceRef.current) return;
-        const W = canvas.width;
-        const H = canvas.height;
+        const W = canvas.clientWidth;
+        const H = canvas.clientHeight;
         const cx = W * 0.4;
         const cy = H * 0.5;
         const R = Math.min(radius, Math.min(W * 0.3, H * 0.38));
@@ -644,8 +644,8 @@ export default function TorqueRotation() {
       onClick: (x, y) => {
         if (gameMode !== "balance_beam") return;
 
-        const W = canvas.width;
-        const H = canvas.height;
+        const W = canvas.clientWidth;
+        const H = canvas.clientHeight;
         const beamCx = W * 0.5;
         const beamCy = H * 0.45;
         const beamPixelLen = Math.min(W * 0.7, 500);
@@ -679,8 +679,8 @@ export default function TorqueRotation() {
       if (gameMode !== "balance_beam") return;
       e.preventDefault();
       const pos = getCanvasMousePos(canvas, e);
-      const W = canvas.width;
-      const H = canvas.height;
+      const W = canvas.clientWidth;
+      const H = canvas.clientHeight;
       const beamCx = W * 0.5;
       const beamCy = H * 0.45;
       const beamPixelLen = Math.min(W * 0.7, 500);
@@ -764,14 +764,14 @@ export default function TorqueRotation() {
       popupsRef.current.push({
         text: result.label,
         points: result.points,
-        x: canvas.width / 2,
-        y: canvas.height / 2,
+        x: canvas.clientWidth / 2,
+        y: canvas.clientHeight / 2,
         startTime: performance.now(),
       });
     }
     if (result.points > 0) {
       playScore(result.points);
-      if (canvas) particlesRef.current.emitConfetti(canvas.width / 2, canvas.height / 2, 15);
+      if (canvas) particlesRef.current.emitConfetti(canvas.clientWidth / 2, canvas.clientHeight / 2, 15);
     } else {
       playSFX("incorrect");
     }

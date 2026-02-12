@@ -13,6 +13,7 @@ import {
   type ChallengeState,
 } from "@/lib/simulation/scoring";
 import { drawMeter } from "@/lib/simulation/drawing";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import { SimMath } from "@/components/simulations/SimMath";
 // interaction utilities available if needed
 
@@ -92,8 +93,8 @@ export default function HeatEngine() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const progress = progressRef.current;
 
     ctx.clearRect(0, 0, W, H);
@@ -557,8 +558,8 @@ export default function HeatEngine() {
     const canvas = canvasRef.current;
     if (canvas) {
       const stage = Math.floor(progressRef.current) % 4;
-      const pistonCX = canvas.width * 0.43;
-      const cylBot = canvas.height * 0.5 + canvas.height * 0.65 / 2;
+      const pistonCX = canvas.clientWidth * 0.43;
+      const cylBot = canvas.clientHeight * 0.5 + canvas.clientHeight * 0.65 / 2;
       if (stage === 0 && Math.random() < 0.15) {
         particlesRef.current.emit(pistonCX + (Math.random() - 0.5) * 40, cylBot + 5, 1, "#ef4444", {
           speed: 30, lifetime: 0.6, size: 3, gravity: 40, shape: "circle", angle: Math.PI / 2, spread: 0.5,
@@ -580,9 +581,8 @@ export default function HeatEngine() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.5), _isMobile ? 500 : 440);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.5), _isMobile ? 500 : 440));
       draw();
     };
     resize();
@@ -601,8 +601,8 @@ export default function HeatEngine() {
     challengeRef.current = updateChallengeState(challengeRef.current, result);
 
     const canvas = canvasRef.current;
-    const cx = canvas ? canvas.width / 2 : 400;
-    const cy2 = canvas ? canvas.height / 2 : 200;
+    const cx = canvas ? canvas.clientWidth / 2 : 400;
+    const cy2 = canvas ? canvas.clientHeight / 2 : 200;
     popupsRef.current.push({
       text: `${result.label} (${(currentEff * 100).toFixed(1)}% vs ${(targetEff * 100).toFixed(0)}%)`,
       points: result.points,

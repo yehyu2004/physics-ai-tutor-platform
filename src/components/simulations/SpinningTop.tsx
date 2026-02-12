@@ -3,6 +3,7 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import { ParticleSystem } from "@/lib/simulation/particles";
 import { playSFX, playScore } from "@/lib/simulation/sound";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import {
   calculateAccuracy,
   renderScorePopup,
@@ -80,8 +81,8 @@ export default function SpinningTop() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const cx = W * 0.36;
     const baseY = H * 0.78;
     const scale = 420;
@@ -436,8 +437,8 @@ export default function SpinningTop() {
         playSFX("fail");
         const canvas = canvasRef.current;
         if (canvas) {
-          const W = canvas.width;
-          const baseY2 = canvas.height * 0.78;
+          const W = canvas.clientWidth;
+          const baseY2 = canvas.clientHeight * 0.78;
           particleSystemRef.current.emitSparks(W * 0.36, baseY2, 20, "#ef4444");
         }
         // Reset position
@@ -460,8 +461,8 @@ export default function SpinningTop() {
 
     const canvas = canvasRef.current;
     if (canvas) {
-      const cx2 = canvas.width * 0.36;
-      const baseY2 = canvas.height * 0.78;
+      const cx2 = canvas.clientWidth * 0.36;
+      const baseY2 = canvas.clientHeight * 0.78;
       const scale2 = 420;
       const nx2 = Math.sin(thetaRef.current) * Math.cos(phiRef.current);
       const ny2 = Math.cos(thetaRef.current);
@@ -499,8 +500,8 @@ export default function SpinningTop() {
       const mx = e.clientX - rect.left;
       const my = e.clientY - rect.top;
 
-      const W = canvas.width;
-      const H = canvas.height;
+      const W = canvas.clientWidth;
+      const H = canvas.clientHeight;
       const cx = W * 0.36;
       const baseY = H * 0.78;
       const scale = 420;
@@ -539,9 +540,8 @@ export default function SpinningTop() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.52), _isMobile ? 500 : 470);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.52), _isMobile ? 500 : 470));
       draw();
     };
     resize();

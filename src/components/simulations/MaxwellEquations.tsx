@@ -12,6 +12,7 @@ import {
   type ChallengeState,
 } from "@/lib/simulation/scoring";
 import { drawInfoPanel } from "@/lib/simulation/drawing";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import { SimMath } from "@/components/simulations/SimMath";
 
 type SimMode = "charging" | "emwave" | "faraday";
@@ -97,8 +98,8 @@ export default function MaxwellEquations() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const t = timeRef.current;
     const charge = chargeRef.current;
 
@@ -830,9 +831,8 @@ export default function MaxwellEquations() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480));
       draw();
     };
     resize();
@@ -940,7 +940,7 @@ export default function MaxwellEquations() {
       playScore(3);
       const canvas = canvasRef.current;
       if (canvas) {
-        particlesRef.current.emitConfetti(canvas.width / 2, canvas.height / 3, 15);
+        particlesRef.current.emitConfetti(canvas.clientWidth / 2, canvas.clientHeight / 3, 15);
       }
     } else {
       playSFX("incorrect");

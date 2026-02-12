@@ -14,6 +14,7 @@ import {
 } from "@/lib/simulation/scoring";
 import { drawInfoPanel, drawMeter } from "@/lib/simulation/drawing";
 import { getCanvasMousePos } from "@/lib/simulation/interaction";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import { SimMath } from "@/components/simulations/SimMath";
 
 interface KeplerMeasurement {
@@ -156,8 +157,8 @@ export default function OrbitalMotion() {
       popupsRef.current.push({
         text: `${result.label} (e=${eccentricity.toFixed(2)})`,
         points: result.points,
-        x: canvas.width / 2,
-        y: canvas.height / 3,
+        x: canvas.clientWidth / 2,
+        y: canvas.clientHeight / 3,
         startTime: performance.now(),
       });
     }
@@ -166,7 +167,7 @@ export default function OrbitalMotion() {
       playSFX("correct");
       playScore(result.points);
       if (result.tier === "perfect" && canvas) {
-        particleSystemRef.current.emitConfetti(canvas.width / 2, canvas.height / 2, 25);
+        particleSystemRef.current.emitConfetti(canvas.clientWidth / 2, canvas.clientHeight / 2, 25);
       }
       // New target
       setTimeout(() => {
@@ -182,8 +183,8 @@ export default function OrbitalMotion() {
     (clickX: number, clickY: number) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
-      const W = canvas.width;
-      const H = canvas.height;
+      const W = canvas.clientWidth;
+      const H = canvas.clientHeight;
 
       const px = posRef.current.x * W;
       const py = posRef.current.y * H;
@@ -232,8 +233,8 @@ export default function OrbitalMotion() {
             popupsRef.current.push({
               text: result.label,
               points: result.points,
-              x: canvas.width / 2,
-              y: canvas.height / 3,
+              x: canvas.clientWidth / 2,
+              y: canvas.clientHeight / 3,
               startTime: performance.now(),
             });
           }
@@ -242,7 +243,7 @@ export default function OrbitalMotion() {
             playSFX("success");
             playScore(result.points);
             if (result.tier === "perfect") {
-              particleSystemRef.current.emitConfetti(canvas.width / 2, canvas.height / 2, 30);
+              particleSystemRef.current.emitConfetti(canvas.clientWidth / 2, canvas.clientHeight / 2, 30);
             }
           } else {
             playSFX("incorrect");
@@ -259,8 +260,8 @@ export default function OrbitalMotion() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const now = performance.now();
 
     ctx.clearRect(0, 0, W, H);
@@ -695,9 +696,8 @@ export default function OrbitalMotion() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.6), _isMobile ? 500 : 520);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.6), _isMobile ? 500 : 520));
       draw();
     };
     resize();

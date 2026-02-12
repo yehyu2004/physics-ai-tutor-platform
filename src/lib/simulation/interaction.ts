@@ -24,17 +24,17 @@ export interface CanvasButton {
   activeColor?: string;
 }
 
-/** Get mouse position relative to canvas, accounting for DPI scaling */
+/** Get mouse position relative to canvas in logical (CSS) coordinates.
+ *  Works correctly with HiDPI canvases where canvas.width includes the
+ *  devicePixelRatio multiplier but the drawing context is scaled to match. */
 export function getCanvasMousePos(
   canvas: HTMLCanvasElement,
   e: MouseEvent | Touch,
 ): { x: number; y: number } {
   const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width / rect.width;
-  const scaleY = canvas.height / rect.height;
   return {
-    x: (e.clientX - rect.left) * scaleX,
-    y: (e.clientY - rect.top) * scaleY,
+    x: e.clientX - rect.left,
+    y: e.clientY - rect.top,
   };
 }
 

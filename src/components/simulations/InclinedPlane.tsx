@@ -13,6 +13,7 @@ import {
 } from "@/lib/simulation/scoring";
 import { drawMeter } from "@/lib/simulation/drawing";
 import { createDragHandler } from "@/lib/simulation/interaction";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import { SimMath } from "@/components/simulations/SimMath";
 
 type SimMode = "sandbox" | "quiz" | "critical" | "stack";
@@ -78,8 +79,8 @@ export default function InclinedPlane() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
 
     ctx.clearRect(0, 0, W, H);
     ctx.fillStyle = "#0f172a";
@@ -533,14 +534,14 @@ export default function InclinedPlane() {
       if (Math.random() < 0.3) {
         const canvas = canvasRef.current;
         if (canvas) {
-          const rampLen = Math.min(canvas.width * 0.65, (canvas.height - 60) * 0.75 / Math.sin(Math.max(rad, 0.1)));
+          const rampLen = Math.min(canvas.clientWidth * 0.65, (canvas.clientHeight - 60) * 0.75 / Math.sin(Math.max(rad, 0.1)));
           const usableRampPx = Math.max(rampLen - 80, 10);
           const blockPosPx = Math.min(Math.max(posRef.current * pxPerMeter, 0), usableRampPx);
           const downUx = Math.cos(rad);
           const downUy = Math.sin(rad);
           const margin = 60;
           const rampBaseX = margin;
-          const rampBaseY = canvas.height - margin;
+          const rampBaseY = canvas.clientHeight - margin;
           const rampTopX = rampBaseX + rampLen * Math.cos(rad);
           const rampTopY = rampBaseY - rampLen * Math.sin(rad);
           const startOffsetPx = 30;
@@ -553,7 +554,7 @@ export default function InclinedPlane() {
       // Check if block reached bottom of ramp
       const canvas = canvasRef.current;
       if (canvas) {
-        const rampLen = Math.min(canvas.width * 0.65, (canvas.height - 60) * 0.75 / Math.sin(Math.max(rad, 0.1)));
+        const rampLen = Math.min(canvas.clientWidth * 0.65, (canvas.clientHeight - 60) * 0.75 / Math.sin(Math.max(rad, 0.1)));
         const usableRampPx = Math.max(rampLen - 80, 10);
         const maxPosMeters = usableRampPx / pxPerMeter;
         if (posRef.current >= maxPosMeters) {
@@ -561,8 +562,8 @@ export default function InclinedPlane() {
           velRef.current = 0;
           setIsRunning(false);
           particlesRef.current.emitSparks(
-            canvas.width * 0.65,
-            canvas.height - 60,
+            canvas.clientWidth * 0.65,
+            canvas.clientHeight - 60,
             20,
             "#fbbf24"
           );
@@ -598,9 +599,8 @@ export default function InclinedPlane() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480));
       draw();
     };
     resize();
@@ -626,9 +626,9 @@ export default function InclinedPlane() {
       onDragStart: (x, y) => {
         if (isRunning) return false;
         const margin = 60;
-        const rampBaseY = canvas.height - margin;
+        const rampBaseY = canvas.clientHeight - margin;
         const rad = (angle * Math.PI) / 180;
-        const rampLen = Math.min(canvas.width * 0.65, (canvas.height * 0.75) / Math.sin(Math.max(rad, 0.1)));
+        const rampLen = Math.min(canvas.clientWidth * 0.65, (canvas.clientHeight * 0.75) / Math.sin(Math.max(rad, 0.1)));
         const rampBaseX = margin;
         const rampTopX = rampBaseX + rampLen * Math.cos(rad);
         const rampTopY = rampBaseY - rampLen * Math.sin(rad);
@@ -644,8 +644,8 @@ export default function InclinedPlane() {
       onDrag: (x, y) => {
         if (!isDraggingAngleRef.current) return;
         const margin = 60;
-        const rampBaseY = canvas.height - margin;
-        const pivotX = margin + Math.min(canvas.width * 0.65, canvas.height * 0.75) * Math.cos((angle * Math.PI) / 180);
+        const rampBaseY = canvas.clientHeight - margin;
+        const pivotX = margin + Math.min(canvas.clientWidth * 0.65, canvas.clientHeight * 0.75) * Math.cos((angle * Math.PI) / 180);
         // Calculate angle from pivot point (bottom-right of ramp)
         const dx = pivotX - x;
         const dy = rampBaseY - y;
@@ -718,8 +718,8 @@ export default function InclinedPlane() {
     challengeRef.current = updateChallengeState(challengeRef.current, result);
 
     const canvas = canvasRef.current;
-    const cx = canvas ? canvas.width / 2 : 300;
-    const cy = canvas ? canvas.height / 2 : 200;
+    const cx = canvas ? canvas.clientWidth / 2 : 300;
+    const cy = canvas ? canvas.clientHeight / 2 : 200;
     scorePopupsRef.current.push({
       text: result.label,
       points,
@@ -785,8 +785,8 @@ export default function InclinedPlane() {
     challengeRef.current = updateChallengeState(challengeRef.current, result);
 
     const canvas = canvasRef.current;
-    const cx = canvas ? canvas.width / 2 : 300;
-    const cy = canvas ? canvas.height / 2 : 200;
+    const cx = canvas ? canvas.clientWidth / 2 : 300;
+    const cy = canvas ? canvas.clientHeight / 2 : 200;
     scorePopupsRef.current.push({
       text: `${label} (${actualCritical.toFixed(1)}\u00B0)`,
       points,

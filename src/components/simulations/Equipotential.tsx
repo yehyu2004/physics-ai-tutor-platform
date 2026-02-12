@@ -12,6 +12,7 @@ import {
   type ChallengeState,
 } from "@/lib/simulation/scoring";
 import { drawTarget } from "@/lib/simulation/drawing";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import { SimMath } from "@/components/simulations/SimMath";
 
 interface Charge {
@@ -97,8 +98,8 @@ export default function Equipotential() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
 
     ctx.clearRect(0, 0, W, H);
     ctx.fillStyle = "#020617";
@@ -443,9 +444,8 @@ export default function Equipotential() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 500);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 500));
       draw();
     };
     resize();
@@ -563,16 +563,16 @@ export default function Equipotential() {
           popupsRef.current.push({
             text: label,
             points,
-            x: canvas.width / 2,
-            y: canvas.height / 2,
+            x: canvas.clientWidth / 2,
+            y: canvas.clientHeight / 2,
             startTime: performance.now(),
           });
 
           if (points > 0) {
             playScore(points);
             particlesRef.current.emitConfetti(
-              testChargeGoalRef.current.x * canvas.width,
-              testChargeGoalRef.current.y * canvas.height,
+              testChargeGoalRef.current.x * canvas.clientWidth,
+              testChargeGoalRef.current.y * canvas.clientHeight,
               20
             );
           } else {

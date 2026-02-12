@@ -3,6 +3,7 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import { ParticleSystem } from "@/lib/simulation/particles";
 import { playSFX, playScore } from "@/lib/simulation/sound";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import {
   renderScorePopup,
   renderScoreboard,
@@ -197,8 +198,8 @@ export default function StandardModel() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
 
     ctx.clearRect(0, 0, W, H);
     ctx.fillStyle = "#0f172a";
@@ -560,9 +561,8 @@ export default function StandardModel() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 460);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 460));
       draw();
     };
     resize();
@@ -603,8 +603,8 @@ export default function StandardModel() {
     const mx = e.clientX - rect.left;
     const my = e.clientY - rect.top;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const margin = 30;
     const cellW = (W - margin * 2 - 40) / 5;
     const cellH = (H - margin * 2 - 60) / 4;
@@ -694,12 +694,12 @@ export default function StandardModel() {
       popupsRef.current.push({
         text: correct ? "Correct!" : "Wrong!",
         points: result.points,
-        x: canvas.width / 2,
-        y: canvas.height / 2,
+        x: canvas.clientWidth / 2,
+        y: canvas.clientHeight / 2,
         startTime: performance.now(),
       });
       if (correct) {
-        particleSystemRef.current.emitConfetti(canvas.width / 2, canvas.height / 2, 20);
+        particleSystemRef.current.emitConfetti(canvas.clientWidth / 2, canvas.clientHeight / 2, 20);
       }
     }
 
@@ -733,12 +733,12 @@ export default function StandardModel() {
       popupsRef.current.push({
         text: correct ? "Correct!" : "Wrong!",
         points: result.points,
-        x: canvas.width / 2,
-        y: canvas.height / 2,
+        x: canvas.clientWidth / 2,
+        y: canvas.clientHeight / 2,
         startTime: performance.now(),
       });
       if (correct) {
-        particleSystemRef.current.emitConfetti(canvas.width / 2, canvas.height / 2, 20);
+        particleSystemRef.current.emitConfetti(canvas.clientWidth / 2, canvas.clientHeight / 2, 20);
       }
     }
 

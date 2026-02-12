@@ -14,6 +14,7 @@ import {
 } from "@/lib/simulation/scoring";
 import { drawTarget, drawInfoPanel } from "@/lib/simulation/drawing";
 import { createDragHandler } from "@/lib/simulation/interaction";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import { SimMath } from "@/components/simulations/SimMath";
 
 const MAX_DIST = 200;
@@ -73,8 +74,8 @@ export default function ConstantAcceleration() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const t = timeRef.current;
 
     ctx.clearRect(0, 0, W, H);
@@ -476,10 +477,10 @@ export default function ConstantAcceleration() {
     hasScored.current = true;
 
     const canvas = canvasRef.current;
-    const W = canvas ? canvas.width : 800;
+    const W = canvas ? canvas.clientWidth : 800;
     const margin = 60;
     const trackW = W - margin * 2;
-    const carSection = canvas ? canvas.height * 0.22 : 100;
+    const carSection = canvas ? canvas.clientHeight * 0.22 : 100;
     const roadY = carSection * 0.7;
     const carPx = margin + Math.min((currentX / MAX_DIST), 1) * trackW;
 
@@ -589,9 +590,8 @@ export default function ConstantAcceleration() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.65), _isMobile ? 500 : 550);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.65), _isMobile ? 500 : 550));
       draw();
     };
     resize();
@@ -614,8 +614,8 @@ export default function ConstantAcceleration() {
 
     const cleanup = createDragHandler(canvas, {
       onClick: (mx, my) => {
-        const W = canvas.width;
-        const H = canvas.height;
+        const W = canvas.clientWidth;
+        const H = canvas.clientHeight;
         const carSection = H * 0.22;
         const roadY = carSection * 0.7;
         const margin = 60;

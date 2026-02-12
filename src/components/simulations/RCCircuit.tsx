@@ -14,6 +14,7 @@ import {
 } from "@/lib/simulation/scoring";
 import { drawInfoPanel } from "@/lib/simulation/drawing";
 import { createDragHandler, isPointInRect } from "@/lib/simulation/interaction";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import { SimMath } from "@/components/simulations/SimMath";
 
 interface Electron {
@@ -115,8 +116,8 @@ export default function RCCircuit() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const t = timeRef.current;
 
     ctx.clearRect(0, 0, W, H);
@@ -619,10 +620,10 @@ export default function RCCircuit() {
     if (currentMag > 0.7) {
       const canvas = canvasRef.current;
       if (canvas) {
-        const circW = canvas.width * 0.35;
+        const circW = canvas.clientWidth * 0.35;
         const cx2 = circW * 0.5;
-        const cy2 = canvas.height * 0.5;
-        const sz = Math.min(circW * 0.35, canvas.height * 0.35);
+        const cy2 = canvas.clientHeight * 0.5;
+        const sz = Math.min(circW * 0.35, canvas.clientHeight * 0.35);
         // Sparks near the capacitor
         particlesRef.current.emitSparks(
           cx2 + sz + (Math.random() - 0.5) * 10,
@@ -650,15 +651,15 @@ export default function RCCircuit() {
         popupsRef.current.push({
           text: `${result.label}`,
           points: result.points,
-          x: canvas ? canvas.width * 0.5 : 400,
-          y: canvas ? canvas.height * 0.4 : 200,
+          x: canvas ? canvas.clientWidth * 0.5 : 400,
+          y: canvas ? canvas.clientHeight * 0.4 : 200,
           startTime: performance.now(),
         });
 
         if (result.points > 0) {
           playScore(result.points);
           if (canvas) {
-            particlesRef.current.emitConfetti(canvas.width * 0.5, canvas.height * 0.3, result.points * 10);
+            particlesRef.current.emitConfetti(canvas.clientWidth * 0.5, canvas.clientHeight * 0.3, result.points * 10);
           }
         } else {
           playSFX("fail");
@@ -684,9 +685,8 @@ export default function RCCircuit() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480));
       draw();
     };
     resize();
@@ -707,10 +707,10 @@ export default function RCCircuit() {
 
     const cleanup = createDragHandler(canvas, {
       onClick: (x, y) => {
-        const circW = canvas.width * 0.35;
+        const circW = canvas.clientWidth * 0.35;
         const ccx = circW * 0.5;
-        const ccy = canvas.height * 0.5;
-        const sz = Math.min(circW * 0.35, canvas.height * 0.35);
+        const ccy = canvas.clientHeight * 0.5;
+        const sz = Math.min(circW * 0.35, canvas.clientHeight * 0.35);
         const switchX = ccx - sz * 0.6;
         const switchY = ccy - sz;
 

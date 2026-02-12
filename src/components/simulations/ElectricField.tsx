@@ -13,6 +13,7 @@ import {
   type ChallengeState,
 } from "@/lib/simulation/scoring";
 import { drawTarget } from "@/lib/simulation/drawing";
+import { setupHiDPICanvas } from "@/lib/simulation/canvas";
 import { SimMath } from "@/components/simulations/SimMath";
 
 interface Charge {
@@ -97,8 +98,8 @@ export default function ElectricField() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const now = performance.now();
 
     ctx.clearRect(0, 0, W, H);
@@ -455,8 +456,8 @@ export default function ElectricField() {
     if (tc.active) {
       const canvas = canvasRef.current;
       if (canvas) {
-        const W = canvas.width;
-        const H = canvas.height;
+        const W = canvas.clientWidth;
+        const H = canvas.clientHeight;
         const px = tc.x * W;
         const py = tc.y * H;
         const { Ex, Ey } = getField(px, py, chargesRef.current, W, H);
@@ -514,9 +515,8 @@ export default function ElectricField() {
     const resize = () => {
       const container = canvas.parentElement;
       if (!container) return;
-      canvas.width = container.clientWidth;
       const _isMobile = container.clientWidth < 640;
-      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 500);
+      setupHiDPICanvas(canvas, container.clientWidth, Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 500));
       heatmapDirtyRef.current = true;
       draw();
     };
@@ -533,8 +533,8 @@ export default function ElectricField() {
   const checkEquilibrium = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
     const tx = equilibriumTargetRef.current.x * W;
     const ty = equilibriumTargetRef.current.y * H;
     const { Ex, Ey } = getField(tx, ty, chargesRef.current, W, H);
