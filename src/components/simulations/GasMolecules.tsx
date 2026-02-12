@@ -42,7 +42,8 @@ export default function GasMolecules() {
   const pistonDraggingRef = useRef(false);
 
   // Pressure tracking
-  const pressureRef = useRef(0);
+  const pressureRef = useRef(0); // wall-hit pressure (for visual glow)
+  const kineticPressureRef = useRef(0); // kinetic theory pressure (P = N<v²>/2V)
   const wallHitsRef = useRef(0);
   const pressureHistoryRef = useRef<number[]>([]);
 
@@ -74,20 +75,20 @@ export default function GasMolecules() {
   }, [numParticles, temperature, initParticles]);
 
   const startChallenge = useCallback(() => {
-    // Generate a random target pressure
-    const basePressure = (numParticles * temperature) / 300;
+    // Generate a target pressure based on current kinetic pressure
+    const currentKP = kineticPressureRef.current || 1;
     const targetFactor = 0.5 + Math.random() * 1.5;
-    targetPressureRef.current = Math.round(basePressure * targetFactor);
+    targetPressureRef.current = Math.round(currentKP * targetFactor);
     challengeRef.current = {
       ...createChallengeState(),
       active: true,
       description: `Reach target pressure: ${targetPressureRef.current.toFixed(0)}`,
     };
     setChallengeMode(true);
-  }, [numParticles, temperature]);
+  }, []);
 
   const checkPressure = useCallback(() => {
-    const currentPressure = pressureRef.current;
+    const currentPressure = kineticPressureRef.current;
     const target = targetPressureRef.current;
     const result = calculateAccuracy(currentPressure, target, target * 0.5);
     challengeRef.current = updateChallengeState(challengeRef.current, result);
@@ -111,9 +112,9 @@ export default function GasMolecules() {
       }
       // Generate new target
       setTimeout(() => {
-        const basePressure = (numParticles * temperature) / 300;
+        const currentKP = kineticPressureRef.current || 1;
         const targetFactor = 0.3 + Math.random() * 2.0;
-        targetPressureRef.current = Math.round(basePressure * targetFactor);
+        targetPressureRef.current = Math.round(currentKP * targetFactor);
         challengeRef.current = {
           ...challengeRef.current,
           description: `Reach target pressure: ${targetPressureRef.current.toFixed(0)}`,
@@ -122,7 +123,7 @@ export default function GasMolecules() {
     } else {
       playSFX("incorrect");
     }
-  }, [numParticles, temperature]);
+  }, []);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -365,7 +366,7 @@ export default function GasMolecules() {
       ctx.textAlign = "left";
       ctx.fillText("TARGET PRESSURE", boxLeft + 20, boxTop + boxH - 78);
       ctx.font = "bold 16px ui-monospace, monospace";
-      const pDiff = Math.abs(pressure - targetP) / targetP;
+      const pDiff = Math.abs(kineticPressureRef.current - targetP) / Math.max(targetP, 1);
       ctx.fillStyle = pDiff < 0.1 ? "#22c55e" : pDiff < 0.3 ? "#f59e0b" : "#ef4444";
       ctx.fillText(`P = ${targetP.toFixed(0)}`, boxLeft + 20, boxTop + boxH - 60);
 
@@ -469,13 +470,19 @@ export default function GasMolecules() {
       }
     }
 
-    // Update pressure from momentum transfer (proportional to N*T/V)
+    // Update wall-hit pressure (for visual glow)
     wallHitsRef.current = wallHitsRef.current * 0.95 + frameMomentum * 0.05;
     const perimeter = 2 * (1 + piston);
     pressureRef.current = (wallHitsRef.current / Math.max(perimeter, 0.1)) * 60;
 
+    // Update kinetic pressure: P = N<v²>/(2V)
+    let animTotalV2 = 0;
+    for (const p of particles) animTotalV2 += p.vx * p.vx + p.vy * p.vy;
+    const rawKP = particles.length * animTotalV2 / (2 * Math.max(piston, 0.05));
+    kineticPressureRef.current = kineticPressureRef.current * 0.9 + rawKP * 0.1;
+
     // Pressure history for smoothing display
-    pressureHistoryRef.current.push(pressureRef.current);
+    pressureHistoryRef.current.push(kineticPressureRef.current);
     if (pressureHistoryRef.current.length > 60) pressureHistoryRef.current.shift();
 
     particleSystemRef.current.update(dt);
@@ -588,7 +595,7 @@ export default function GasMolecules() {
                 Adjust temperature and volume to reach target pressure
               </p>
               <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                Target: P = {targetPressureRef.current.toFixed(0)} | Current: P = {pressureRef.current.toFixed(0)} |
+                Target: P = {targetPressureRef.current.toFixed(0)} | Current: P = {kineticPressureRef.current.toFixed(0)} |
                 Score: {challengeRef.current.score} pts
               </p>
             </div>
