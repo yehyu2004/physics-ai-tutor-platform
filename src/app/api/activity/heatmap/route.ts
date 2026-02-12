@@ -2,7 +2,13 @@ import { NextResponse } from "next/server";
 import { getEffectiveSession } from "@/lib/impersonate";
 import { prisma } from "@/lib/prisma";
 
-export async function GET() {
+const FILTER_CATEGORIES: Record<string, string[]> = {
+  chat: ["AI_CHAT"],
+  simulation: ["SIMULATION"],
+  submission: ["ASSIGNMENT_SUBMIT", "ASSIGNMENT_VIEW"],
+};
+
+export async function GET(req: Request) {
   try {
     const session = await getEffectiveSession();
     if (!session?.user) {
@@ -10,16 +16,30 @@ export async function GET() {
     }
 
     const userId = (session.user as { id: string }).id;
+    const { searchParams } = new URL(req.url);
+    const filter = searchParams.get("filter"); // "all" | "chat" | "simulation" | "submission" | "other"
 
     // Get activities from the past 365 days
     const yearAgo = new Date();
     yearAgo.setFullYear(yearAgo.getFullYear() - 1);
     yearAgo.setHours(0, 0, 0, 0);
 
+    // Build category filter
+    const whereCategory: Record<string, unknown> = {};
+    if (filter && filter !== "all") {
+      if (filter === "other") {
+        const excludeCats = Object.values(FILTER_CATEGORIES).flat();
+        whereCategory.category = { notIn: excludeCats };
+      } else if (FILTER_CATEGORIES[filter]) {
+        whereCategory.category = { in: FILTER_CATEGORIES[filter] };
+      }
+    }
+
     const activities = await prisma.userActivity.findMany({
       where: {
         userId,
         createdAt: { gte: yearAgo },
+        ...whereCategory,
       },
       select: { createdAt: true },
     });

@@ -21,6 +21,7 @@ import {
   User,
   Mail,
   FlaskConical,
+  Activity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -82,6 +83,7 @@ const toolItems: NavItem[] = [
 
 const adminItems: NavItem[] = [
   { label: "Users", href: "/admin/users", icon: Users },
+  { label: "User Activity", href: "/admin/user-activity", icon: Activity },
   { label: "Email Records", href: "/admin/email-records", icon: Mail },
   { label: "Analytics", href: "/admin/analytics", icon: BarChart3 },
   { label: "Q&A History", href: "/admin/qa-history", icon: BarChart3 },
@@ -140,7 +142,7 @@ export default function Sidebar({ userRole, userName, collapsed = false, onToggl
   if (userRole === "ADMIN" || userRole === "PROFESSOR" || userRole === "TA") {
     const staffItems = userRole === "ADMIN" || userRole === "PROFESSOR"
       ? adminItems
-      : adminItems.filter((item) => item.href === "/admin/qa-history" || item.href === "/admin/users" || item.href === "/admin/email-records");
+      : adminItems.filter((item) => item.href === "/admin/qa-history" || item.href === "/admin/users" || item.href === "/admin/email-records" || item.href === "/admin/user-activity");
     sections.push({ label: "ADMIN", items: staffItems });
   }
 

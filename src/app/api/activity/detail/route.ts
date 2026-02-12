@@ -17,6 +17,24 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Invalid date parameter (YYYY-MM-DD)" }, { status: 400 });
     }
 
+    const filter = searchParams.get("filter");
+
+    const FILTER_CATEGORIES: Record<string, string[]> = {
+      chat: ["AI_CHAT"],
+      simulation: ["SIMULATION"],
+      submission: ["ASSIGNMENT_SUBMIT", "ASSIGNMENT_VIEW"],
+    };
+
+    const whereCategory: Record<string, unknown> = {};
+    if (filter && filter !== "all") {
+      if (filter === "other") {
+        const excludeCats = Object.values(FILTER_CATEGORIES).flat();
+        whereCategory.category = { notIn: excludeCats };
+      } else if (FILTER_CATEGORIES[filter]) {
+        whereCategory.category = { in: FILTER_CATEGORIES[filter] };
+      }
+    }
+
     const startOfDay = new Date(date + "T00:00:00.000Z");
     const endOfDay = new Date(date + "T23:59:59.999Z");
 
@@ -24,6 +42,7 @@ export async function GET(req: Request) {
       where: {
         userId,
         createdAt: { gte: startOfDay, lte: endOfDay },
+        ...whereCategory,
       },
       orderBy: { createdAt: "desc" },
       select: {

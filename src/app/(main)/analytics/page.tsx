@@ -44,6 +44,7 @@ export default function AnalyticsPage() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [dayActivities, setDayActivities] = useState<{ id: string; category: string; detail: string | null; durationMs: number | null; time: string }[]>([]);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [activityFilter, setActivityFilter] = useState<string>("all");
 
   useTrackTime("ANALYTICS_VIEW");
 
@@ -61,6 +62,18 @@ export default function AnalyticsPage() {
       })
       .catch(() => setLoading(false));
   }, []);
+
+  // Refetch heatmap when activity filter changes
+  useEffect(() => {
+    const params = activityFilter !== "all" ? `?filter=${activityFilter}` : "";
+    fetch(`/api/activity/heatmap${params}`)
+      .then((r) => r.json())
+      .then((json) => setHeatmapData(json.data || []))
+      .catch(() => {});
+    // Clear day detail when filter changes
+    setSelectedDate(null);
+    setDayActivities([]);
+  }, [activityFilter]);
 
   const formatDuration = (ms: number): string => {
     if (ms < 1000) return "0s";
@@ -92,14 +105,15 @@ export default function AnalyticsPage() {
     }
     setSelectedDate(date);
     setLoadingDetail(true);
-    fetch(`/api/activity/detail?date=${date}`)
+    const filterParam = activityFilter !== "all" ? `&filter=${activityFilter}` : "";
+    fetch(`/api/activity/detail?date=${date}${filterParam}`)
       .then((r) => r.json())
       .then((json) => {
         setDayActivities(json.activities || []);
         setLoadingDetail(false);
       })
       .catch(() => setLoadingDetail(false));
-  }, [selectedDate]);
+  }, [selectedDate, activityFilter]);
 
   if (loading) {
     return (
@@ -277,8 +291,33 @@ export default function AnalyticsPage() {
       {/* Activity Heatmap */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Activity Heatmap</CardTitle>
-          <p className="text-xs text-neutral-500 dark:text-neutral-400">Your feature usage over the past year — just like GitHub</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base">Activity Heatmap</CardTitle>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">Your feature usage over the past year — just like GitHub</p>
+            </div>
+            <div className="flex items-center gap-1.5">
+              {[
+                { key: "all", label: "All" },
+                { key: "chat", label: "Chat" },
+                { key: "simulation", label: "Simulation" },
+                { key: "submission", label: "Submission" },
+                { key: "other", label: "Other" },
+              ].map((f) => (
+                <button
+                  key={f.key}
+                  onClick={() => setActivityFilter(f.key)}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                    activityFilter === f.key
+                      ? "bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900"
+                      : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <ContributionGraph
