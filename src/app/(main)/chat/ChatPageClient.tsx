@@ -23,9 +23,6 @@ import {
   ShieldAlert,
   Check,
   Copy,
-  Play,
-  Terminal,
-  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -33,23 +30,12 @@ import { Input } from "@/components/ui/input";
 
 import { cn } from "@/lib/utils";
 
-interface ToolCallInfo {
-  language: string;
-  code: string;
-  status: "executing" | "completed" | "error";
-  output?: string;
-  error?: string;
-  hasImage?: boolean;
-  imageData?: string;
-}
-
 interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
   imageUrls?: string[];
   thinking?: string;
-  toolCalls?: ToolCallInfo[];
 }
 
 interface Conversation {
@@ -162,14 +148,7 @@ export default function ChatPageClient({
       const res = await fetch(`/api/conversations/${convId}/messages`);
       if (res.ok) {
         const data = await res.json();
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        setMessages(data.messages.map((msg: any) => ({
-          ...msg,
-          toolCalls: msg.toolCalls?.map((tc: ToolCallInfo) => ({
-            ...tc,
-            status: tc.error && !tc.output ? "error" : "completed",
-          })),
-        })));
+        setMessages(data.messages);
       }
     } catch (err) {
       console.error("Failed to load conversation:", err);
@@ -337,43 +316,6 @@ export default function ChatPageClient({
                     ? { ...msg, thinking: (msg.thinking || "") + event.content }
                     : msg
                 )
-              );
-            } else if (event.type === "tool_call") {
-              setMessages((prev) =>
-                prev.map((msg) =>
-                  msg.id === assistantMsgId
-                    ? {
-                        ...msg,
-                        toolCalls: [
-                          ...(msg.toolCalls || []),
-                          {
-                            language: event.language,
-                            code: event.code,
-                            status: "executing" as const,
-                          },
-                        ],
-                      }
-                    : msg
-                )
-              );
-            } else if (event.type === "tool_result") {
-              setMessages((prev) =>
-                prev.map((msg) => {
-                  if (msg.id !== assistantMsgId) return msg;
-                  const toolCalls = [...(msg.toolCalls || [])];
-                  const lastIdx = toolCalls.length - 1;
-                  if (lastIdx >= 0) {
-                    toolCalls[lastIdx] = {
-                      ...toolCalls[lastIdx],
-                      status: event.error && !event.output ? "error" : "completed",
-                      output: event.output,
-                      error: event.error,
-                      hasImage: event.hasImage,
-                      imageData: event.imageData,
-                    };
-                  }
-                  return { ...msg, toolCalls };
-                })
               );
             } else if (event.type === "delta") {
               setMessages((prev) =>
@@ -786,62 +728,9 @@ export default function ChatPageClient({
                             </div>
                           </details>
                         )}
-                        {msg.toolCalls?.map((tc, idx) => (
-                          <div key={idx} className="my-2 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/30 overflow-hidden">
-                            <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-100/50 dark:bg-blue-900/30 border-b border-blue-200 dark:border-blue-800">
-                              <Terminal className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
-                              <span className="text-xs font-medium text-blue-700 dark:text-blue-300 uppercase tracking-wide">
-                                {tc.language}
-                              </span>
-                              {tc.status === "executing" && (
-                                <span className="ml-auto text-xs text-blue-500 animate-pulse flex items-center gap-1">
-                                  <Play className="h-3 w-3" /> Running...
-                                </span>
-                              )}
-                              {tc.status === "completed" && (
-                                <Check className="ml-auto h-3.5 w-3.5 text-green-500" />
-                              )}
-                              {tc.status === "error" && (
-                                <AlertCircle className="ml-auto h-3.5 w-3.5 text-red-500" />
-                              )}
-                            </div>
-                            <details className="group/code">
-                              <summary className="px-3 py-1 text-xs text-blue-600 dark:text-blue-400 cursor-pointer hover:bg-blue-100/30 dark:hover:bg-blue-900/20 select-none">
-                                View code
-                              </summary>
-                              <pre className="px-3 py-2 text-xs font-mono bg-gray-950 text-gray-100 overflow-x-auto max-h-48">
-                                {tc.code}
-                              </pre>
-                            </details>
-                            {tc.output && (
-                              <div className="border-t border-blue-200 dark:border-blue-800">
-                                {tc.imageData?.startsWith("<svg") ? (
-                                  <div
-                                    className="p-3 bg-white dark:bg-gray-900 flex justify-center overflow-auto"
-                                    dangerouslySetInnerHTML={{ __html: tc.imageData }}
-                                  />
-                                ) : tc.imageData?.startsWith("data:image/") ? (
-                                  <div className="p-3 bg-white dark:bg-gray-900 flex justify-center">
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img src={tc.imageData} alt="Generated plot" className="max-w-full rounded" />
-                                  </div>
-                                ) : (
-                                  <pre className="px-3 py-2 text-xs font-mono text-green-400 bg-gray-900 overflow-x-auto max-h-32">
-                                    {tc.output.slice(0, 2000)}
-                                  </pre>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        ))}
                         {!msg.content ? (
                           <div className="flex items-center gap-1.5 py-1">
-                            {msg.toolCalls?.some(tc => tc.status === "executing") ? (
-                              <span className="text-xs text-blue-500 dark:text-blue-400 animate-pulse flex items-center gap-1.5">
-                                <Terminal className="h-3 w-3" />
-                                Executing code...
-                              </span>
-                            ) : msg.thinking ? (
+                            {msg.thinking ? (
                               <span className="text-xs text-purple-500 dark:text-purple-400 animate-pulse flex items-center gap-1.5">
                                 <Sparkles className="h-3 w-3" />
                                 Thinking...
