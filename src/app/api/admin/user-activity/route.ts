@@ -172,34 +172,6 @@ export async function GET(req: Request) {
       color: CATEGORY_COLORS[g.category] || "#94a3b8",
     })).sort((a, b) => b.totalMs - a.totalMs);
 
-    // Time by weekly timeslot
-    const weekMap: Record<string, { count: number; totalMs: number; start: Date; end: Date }> = {};
-    for (const a of activities) {
-      const d = new Date(a.createdAt);
-      // Get Monday of that week
-      const day = d.getDay();
-      const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-      const monday = new Date(d);
-      monday.setDate(diff);
-      monday.setHours(0, 0, 0, 0);
-      const sunday = new Date(monday);
-      sunday.setDate(monday.getDate() + 6);
-      const key = monday.toISOString().split("T")[0];
-      if (!weekMap[key]) weekMap[key] = { count: 0, totalMs: 0, start: monday, end: sunday };
-      weekMap[key].count++;
-      weekMap[key].totalMs += a.durationMs || 0;
-    }
-    const timeByTimeslot = Object.entries(weekMap)
-      .sort(([a], [b]) => b.localeCompare(a))
-      .map(([, data]) => {
-        const fmt = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-        return {
-          label: `${fmt(data.start)} – ${fmt(data.end)}`,
-          count: data.count,
-          totalMs: data.totalMs,
-        };
-      });
-
     // Time by role
     const ROLE_LABELS: Record<string, string> = {
       STUDENT: "Student",
@@ -236,7 +208,6 @@ export async function GET(req: Request) {
       dailyTrend,
       trendCategories,
       timeByCategory,
-      timeByTimeslot,
       timeByRole,
       csvData,
     });

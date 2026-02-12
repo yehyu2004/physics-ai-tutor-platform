@@ -46,7 +46,6 @@ interface ActivityData {
   dailyTrend: Record<string, string | number>[];
   trendCategories: string[];
   timeByCategory: { category: string; label: string; totalMs: number; count: number; color: string }[];
-  timeByTimeslot: { label: string; count: number; totalMs: number }[];
   timeByRole: { label: string; count: number; totalMs: number }[];
   csvData: { id: string; userName: string; userEmail: string; category: string; detail: string | null; durationMs: number | null; createdAt: string }[];
 }
@@ -59,7 +58,7 @@ export default function AdminUserActivityPage() {
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [activityFilter, setActivityFilter] = useState<string>("all");
   const [dateRange, setDateRange] = useState<string>("30");
-  const [breakdownView, setBreakdownView] = useState<"activity" | "timeslot" | "identity">("activity");
+  const [breakdownView, setBreakdownView] = useState<"activity" | "identity">("activity");
 
   // Fetch activity data
   const fetchData = useCallback(() => {
@@ -362,7 +361,6 @@ export default function AdminUserActivityPage() {
                 <div className="flex items-center gap-1.5">
                   {([
                     { key: "activity" as const, label: "Activity" },
-                    { key: "timeslot" as const, label: "Timeslot" },
                     { key: "identity" as const, label: "Identity" },
                   ]).map((f) => (
                     <button
@@ -384,9 +382,7 @@ export default function AdminUserActivityPage() {
               {(() => {
                 const items = breakdownView === "activity"
                   ? data.timeByCategory.map((d) => ({ label: d.label, count: d.count, totalMs: d.totalMs, color: d.color }))
-                  : breakdownView === "timeslot"
-                    ? data.timeByTimeslot
-                    : data.timeByRole;
+                  : data.timeByRole;
 
                 if (items.length === 0) {
                   return (
