@@ -193,7 +193,7 @@ export default function InclinedPlane() {
       const downUx = Math.cos(rad);
       const downUy = Math.sin(rad);
       const startOffsetPx = 30 + index * (blockSize + 4);
-      const bx = rampTopX - downUx * startOffsetPx + downUx * clampedPos;
+      const bx = rampTopX - downUx * startOffsetPx - downUx * clampedPos;
       const by = rampTopY + downUy * startOffsetPx + downUy * clampedPos;
 
       ctx.save();
@@ -256,7 +256,7 @@ export default function InclinedPlane() {
     const downUx = Math.cos(rad);
     const downUy = Math.sin(rad);
     const startOffsetPx = 30;
-    const bx = rampTopX - downUx * startOffsetPx + downUx * blockPosPx;
+    const bx = rampTopX - downUx * startOffsetPx - downUx * blockPosPx;
     const by = rampTopY + downUy * startOffsetPx + downUy * blockPosPx;
     const blockSize = 36;
 
@@ -320,12 +320,12 @@ export default function InclinedPlane() {
       ctx.setLineDash([4, 3]);
       ctx.beginPath();
       ctx.moveTo(bx, by);
-      ctx.lineTo(bx + mgSin * Math.cos(rad), by + mgSin * Math.sin(rad));
+      ctx.lineTo(bx - mgSin * Math.cos(rad), by + mgSin * Math.sin(rad));
       ctx.stroke();
       ctx.setLineDash([]);
-      drawArrowHead(ctx, bx + mgSin * Math.cos(rad), by + mgSin * Math.sin(rad), Math.cos(rad), Math.sin(rad), "#f97316");
+      drawArrowHead(ctx, bx - mgSin * Math.cos(rad), by + mgSin * Math.sin(rad), -Math.cos(rad), Math.sin(rad), "#f97316");
       ctx.fillStyle = "#f97316";
-      ctx.fillText("mg sin\u03b8", bx + mgSin * Math.cos(rad) + 5, by + mgSin * Math.sin(rad));
+      ctx.fillText("mg sin\u03b8", bx - mgSin * Math.cos(rad) - 55, by + mgSin * Math.sin(rad));
 
       // mg cos(theta) - perpendicular to ramp into surface
       const perpX = Math.sin(rad);
@@ -360,12 +360,12 @@ export default function InclinedPlane() {
         ctx.lineWidth = 2.5;
         ctx.beginPath();
         ctx.moveTo(bx, by);
-        ctx.lineTo(bx - fFriction * Math.cos(rad), by - fFriction * Math.sin(rad));
+        ctx.lineTo(bx + fFriction * Math.cos(rad), by - fFriction * Math.sin(rad));
         ctx.stroke();
-        drawArrowHead(ctx, bx - fFriction * Math.cos(rad), by - fFriction * Math.sin(rad), -Math.cos(rad), -Math.sin(rad), "#eab308");
+        drawArrowHead(ctx, bx + fFriction * Math.cos(rad), by - fFriction * Math.sin(rad), Math.cos(rad), -Math.sin(rad), "#eab308");
         ctx.fillStyle = "#eab308";
         ctx.textAlign = "left";
-        ctx.fillText("f", bx - fFriction * Math.cos(rad) - 15, by - fFriction * Math.sin(rad) - 10);
+        ctx.fillText("f", bx + fFriction * Math.cos(rad) + 5, by - fFriction * Math.sin(rad) - 10);
       }
     }
 
@@ -544,7 +544,7 @@ export default function InclinedPlane() {
           const rampTopX = rampBaseX + rampLen * Math.cos(rad);
           const rampTopY = rampBaseY - rampLen * Math.sin(rad);
           const startOffsetPx = 30;
-          const bx2 = rampTopX - downUx * startOffsetPx + downUx * blockPosPx;
+          const bx2 = rampTopX - downUx * startOffsetPx - downUx * blockPosPx;
           const by2 = rampTopY + downUy * startOffsetPx + downUy * blockPosPx;
           particlesRef.current.emitSparks(bx2, by2, 2, "#fbbf24");
         }

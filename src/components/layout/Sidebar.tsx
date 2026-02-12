@@ -39,6 +39,7 @@ interface NavItem {
   href: string;
   icon: React.ElementType;
   roles?: UserRole[];
+  badge?: string;
   children?: { label: string; href: string }[];
 }
 
@@ -50,7 +51,7 @@ interface NavSection {
 const mainItems: NavItem[] = [
   { label: "Home", href: "/dashboard", icon: Home },
   { label: "AI Chat", href: "/chat", icon: MessageSquare },
-  { label: "Simulations", href: "/simulations", icon: FlaskConical },
+  { label: "Simulations", href: "/simulations", icon: FlaskConical, badge: "Beta" },
   { label: "Grades", href: "/grades", icon: GraduationCap },
 ];
 
@@ -261,6 +262,11 @@ export default function Sidebar({ userRole, userName, collapsed = false, onToggl
       >
         <item.icon className="h-5 w-5 shrink-0" />
         {!collapsed && item.label}
+        {!collapsed && item.badge && (
+          <span className="ml-auto text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400">
+            {item.badge}
+          </span>
+        )}
       </Link>
     );
   };
