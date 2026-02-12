@@ -675,7 +675,8 @@ export default function DragTerminalVelocity() {
       const container = canvas.parentElement;
       if (!container) return;
       canvas.width = container.clientWidth;
-      canvas.height = Math.min(container.clientWidth * 0.55, 480);
+      const _isMobile = container.clientWidth < 640;
+      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 480);
       initWindStreaks(canvas.height, canvas.width * 0.4);
       draw();
     };

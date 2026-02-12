@@ -593,7 +593,8 @@ export default function PendulumSim() {
       const container = canvas.parentElement;
       if (!container) return;
       canvas.width = container.clientWidth;
-      canvas.height = Math.min(container.clientWidth * 0.6, 520);
+      const _isMobile = container.clientWidth < 640;
+      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.6), _isMobile ? 500 : 520);
       draw();
     };
     resize();

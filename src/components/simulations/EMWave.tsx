@@ -640,7 +640,8 @@ export default function EMWave() {
       const container = canvas.parentElement;
       if (!container) return;
       canvas.width = container.clientWidth;
-      canvas.height = Math.min(container.clientWidth * 0.5, 440);
+      const _isMobile = container.clientWidth < 640;
+      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.5), _isMobile ? 500 : 440);
       draw();
     };
     resize();

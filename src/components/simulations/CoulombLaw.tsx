@@ -465,7 +465,8 @@ export default function CoulombLaw() {
       const container = canvas.parentElement;
       if (!container) return;
       canvas.width = container.clientWidth;
-      canvas.height = Math.min(container.clientWidth * 0.55, 500);
+      const _isMobile = container.clientWidth < 640;
+      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.55), _isMobile ? 500 : 500);
 
       // Re-position default charges if they are off-screen
       setCharges((prev) =>

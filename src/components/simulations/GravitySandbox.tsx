@@ -715,7 +715,8 @@ export default function GravitySandbox() {
       const container = canvas.parentElement;
       if (!container) return;
       canvas.width = container.clientWidth;
-      canvas.height = Math.min(container.clientWidth * 0.6, 560);
+      const _isMobile = container.clientWidth < 640;
+      canvas.height = Math.min(container.clientWidth * (_isMobile ? 1.0 : 0.6), _isMobile ? 500 : 560);
       draw();
     };
     resize();
