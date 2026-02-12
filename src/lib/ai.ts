@@ -1,68 +1,13 @@
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 
-export const openai = new OpenAI({
+const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-export const anthropic = new Anthropic({
+const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
-
-const TOOL_DESCRIPTION = `Execute Python, JavaScript, or TypeScript code in a sandboxed environment. Use this to:
-- Run numerical calculations and verify physics solutions
-- Generate SVG visualizations and plots (print SVG markup to stdout)
-- Demonstrate physics concepts with computed data
-- Validate mathematical derivations programmatically
-
-IMPORTANT: The sandbox has NO external packages (no matplotlib, numpy, scipy, PIL). For plots and diagrams:
-- Generate SVG markup using string formatting and print it to stdout
-- Use Python's built-in math module for calculations
-- The output will be rendered inline if it starts with <svg
-
-Only use this tool when computation or visualization genuinely helps. Do not use it for simple arithmetic.`;
-
-export const EXECUTE_CODE_TOOL_OPENAI = {
-  type: "function" as const,
-  name: "execute_code",
-  description: TOOL_DESCRIPTION,
-  parameters: {
-    type: "object" as const,
-    properties: {
-      language: {
-        type: "string" as const,
-        enum: ["python", "javascript", "typescript"],
-        description: "Programming language to execute",
-      },
-      code: {
-        type: "string" as const,
-        description: "The code to execute. Must print output to stdout.",
-      },
-    },
-    required: ["language", "code"],
-  },
-  strict: false,
-};
-
-export const EXECUTE_CODE_TOOL_ANTHROPIC: Anthropic.Tool = {
-  name: "execute_code",
-  description: TOOL_DESCRIPTION,
-  input_schema: {
-    type: "object" as const,
-    properties: {
-      language: {
-        type: "string",
-        enum: ["python", "javascript", "typescript"],
-        description: "Programming language to execute",
-      },
-      code: {
-        type: "string",
-        description: "The code to execute. Must print output to stdout.",
-      },
-    },
-    required: ["language", "code"],
-  },
-};
 
 const DEFAULT_SYSTEM_PROMPT = `You are a helpful physics tutor for university-level General Physics students at NTHU (National Tsing Hua University).
 
@@ -116,17 +61,6 @@ DIAGRAMS — proactively include visuals whenever they would aid understanding. 
      <text x="200" y="30" text-anchor="middle" font-size="14">E (along ŷ)</text>
    </svg>
    \`\`\`
-
-CODE EXECUTION:
-You have an execute_code tool that runs Python, JavaScript, or TypeScript in a secure sandbox.
-Use it when computation or visualization genuinely helps (complex calculations, generating plots, verifying answers).
-The sandbox has NO external packages — no matplotlib, numpy, scipy. For plots, generate SVG markup directly:
-\`\`\`
-import math
-points = " ".join(f"{x},{200 - int(180*math.sin(x*math.pi/100))}" for x in range(0, 401, 2))
-print(f'<svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><polyline points="{points}" fill="none" stroke="#3b82f6" stroke-width="2"/></svg>')
-\`\`\`
-Do NOT use the tool for simple arithmetic you can do inline with LaTeX.
 
 Always show your work and explain the reasoning behind each step.`;
 
@@ -233,7 +167,7 @@ async function streamOpenAI(
     model,
     input,
     reasoning: { effort: "low", summary: "detailed" },
-    tools: [{ type: "web_search_preview" }, EXECUTE_CODE_TOOL_OPENAI],
+    tools: [{ type: "web_search_preview" }],
     stream: true,
   });
 
@@ -284,7 +218,6 @@ async function streamAnthropic(
     max_tokens: 4096,
     system: systemPrompt,
     messages: anthropicMessages,
-    tools: [EXECUTE_CODE_TOOL_ANTHROPIC],
   });
 
   return stream;
