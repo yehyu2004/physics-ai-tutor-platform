@@ -31,6 +31,10 @@ export default function GasMolecules() {
   const [isRunning, setIsRunning] = useState(true);
   const [showHistogram, setShowHistogram] = useState(true);
   const [challengeMode, setChallengeMode] = useState(false);
+  const [displayPressure, setDisplayPressure] = useState(0);
+  const [displayScore, setDisplayScore] = useState(0);
+  const [displayTarget, setDisplayTarget] = useState(0);
+  const displayTickRef = useRef(0);
   const particlesRef = useRef<Particle[]>([]);
   const speedHistRef = useRef<number[]>(new Array(20).fill(0));
   const particleSystemRef = useRef(new ParticleSystem());
@@ -485,6 +489,14 @@ export default function GasMolecules() {
     pressureHistoryRef.current.push(kineticPressureRef.current);
     if (pressureHistoryRef.current.length > 60) pressureHistoryRef.current.shift();
 
+    // Update display state every ~10 frames to keep JSX panel in sync
+    displayTickRef.current++;
+    if (displayTickRef.current % 10 === 0) {
+      setDisplayPressure(Math.round(kineticPressureRef.current));
+      setDisplayScore(challengeRef.current.score);
+      setDisplayTarget(Math.round(targetPressureRef.current));
+    }
+
     particleSystemRef.current.update(dt);
     draw();
     animRef.current = requestAnimationFrame(animate);
@@ -595,8 +607,8 @@ export default function GasMolecules() {
                 Adjust temperature and volume to reach target pressure
               </p>
               <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                Target: P = {targetPressureRef.current.toFixed(0)} | Current: P = {kineticPressureRef.current.toFixed(0)} |
-                Score: {challengeRef.current.score} pts
+                Target: P = {displayTarget} | Current: P = {displayPressure} |
+                Score: {displayScore} pts
               </p>
             </div>
             <button
