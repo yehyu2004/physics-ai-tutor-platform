@@ -209,7 +209,7 @@ export default function GasMolecules() {
     // Pressure gauge
     const gaugeX = boxLeft + 10;
     const gaugeY = boxTop + boxH - 50;
-    drawMeter(ctx, gaugeX, gaugeY, 100, 12, pressure, maxPressure, "#ef4444", `P: ${pressure.toFixed(0)}`);
+    drawMeter(ctx, gaugeX, gaugeY, 100, 12, pressure, maxPressure, "#ef4444", `P: ${pressure.toFixed(0)} Pa`);
 
     // Particles
     const particles = particlesRef.current;
@@ -372,7 +372,7 @@ export default function GasMolecules() {
       ctx.font = "bold 16px ui-monospace, monospace";
       const pDiff = Math.abs(kineticPressureRef.current - targetP) / Math.max(targetP, 1);
       ctx.fillStyle = pDiff < 0.1 ? "#22c55e" : pDiff < 0.3 ? "#f59e0b" : "#ef4444";
-      ctx.fillText(`P = ${targetP.toFixed(0)}`, boxLeft + 20, boxTop + boxH - 60);
+      ctx.fillText(`P = ${targetP.toFixed(0)} Pa`, boxLeft + 20, boxTop + boxH - 60);
 
       // Scoreboard
       renderScoreboard(ctx, W - 165, H - 135, 155, 125, challengeRef.current);
@@ -599,7 +599,7 @@ export default function GasMolecules() {
       </div>
 
       {/* Challenge mode panel */}
-      {challengeMode && challengeRef.current.active && (
+      {challengeMode && (
         <div className="rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 p-4">
           <div className="flex items-center justify-between">
             <div>
@@ -607,7 +607,7 @@ export default function GasMolecules() {
                 Adjust temperature and volume to reach target pressure
               </p>
               <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                Target: P = {displayTarget} | Current: P = {displayPressure} |
+                Target: P = {displayTarget} Pa | Current: P = {displayPressure} Pa |
                 Score: {displayScore} pts
               </p>
             </div>
@@ -694,17 +694,11 @@ export default function GasMolecules() {
 
         <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 flex items-end gap-2">
           <button
-            onClick={() => setIsRunning(!isRunning)}
-            className="flex-1 h-10 rounded-lg bg-orange-600 hover:bg-orange-700 text-white font-medium text-sm transition-colors"
-          >
-            {isRunning ? "Pause" : "Play"}
-          </button>
-          <button
             onClick={() => {
               pistonRef.current = 1.0;
               initParticles(numParticles, temperature);
             }}
-            className="h-10 px-4 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium transition-colors"
+            className="flex-1 h-10 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium transition-colors"
           >
             Reset
           </button>
