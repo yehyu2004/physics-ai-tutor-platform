@@ -436,8 +436,8 @@ export default function TorqueRotation() {
       ctx.fillText("ROTATION DATA", W - 208, 28);
       ctx.font = "12px ui-monospace";
       ctx.fillStyle = "#e2e8f0";
-      ctx.fillText(`tau = ${torque.toFixed(2)} N*m`, W - 208, 48);
-      ctx.fillText(`I = ${momentOfInertia} kg*m^2`, W - 208, 64);
+      ctx.fillText(`\u03C4 = ${torque.toFixed(2)} N\u00B7m`, W - 208, 48);
+      ctx.fillText(`I = ${momentOfInertia} kg\u00B7m\u00B2`, W - 208, 64);
       ctx.fillText(`alpha = tau/I = ${alpha.toFixed(3)} rad/s^2`, W - 208, 80);
       ctx.fillText(`omega = ${angVelRef.current.toFixed(2)} rad/s`, W - 208, 96);
       ctx.fillText(`theta = ${((angleRef.current * 180) / Math.PI % 360).toFixed(0)} deg`, W - 208, 112);
@@ -1008,7 +1008,7 @@ export default function TorqueRotation() {
               onClick={checkTargetAlpha}
               className="h-10 px-6 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium text-sm transition-colors whitespace-nowrap"
             >
-              Check alpha
+              Check
             </button>
           </div>
         </div>

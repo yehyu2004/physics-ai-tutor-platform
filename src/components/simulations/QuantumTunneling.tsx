@@ -899,7 +899,7 @@ export default function QuantumTunneling() {
               <span className="text-xs text-gray-500">
                 {transmitted}/{totalShots} tunneled ({totalShots > 0 ? ((transmitted / totalShots) * 100).toFixed(1) : 0}%)
               </span>
-              <button onClick={resetCounter} className="text-xs text-red-500 hover:text-red-400">
+              <button onClick={() => { resetCounter(); setChallengeMode(false); }} className="text-xs text-red-500 hover:text-red-400">
                 Reset
               </button>
             </div>

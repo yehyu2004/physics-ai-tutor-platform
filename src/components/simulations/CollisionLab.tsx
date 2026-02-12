@@ -1021,7 +1021,7 @@ export default function CollisionLab() {
         </div>
         <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-3 flex items-end">
           <button
-            onClick={reset}
+            onClick={() => { reset(); setChallengeMode(false); }}
             className="w-full h-9 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium transition-colors"
           >
             Reset

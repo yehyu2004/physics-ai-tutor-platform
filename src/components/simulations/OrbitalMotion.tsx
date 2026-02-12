@@ -841,8 +841,8 @@ export default function OrbitalMotion() {
               }}
               className="flex-1 accent-amber-500"
             />
-            <span className="text-sm font-mono font-bold text-gray-900 dark:text-gray-100 min-w-[3rem] text-right">
-              {centralMass}
+            <span className="text-sm font-mono font-bold text-gray-900 dark:text-gray-100 min-w-[3.5rem] text-right">
+              {centralMass} M☉
             </span>
           </div>
         </div>

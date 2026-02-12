@@ -296,7 +296,7 @@ export default function SpinningTop() {
     ctx.fillText(`Omega_prec = ${precessionOmega.toFixed(2)} rad/s`, panelX + 14, y);
     y += 22;
     ctx.fillStyle = "#fbbf24";
-    ctx.fillText(`L = ${L.toFixed(3)} kg m^2/s`, panelX + 14, y);
+    ctx.fillText(`L = ${L.toFixed(3)} kg\u00B7m\u00B2/s`, panelX + 14, y);
     y += 22;
     ctx.fillStyle = "#60a5fa";
     ctx.fillText(`KE_rot = ${keRot.toFixed(2)} J`, panelX + 14, y);
@@ -304,7 +304,7 @@ export default function SpinningTop() {
 
     ctx.fillStyle = "#94a3b8";
     ctx.font = "10px ui-monospace, monospace";
-    ctx.fillText(`I = ${momentOfInertia.toFixed(4)} kg m^2`, panelX + 14, y);
+    ctx.fillText(`I = ${momentOfInertia.toFixed(4)} kg\u00B7m\u00B2`, panelX + 14, y);
     y += 16;
     ctx.fillText(`m = ${mass.toFixed(2)} kg, l = ${length.toFixed(2)} m`, panelX + 14, y);
     y += 20;
@@ -694,7 +694,7 @@ export default function SpinningTop() {
           </h3>
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
             Given: spin = {spinRate} rad/s, tilt = {tiltDeg} deg, m = {mass.toFixed(2)} kg, l ={" "}
-            {length.toFixed(2)} m, I = {momentOfInertia.toFixed(4)} kg m^2
+            {length.toFixed(2)} m, I = {momentOfInertia.toFixed(4)} kg·m²
           </p>
           <p className="text-xs text-gray-500 dark:text-gray-500 mb-3 font-mono">
             Hint: Omega_prec = mgl / (I * omega_spin)

@@ -771,7 +771,7 @@ export default function WaveInterference() {
             <input type="range" min={0.5} max={5} step={0.1} value={freq1}
               onChange={(e) => { setFreq1(Number(e.target.value)); setActivePreset(null); }}
               className="flex-1 accent-red-500" />
-            <span className="text-sm font-mono font-bold text-gray-900 dark:text-gray-100 min-w-[2.5rem] text-right">{freq1.toFixed(1)}</span>
+            <span className="text-sm font-mono font-bold text-gray-900 dark:text-gray-100 min-w-[3.5rem] text-right">{freq1.toFixed(1)} Hz</span>
           </div>
         </div>
 
@@ -791,7 +791,7 @@ export default function WaveInterference() {
             <input type="range" min={0.5} max={5} step={0.1} value={freq2}
               onChange={(e) => { setFreq2(Number(e.target.value)); setActivePreset(null); }}
               className="flex-1 accent-blue-500" />
-            <span className="text-sm font-mono font-bold text-gray-900 dark:text-gray-100 min-w-[2.5rem] text-right">{freq2.toFixed(1)}</span>
+            <span className="text-sm font-mono font-bold text-gray-900 dark:text-gray-100 min-w-[3.5rem] text-right">{freq2.toFixed(1)} Hz</span>
           </div>
         </div>
 

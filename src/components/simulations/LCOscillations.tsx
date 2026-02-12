@@ -995,7 +995,7 @@ export default function LCOscillations() {
             {isRunning ? "Pause" : "Play"}
           </button>
           <button
-            onClick={reset}
+            onClick={() => { reset(); setChallengeMode(null); }}
             className="h-10 px-6 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium"
           >
             Reset

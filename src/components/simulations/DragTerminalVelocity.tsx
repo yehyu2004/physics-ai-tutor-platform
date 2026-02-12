@@ -807,7 +807,7 @@ export default function DragTerminalVelocity() {
             Predict the Terminal Velocity
           </h3>
           <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">
-            Object: {SHAPE_INFO[objectShape].name} (Cd = {dragCoeff.toFixed(2)}), mass = {mass} kg, A = {crossArea.toFixed(2)} m^2, rho = {rho} kg/m^3
+            Object: {SHAPE_INFO[objectShape].name} (Cd = {dragCoeff.toFixed(2)}), mass = {mass} kg, A = {crossArea.toFixed(2)} m², rho = {rho} kg/m³
           </p>
           <p className="text-xs text-amber-600 dark:text-amber-400 mb-2">
             Hint: v_t = sqrt(2mg / (rho * Cd * A))
@@ -919,7 +919,7 @@ export default function DragTerminalVelocity() {
               onChange={(e) => { setCrossArea(Number(e.target.value)); reset(); if (mode === "sandbox") setIsRunning(true); }}
               disabled={mode === "predict-vt" && waitingForPrediction}
               className="flex-1 accent-green-500" />
-            <span className="text-sm font-mono font-bold text-gray-900 dark:text-gray-100 min-w-[3.5rem] text-right">{crossArea.toFixed(2)} m^2</span>
+            <span className="text-sm font-mono font-bold text-gray-900 dark:text-gray-100 min-w-[3.5rem] text-right">{crossArea.toFixed(2)} m²</span>
           </div>
         </div>
         <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 flex flex-col gap-2">

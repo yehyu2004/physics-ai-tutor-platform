@@ -371,7 +371,7 @@ export default function SimpleHarmonicMotion() {
       { label: "omega", value: `${omega.toFixed(2)} rad/s`, color: "#60a5fa" },
       ...(mode === "resonance" ? [
         { label: "f_drive", value: `${drivingFreq.toFixed(3)} Hz`, color: "#f59e0b" },
-        { label: "A_resp", value: `${s.maxDisplacement.toFixed(0)} px`, color: "#f59e0b" },
+        { label: "A_resp", value: `${s.maxDisplacement.toFixed(0)} cm`, color: "#f59e0b" },
       ] : []),
     ]);
 
@@ -856,7 +856,7 @@ export default function SimpleHarmonicMotion() {
               className="flex-1 accent-blue-500"
             />
             <span className="text-sm font-mono font-bold text-gray-900 dark:text-gray-100 min-w-[3.5rem] text-right">
-              {amplitude} px
+              {amplitude} cm
             </span>
           </div>
         </div>

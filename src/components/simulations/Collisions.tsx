@@ -761,7 +761,7 @@ export default function Collisions() {
               disabled={predV1.trim() === "" || predV2.trim() === ""}
               className="h-10 px-6 rounded-lg bg-amber-500 hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium text-sm transition-colors"
             >
-              Submit & Run
+              Check
             </button>
           </div>
         </div>

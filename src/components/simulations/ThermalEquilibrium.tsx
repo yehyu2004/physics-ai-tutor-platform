@@ -822,7 +822,7 @@ export default function ThermalEquilibrium() {
                   {isRunning ? "Pause" : "Resume"}
                 </button>
                 <button
-                  onClick={reset}
+                  onClick={() => { reset(); setChallengeMode(false); }}
                   className="h-9 px-4 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-xs font-medium"
                 >
                   Reset
