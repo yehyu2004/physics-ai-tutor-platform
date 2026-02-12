@@ -142,7 +142,7 @@ export default function Sidebar({ userRole, userName, collapsed = false, onToggl
   if (userRole === "ADMIN" || userRole === "PROFESSOR" || userRole === "TA") {
     const staffItems = userRole === "ADMIN" || userRole === "PROFESSOR"
       ? adminItems
-      : adminItems.filter((item) => item.href === "/admin/qa-history" || item.href === "/admin/users" || item.href === "/admin/email-records" || item.href === "/admin/user-activity");
+      : adminItems.filter((item) => item.href === "/admin/qa-history" || item.href === "/admin/users" || item.href === "/admin/email-records");
     sections.push({ label: "ADMIN", items: staffItems });
   }
 

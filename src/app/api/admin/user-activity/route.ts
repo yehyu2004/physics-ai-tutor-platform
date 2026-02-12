@@ -49,18 +49,18 @@ export async function GET(req: Request) {
     }
 
     const userRole = (session.user as { role?: string }).role;
-    if (userRole !== "ADMIN" && userRole !== "PROFESSOR" && userRole !== "TA") {
+    if (userRole !== "ADMIN" && userRole !== "PROFESSOR") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const { searchParams } = new URL(req.url);
-    const userId = searchParams.get("userId") || undefined;
+    const role = searchParams.get("role") || undefined;
     const filter = searchParams.get("filter") || "all";
     const range = searchParams.get("range") || "30";
 
     // Build where clause
     const where: Record<string, unknown> = {};
-    if (userId) where.userId = userId;
+    if (role) where.user = { role };
 
     // Date range
     if (range !== "all") {

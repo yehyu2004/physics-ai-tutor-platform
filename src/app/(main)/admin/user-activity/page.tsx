@@ -3,13 +3,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { Loader2, Users, Clock, Activity, TrendingUp, Download } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import {
   AreaChart,
@@ -43,12 +36,6 @@ const CATEGORY_LABELS: Record<string, string> = {
   ADMIN_ACTION: "Admin",
 };
 
-interface UserOption {
-  id: string;
-  name: string | null;
-  email: string;
-}
-
 interface ActivityData {
   summary: {
     totalActivities: number;
@@ -67,34 +54,18 @@ interface ActivityData {
 
 
 export default function AdminUserActivityPage() {
-  const [users, setUsers] = useState<UserOption[]>([]);
   const [data, setData] = useState<ActivityData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState<string>("all");
+  const [roleFilter, setRoleFilter] = useState<string>("all");
   const [activityFilter, setActivityFilter] = useState<string>("all");
   const [dateRange, setDateRange] = useState<string>("30");
   const [breakdownView, setBreakdownView] = useState<"activity" | "timeslot" | "identity">("activity");
-
-  // Fetch user list for dropdown
-  useEffect(() => {
-    fetch("/api/admin/users")
-      .then((r) => r.json())
-      .then((json) => {
-        const list = (json.users || json || []).map((u: { id: string; name: string | null; email: string }) => ({
-          id: u.id,
-          name: u.name,
-          email: u.email,
-        }));
-        setUsers(list);
-      })
-      .catch(() => {});
-  }, []);
 
   // Fetch activity data
   const fetchData = useCallback(() => {
     setLoading(true);
     const params = new URLSearchParams();
-    if (userId !== "all") params.set("userId", userId);
+    if (roleFilter !== "all") params.set("role", roleFilter);
     if (activityFilter !== "all") params.set("filter", activityFilter);
     params.set("range", dateRange);
 
@@ -111,7 +82,7 @@ export default function AdminUserActivityPage() {
         setData(null);
         setLoading(false);
       });
-  }, [userId, activityFilter, dateRange]);
+  }, [roleFilter, activityFilter, dateRange]);
 
   useEffect(() => {
     fetchData();
@@ -173,20 +144,28 @@ export default function AdminUserActivityPage() {
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-4">
-        {/* User selector */}
-        <Select value={userId} onValueChange={setUserId}>
-          <SelectTrigger className="w-[220px]">
-            <SelectValue placeholder="All Users" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Users</SelectItem>
-            {users.map((u) => (
-              <SelectItem key={u.id} value={u.id}>
-                {u.name || u.email} {u.name ? `(${u.email})` : ""}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {/* Identity type filter */}
+        <div className="flex items-center gap-1.5">
+          {[
+            { key: "all", label: "All Roles" },
+            { key: "STUDENT", label: "Student" },
+            { key: "TA", label: "TA" },
+            { key: "PROFESSOR", label: "Professor" },
+            { key: "ADMIN", label: "Admin" },
+          ].map((f) => (
+            <button
+              key={f.key}
+              onClick={() => setRoleFilter(f.key)}
+              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                roleFilter === f.key
+                  ? "bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900"
+                  : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
 
         {/* Activity type filter */}
         <div className="flex items-center gap-1.5">
