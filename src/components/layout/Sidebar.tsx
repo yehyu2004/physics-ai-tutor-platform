@@ -20,6 +20,7 @@ import {
   PanelLeftClose,
   User,
   Mail,
+  FlaskConical,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -49,6 +50,7 @@ interface NavSection {
 const mainItems: NavItem[] = [
   { label: "Home", href: "/dashboard", icon: Home },
   { label: "AI Chat", href: "/chat", icon: MessageSquare },
+  { label: "Simulations", href: "/simulations", icon: FlaskConical },
   { label: "Grades", href: "/grades", icon: GraduationCap },
 ];
 

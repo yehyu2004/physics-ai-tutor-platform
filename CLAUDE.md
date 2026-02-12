@@ -109,6 +109,23 @@ prisma/
 - Optional "lock after submission" toggle for timed quizzes
 - LaTeX export functionality for creating printable exam copies
 
+#### Physics Simulations
+- **Location**: `src/components/simulations/` (28 Canvas-based components)
+- **Data**: `src/data/halliday-chapters.ts` — full Halliday textbook structure (6 parts, 44 chapters, 28 simulations)
+- **Pages**: `/simulations` (chapter browser) and `/simulations/[id]` (individual sim viewer)
+- **Rendering**: HTML5 Canvas with `requestAnimationFrame` at 60fps
+- **Styling conventions for simulations**:
+  - Canvas background: `#0f172a` (dark navy) or `#020617` (near-black for space themes)
+  - Info panels: `rgba(0,0,0,0.6)` rounded rectangles with `ui-monospace` font
+  - Force vectors: Red (`#ef4444`) for gravity/weight, Green (`#22c55e`) for velocity, Blue (`#3b82f6`) for other forces
+  - Glow effects: `createRadialGradient` with color → transparent, use `shadowBlur` for line glow
+  - Control cards: `rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4`
+  - Slider accent colors: match the physics domain color (red, blue, amber, green, purple)
+  - Equations section: monospace font in `bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2` cards
+  - Canvas color values: Always use `rgba()` format for gradient stops, never CSS `transparent` keyword
+- **Physics accuracy**: Use Velocity Verlet integrator for orbital/gravitational simulations to conserve energy
+- **Adding new simulations**: Add entry to `halliday-chapters.ts`, create component in `src/components/simulations/`, register in `SimulationViewClient.tsx`
+
 #### Exam Mode
 - Platform-wide toggle (TA/Professor/Admin only)
 - Switches AI tutor to guided-only mode (no direct answers)
