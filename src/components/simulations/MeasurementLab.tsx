@@ -139,16 +139,16 @@ function generateObject(
   let minCm: number, maxCm: number;
   switch (precision) {
     case "ruler":
-      minCm = 2 + difficulty * 0.5;
-      maxCm = 12 - difficulty * 0.3;
+      minCm = 2 + difficulty * 0.3;
+      maxCm = 6 - difficulty * 0.2;
       break;
     case "fine":
-      minCm = 1.5 + difficulty * 0.3;
-      maxCm = 10 - difficulty * 0.2;
+      minCm = 1.5 + difficulty * 0.2;
+      maxCm = 5 - difficulty * 0.1;
       break;
     case "caliper":
-      minCm = 0.5 + difficulty * 0.2;
-      maxCm = 5 - difficulty * 0.1;
+      minCm = 0.5 + difficulty * 0.1;
+      maxCm = 3 - difficulty * 0.05;
       break;
   }
   // Generate to the resolution of the instrument (simulating "true" values)
@@ -233,6 +233,11 @@ export default function MeasurementLab() {
       difficulty,
     );
     objectRef.current = obj;
+    // Auto-position ruler near the object's left edge
+    rulerPosRef.current = {
+      x: Math.max(10, obj.x - 20),
+      y: obj.shape === "circle" ? obj.y + obj.heightPx * 0.4 : obj.y + obj.heightPx + 10,
+    };
     setSubmitted(false);
     setLastResult(null);
     setUserInput("");
@@ -569,25 +574,33 @@ export default function MeasurementLab() {
     }
     ctx.restore();
 
-    // Drag handle indicator
+    // Drag handle indicator (larger, more visible)
     ctx.fillStyle = isDraggingRulerRef.current
-      ? "rgba(59,130,246,0.4)"
-      : "rgba(255,255,255,0.1)";
+      ? "rgba(59,130,246,0.5)"
+      : "rgba(255,255,255,0.15)";
     ctx.beginPath();
-    ctx.arc(rx + rulerLen / 2, ry - 10, 6, 0, Math.PI * 2);
+    (ctx as CanvasRenderingContext2D).roundRect(rx + rulerLen / 2 - 20, ry - 18, 40, 14, 7);
     ctx.fill();
-    ctx.strokeStyle = isDraggingRulerRef.current ? "#3b82f6" : "rgba(255,255,255,0.3)";
+    ctx.strokeStyle = isDraggingRulerRef.current ? "#3b82f6" : "rgba(255,255,255,0.35)";
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    // Move icon (four dots)
-    ctx.fillStyle = isDraggingRulerRef.current ? "#3b82f6" : "rgba(255,255,255,0.5)";
-    for (const dx of [-2, 2]) {
-      for (const dy of [-2, 2]) {
+    // Move icon (grip dots - 3x2 grid)
+    ctx.fillStyle = isDraggingRulerRef.current ? "#3b82f6" : "rgba(255,255,255,0.6)";
+    for (const dx of [-6, 0, 6]) {
+      for (const dy of [-3, 3]) {
         ctx.beginPath();
-        ctx.arc(rx + rulerLen / 2 + dx, ry - 10 + dy, 1, 0, Math.PI * 2);
+        ctx.arc(rx + rulerLen / 2 + dx, ry - 11 + dy, 1.5, 0, Math.PI * 2);
         ctx.fill();
       }
+    }
+
+    // "Drag me" hint text (only when not dragging and not submitted)
+    if (!isDraggingRulerRef.current && !submitted) {
+      ctx.fillStyle = "rgba(59,130,246,0.6)";
+      ctx.font = "bold 9px ui-monospace, monospace";
+      ctx.textAlign = "center";
+      ctx.fillText("↕ DRAG RULER", rx + rulerLen / 2, ry - 24);
     }
 
     // Particles
