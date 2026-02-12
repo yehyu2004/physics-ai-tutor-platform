@@ -472,7 +472,7 @@ export default function ConstantAcceleration() {
     if (!challengeMode || hasScored.current) return;
 
     const targetDist = targetDistRef.current;
-    const result = calculateAccuracy(currentX, targetDist, MAX_DIST);
+    const result = calculateAccuracy(currentX, targetDist, targetDist * 0.5);
     hasScored.current = true;
 
     const canvas = canvasRef.current;
