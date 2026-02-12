@@ -48,7 +48,7 @@ export default function ConstantAcceleration() {
   const predictionLineRef = useRef<number | null>(null);
 
   const randomizeTarget = useCallback(() => {
-    targetDistRef.current = Math.round(20 + Math.random() * 150);
+    targetDistRef.current = Math.round(30 + Math.random() * 100);
     hasScored.current = false;
     carStoppedRef.current = false;
     scorePopupRef.current = null;
@@ -683,8 +683,9 @@ export default function ConstantAcceleration() {
       // Stop the sim so the user can set params before pressing Play
       setIsRunning(false);
       cancelAnimationFrame(animRef.current);
-      // Default to negative acceleration for braking challenge
-      if (accel >= 0) setAccel(-2);
+      // Set sensible defaults for braking challenge
+      setV0(20);
+      setAccel(-2);
     }
     hasScored.current = false;
     carStoppedRef.current = false;
