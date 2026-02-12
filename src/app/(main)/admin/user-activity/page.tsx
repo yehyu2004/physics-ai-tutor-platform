@@ -115,12 +115,18 @@ export default function AdminUserActivityPage() {
     params.set("range", dateRange);
 
     fetch(`/api/admin/user-activity?${params.toString()}`)
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error("API error");
+        return r.json();
+      })
       .then((json) => {
         setData(json);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => {
+        setData(null);
+        setLoading(false);
+      });
   }, [userId, activityFilter, dateRange]);
 
   useEffect(() => {
