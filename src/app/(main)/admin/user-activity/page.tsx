@@ -293,7 +293,7 @@ export default function AdminUserActivityPage() {
                     <Clock className="h-5 w-5 text-neutral-700 dark:text-neutral-300" />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold">{formatDuration(data.summary.totalTimeMs)}</div>
+                    <div className="text-2xl font-bold">{(data.summary.totalTimeMs / 3600000).toFixed(1)}h</div>
                     <p className="text-sm font-medium">Total Time Spent</p>
                   </div>
                 </div>
