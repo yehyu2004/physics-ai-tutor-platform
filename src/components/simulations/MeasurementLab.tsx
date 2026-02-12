@@ -1093,7 +1093,7 @@ export default function MeasurementLab() {
               <div className="flex justify-between">
                 <span className="text-gray-500 dark:text-gray-400">True Length:</span>
                 <span className="font-mono font-bold text-gray-900 dark:text-gray-100">
-                  {lastResult.trueValue.toFixed(3)} cm
+                  {lastResult.trueValue.toFixed(PRECISION_INFO[precision].decimalPlaces)} cm
                 </span>
               </div>
               <div className="flex justify-between">
@@ -1113,7 +1113,7 @@ export default function MeasurementLab() {
                         : "text-red-500"
                   }`}
                 >
-                  {lastResult.error.toFixed(3)} cm ({(lastResult.relativeError * 100).toFixed(1)}%)
+                  {lastResult.error.toFixed(PRECISION_INFO[precision].decimalPlaces)} cm ({(lastResult.relativeError * 100).toFixed(1)}%)
                 </span>
               </div>
               <div className="flex justify-between">
