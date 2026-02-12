@@ -28,7 +28,7 @@ export default function GasMolecules() {
   const animRef = useRef<number>(0);
   const [temperature, setTemperature] = useState(300);
   const [numParticles, setNumParticles] = useState(80);
-  const [isRunning, setIsRunning] = useState(true);
+  const isRunning = true;
   const [showHistogram, setShowHistogram] = useState(true);
   const [challengeMode, setChallengeMode] = useState(false);
   const [displayPressure, setDisplayPressure] = useState(0);
