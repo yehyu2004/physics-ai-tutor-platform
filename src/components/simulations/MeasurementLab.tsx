@@ -73,11 +73,11 @@ const OBJECT_LABELS = [
 
 const PRECISION_INFO: Record<
   PrecisionLevel,
-  { label: string; resolution: number; unit: string; sigFigs: number }
+  { label: string; resolution: number; unit: string; sigFigs: number; decimalPlaces: number }
 > = {
-  ruler: { label: "Basic Ruler (1 cm)", resolution: 1, unit: "cm", sigFigs: 2 },
-  fine: { label: "Fine Ruler (1 mm)", resolution: 0.1, unit: "cm", sigFigs: 3 },
-  caliper: { label: "Caliper (0.1 mm)", resolution: 0.01, unit: "cm", sigFigs: 4 },
+  ruler: { label: "Basic Ruler (1 cm)", resolution: 1, unit: "cm", sigFigs: 2, decimalPlaces: 1 },
+  fine: { label: "Fine Ruler (1 mm)", resolution: 0.1, unit: "cm", sigFigs: 3, decimalPlaces: 2 },
+  caliper: { label: "Caliper (0.1 mm)", resolution: 0.01, unit: "cm", sigFigs: 4, decimalPlaces: 3 },
 };
 
 const CHALLENGE_ROUNDS = 5;
@@ -122,6 +122,14 @@ function countSigFigs(str: string): number {
     const withoutTrailing = cleaned.replace(/0+$/, "");
     return withoutTrailing.length || 1;
   }
+}
+
+/** Count decimal places in a string number */
+function countDecimalPlaces(str: string): number {
+  const s = str.trim();
+  const dotIdx = s.indexOf(".");
+  if (dotIdx === -1) return 0;
+  return s.length - dotIdx - 1;
 }
 
 /** Generate a random measurable object */
@@ -366,7 +374,7 @@ export default function MeasurementLab() {
           ctx.font = "bold 12px ui-monospace, monospace";
           ctx.textAlign = "center";
           ctx.fillText(
-            `${obj.trueLengthCm.toFixed(3)} cm`,
+            `${obj.trueLengthCm.toFixed(PRECISION_INFO[precision].decimalPlaces)} cm`,
             obj.x + obj.widthPx / 2,
             arrY + 16,
           );
@@ -437,7 +445,7 @@ export default function MeasurementLab() {
           ctx.font = "bold 12px ui-monospace, monospace";
           ctx.textAlign = "center";
           ctx.fillText(
-            `${obj.trueLengthCm.toFixed(3)} cm (diameter)`,
+            `${obj.trueLengthCm.toFixed(PRECISION_INFO[precision].decimalPlaces)} cm (diameter)`,
             obj.x + obj.widthPx / 2,
             arrY + 16,
           );
@@ -617,7 +625,7 @@ export default function MeasurementLab() {
     const infoPanelRows = [
       { label: "Tool:", value: info.label, color: "#60a5fa" },
       { label: "Resolution:", value: `${info.resolution} ${info.unit}` },
-      { label: "Sig Figs:", value: `${info.sigFigs}`, color: "#fbbf24" },
+      { label: "Decimal Places:", value: `${info.decimalPlaces}`, color: "#fbbf24" },
     ];
     if (obj) {
       infoPanelRows.push({
@@ -832,12 +840,18 @@ export default function MeasurementLab() {
     }
 
     const trueValue = obj.trueLengthCm;
-    const error = Math.abs(userValue - trueValue);
-    const relativeError = trueValue !== 0 ? error / trueValue : 0;
     const info = PRECISION_INFO[precision];
+    // Round both values to instrument precision for fair comparison
+    const dp = info.decimalPlaces;
+    const roundedTrue = parseFloat(trueValue.toFixed(dp));
+    const roundedUser = parseFloat(userValue.toFixed(dp));
+    const error = Math.abs(roundedUser - roundedTrue);
+    const relativeError = roundedTrue !== 0 ? error / roundedTrue : 0;
+    // Check decimal places (measurement science: instrument determines decimal places)
+    const userDP = countDecimalPlaces(userInput);
     const userSigFigs = countSigFigs(userInput);
-    const expectedSigFigs = info.sigFigs;
-    const sigFigsCorrect = userSigFigs === expectedSigFigs;
+    const expectedSigFigs = countSigFigs(roundedTrue.toFixed(dp));
+    const sigFigsCorrect = userDP === dp;
 
     // Scoring: up to 3 points
     let points = 0;
@@ -1028,7 +1042,7 @@ export default function MeasurementLab() {
                       : "text-gray-500 dark:text-gray-400"
                   }`}
                 >
-                  Resolution: {info.resolution} {info.unit} | {info.sigFigs} sig figs
+                  Resolution: {info.resolution} {info.unit} | {info.decimalPlaces} d.p.
                 </div>
               </button>
             );
@@ -1064,8 +1078,7 @@ export default function MeasurementLab() {
           </div>
           {!submitted && (
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-              Use correct significant figures for the {PRECISION_INFO[precision].label.toLowerCase()}.
-              Expected: {PRECISION_INFO[precision].sigFigs} sig figs.
+              Record your answer with {PRECISION_INFO[precision].decimalPlaces} decimal place{PRECISION_INFO[precision].decimalPlaces > 1 ? "s" : ""} (instrument precision of {PRECISION_INFO[precision].label.toLowerCase()}).
             </p>
           )}
         </div>
@@ -1104,14 +1117,14 @@ export default function MeasurementLab() {
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500 dark:text-gray-400">Sig Figs:</span>
+                <span className="text-gray-500 dark:text-gray-400">Precision:</span>
                 <span
                   className={`font-mono font-bold ${
                     lastResult.sigFigsCorrect ? "text-green-500" : "text-red-500"
                   }`}
                 >
-                  {lastResult.userSigFigs} (expected {lastResult.expectedSigFigs})
-                  {lastResult.sigFigsCorrect ? " [correct]" : " [incorrect]"}
+                  {lastResult.userSigFigs} sig figs
+                  {lastResult.sigFigsCorrect ? " [correct d.p.]" : ` [need ${PRECISION_INFO[precision].decimalPlaces} d.p.]`}
                 </span>
               </div>
               <div className="flex justify-between items-center">
