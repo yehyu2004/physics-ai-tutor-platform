@@ -5,6 +5,13 @@ import { Loader2, Users, Clock, Activity, TrendingUp, Download } from "lucide-re
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   AreaChart,
   Area,
   XAxis,
@@ -144,27 +151,18 @@ export default function AdminUserActivityPage() {
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-4">
         {/* Identity type filter */}
-        <div className="flex items-center gap-1.5">
-          {[
-            { key: "all", label: "All Roles" },
-            { key: "STUDENT", label: "Student" },
-            { key: "TA", label: "TA" },
-            { key: "PROFESSOR", label: "Professor" },
-            { key: "ADMIN", label: "Admin" },
-          ].map((f) => (
-            <button
-              key={f.key}
-              onClick={() => setRoleFilter(f.key)}
-              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
-                roleFilter === f.key
-                  ? "bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900"
-                  : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
+        <Select value={roleFilter} onValueChange={setRoleFilter}>
+          <SelectTrigger className="w-[150px]">
+            <SelectValue placeholder="All Roles" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Roles</SelectItem>
+            <SelectItem value="STUDENT">Student</SelectItem>
+            <SelectItem value="TA">TA</SelectItem>
+            <SelectItem value="PROFESSOR">Professor</SelectItem>
+            <SelectItem value="ADMIN">Admin</SelectItem>
+          </SelectContent>
+        </Select>
 
         {/* Activity type filter */}
         <div className="flex items-center gap-1.5">
