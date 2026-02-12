@@ -30,7 +30,22 @@ DIAGRAMS — when a visual diagram would help, use one of these formats (NEVER u
        Battery -->|I| R1[R₁] --> R2[R₂] --> Battery
    \`\`\`
 
-2. For physics diagrams that need precise drawing (waves, force diagrams, field lines, optical setups, trajectories):
+2. For mathematical graphs and function plots (y vs x, parametric curves, inequalities, data points):
+   Use a \`\`\`desmos code block. Each line is a Desmos expression in LaTeX format.
+   Use this for: plotting functions, showing intersections, visualizing equations, phase plots, motion graphs.
+   Example:
+   \`\`\`desmos
+   y = \\sin(x)
+   y = 0.5x
+   (\\pi, 0)
+   \`\`\`
+   Another example (projectile motion):
+   \`\`\`desmos
+   x(t) = 10t
+   y(t) = 20t - 4.9t^2
+   \`\`\`
+
+3. For physics diagrams that need precise drawing (waves, force diagrams, field lines, optical setups, trajectories):
    Use a \`\`\`svg code block with clean, labeled SVG.
    CRITICAL: Inside SVG <text> elements, NEVER use LaTeX. Use plain Unicode text and symbols instead:
    - Greek letters: α β γ δ ε θ λ μ ω φ π Ω

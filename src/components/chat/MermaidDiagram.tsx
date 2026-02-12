@@ -14,7 +14,11 @@ export default function MermaidDiagram({ chart, content }: { chart?: string; con
     if (!mermaidCode) return;
     try {
       const mermaid = (await import("mermaid")).default;
-      mermaid.initialize({ startOnLoad: false, theme: "default" });
+      const isDark = document.documentElement.classList.contains("dark");
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: isDark ? "dark" : "default",
+      });
       await mermaid.parse(mermaidCode);
       const id = `mermaid-${Date.now()}-${mermaidCounter++}`;
       const { svg: rendered } = await mermaid.render(id, mermaidCode);
@@ -43,7 +47,7 @@ export default function MermaidDiagram({ chart, content }: { chart?: string; con
   return (
     <div
       ref={containerRef}
-      className="my-2 p-3 bg-white border border-gray-200 rounded-lg overflow-x-auto flex justify-center"
+      className="my-2 p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg overflow-x-auto flex justify-center"
       dangerouslySetInnerHTML={{ __html: svg }}
     />
   );

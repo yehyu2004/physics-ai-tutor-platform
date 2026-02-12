@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, lazy, Suspense } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
@@ -9,6 +9,9 @@ import { Check, Copy, Play, Edit3, Save } from "lucide-react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import "katex/dist/katex.min.css";
+
+const MermaidDiagram = lazy(() => import("@/components/chat/MermaidDiagram"));
+const DesmosGraph = lazy(() => import("@/components/chat/DesmosGraph"));
 
 function normalizeLatex(content: string): string {
   // Convert \[...\] to $$...$$ and \(...\) to $...$
@@ -275,6 +278,20 @@ export function MarkdownContent({ content, className }: MarkdownContentProps) {
                   />
                 );
               }
+            }
+            if (className?.includes("language-mermaid")) {
+              return (
+                <Suspense fallback={<div className="my-3 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg text-sm text-gray-500 animate-pulse">Rendering diagram...</div>}>
+                  <MermaidDiagram content={code} />
+                </Suspense>
+              );
+            }
+            if (className?.includes("language-desmos")) {
+              return (
+                <Suspense fallback={<div className="my-3 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg text-sm text-gray-500 animate-pulse">Loading graph...</div>}>
+                  <DesmosGraph code={code} />
+                </Suspense>
+              );
             }
             const isBlock = className?.includes("language-");
             if (isBlock) {
