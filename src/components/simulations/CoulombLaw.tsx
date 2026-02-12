@@ -253,16 +253,18 @@ export default function CoulombLaw() {
         drawArrow(ctx, c.x, c.y, nx * len, ny * len, "#f59e0b", {
           lineWidth: 2.5,
           headSize: 10,
-          label: `${computeSIForce(
-            c.magnitude,
-            // Find the dominant interaction for labeling; for net force, label with total magnitude
-            currentCharges.length === 2
-              ? currentCharges.find((o) => o.id !== c.id)!.magnitude
-              : 1,
-            currentCharges.length === 2
-              ? pairs[0]?.dist ?? 100
-              : 100
-          ).toExponential(1)} N`,
+          ...(gameMode !== "challenge" && {
+            label: `${computeSIForce(
+              c.magnitude,
+              // Find the dominant interaction for labeling; for net force, label with total magnitude
+              currentCharges.length === 2
+                ? currentCharges.find((o) => o.id !== c.id)!.magnitude
+                : 1,
+              currentCharges.length === 2
+                ? pairs[0]?.dist ?? 100
+                : 100
+            ).toExponential(1)} N`,
+          }),
         });
 
         ctx.shadowBlur = 0;
@@ -305,26 +307,28 @@ export default function CoulombLaw() {
             ctx.shadowBlur = 0;
             ctx.shadowColor = "transparent";
 
-            // Force label at midpoint
-            ctx.fillStyle = "#fbbf24";
-            ctx.font = "bold 11px ui-monospace, monospace";
-            ctx.textAlign = "center";
-            const midX = (ci.x + cj.x) / 2;
-            const midY = (ci.y + cj.y) / 2;
-            const forceLabel =
-              fSI >= 0.01
-                ? `F = ${fSI.toFixed(2)} N`
-                : `F = ${fSI.toExponential(2)} N`;
-            ctx.fillText(forceLabel, midX, midY + 18);
+            // Force label at midpoint (hidden in challenge mode to avoid answer leak)
+            if (gameMode !== "challenge") {
+              ctx.fillStyle = "#fbbf24";
+              ctx.font = "bold 11px ui-monospace, monospace";
+              ctx.textAlign = "center";
+              const midX = (ci.x + cj.x) / 2;
+              const midY = (ci.y + cj.y) / 2;
+              const forceLabel =
+                fSI >= 0.01
+                  ? `F = ${fSI.toFixed(2)} N`
+                  : `F = ${fSI.toExponential(2)} N`;
+              ctx.fillText(forceLabel, midX, midY + 18);
 
-            // Direction label
-            ctx.fillStyle = "rgba(251,191,36,0.6)";
-            ctx.font = "10px ui-monospace, monospace";
-            ctx.fillText(
-              ci.q * cj.q > 0 ? "Repulsive" : "Attractive",
-              midX,
-              midY + 32
-            );
+              // Direction label
+              ctx.fillStyle = "rgba(251,191,36,0.6)";
+              ctx.font = "10px ui-monospace, monospace";
+              ctx.fillText(
+                ci.q * cj.q > 0 ? "Repulsive" : "Attractive",
+                midX,
+                midY + 32
+              );
+            }
           }
         }
       }
@@ -413,11 +417,11 @@ export default function CoulombLaw() {
         { label: "Distance", value: `${distM.toFixed(2)} m`, color: "#94a3b8" },
         {
           label: "|F|",
-          value: fSI >= 0.01 ? `${fSI.toFixed(3)} N` : `${fSI.toExponential(2)} N`,
+          value: gameMode === "challenge" ? "???" : (fSI >= 0.01 ? `${fSI.toFixed(3)} N` : `${fSI.toExponential(2)} N`),
           color: "#fbbf24",
         },
         { label: "Direction", value: `${angle.toFixed(1)}\u00B0`, color: "#94a3b8" },
-        { label: "Type", value: c0.q * c1.q > 0 ? "Repulsive" : "Attractive", color: c0.q * c1.q > 0 ? "#ef4444" : "#22c55e" },
+        { label: "Type", value: gameMode === "challenge" ? "???" : (c0.q * c1.q > 0 ? "Repulsive" : "Attractive"), color: gameMode === "challenge" ? "#94a3b8" : (c0.q * c1.q > 0 ? "#ef4444" : "#22c55e") },
       ]);
     }
 

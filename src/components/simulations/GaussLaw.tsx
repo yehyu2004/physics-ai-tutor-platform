@@ -523,11 +523,12 @@ export default function GaussLaw() {
     const qEnc = getEnclosedCharge(cfg, qNano, surfR, W, H);
     const flux = qEnc / EPSILON_0;
 
-    // Info panel
+    // Info panel (hide Q_enc and Flux values in challenge mode to avoid answer leak)
+    const isChallenge = gameModeRef.current === "challenge";
     drawInfoPanel(ctx, 12, 12, 220, 100, "GAUSS\u2019S LAW", [
       { label: "Config:", value: cfg.charAt(0).toUpperCase() + cfg.slice(1), color: "#94a3b8" },
-      { label: "Q_enc:", value: `${sciNotation(qEnc)} C`, color: qEnc !== 0 ? "#22c55e" : "#94a3b8" },
-      { label: "Flux \u03A6:", value: `${sciNotation(flux)} N\u00B7m\u00B2/C`, color: "#38bdf8" },
+      { label: "Q_enc:", value: isChallenge ? "???" : `${sciNotation(qEnc)} C`, color: isChallenge ? "#94a3b8" : (qEnc !== 0 ? "#22c55e" : "#94a3b8") },
+      { label: "Flux \u03A6:", value: isChallenge ? "???" : `${sciNotation(flux)} N\u00B7m\u00B2/C`, color: isChallenge ? "#94a3b8" : "#38bdf8" },
       { label: "Surface R:", value: `${surfR}px`, color: "#a78bfa" },
     ]);
 
@@ -542,34 +543,36 @@ export default function GaussLaw() {
       ctx.stroke();
     }
 
-    // Flux magnitude bar
-    const maxFluxDisplay = Math.abs(10e-9 / EPSILON_0);
-    const fluxFraction = Math.min(Math.abs(flux) / maxFluxDisplay, 1);
-    const barX = 12;
-    const barY = H - 40;
-    const barW = 200;
-    const barH = 12;
+    // Flux magnitude bar (hidden in challenge mode to avoid answer leak)
+    if (!isChallenge) {
+      const maxFluxDisplay = Math.abs(10e-9 / EPSILON_0);
+      const fluxFraction = Math.min(Math.abs(flux) / maxFluxDisplay, 1);
+      const barX = 12;
+      const barY = H - 40;
+      const barW = 200;
+      const barH = 12;
 
-    ctx.fillStyle = "rgba(0,0,0,0.5)";
-    ctx.beginPath();
-    ctx.roundRect(barX - 4, barY - 20, barW + 8, barH + 32, 6);
-    ctx.fill();
-
-    ctx.font = "bold 10px ui-monospace, monospace";
-    ctx.fillStyle = "#38bdf8";
-    ctx.textAlign = "left";
-    ctx.fillText(`|\u03A6| = ${Math.abs(flux).toExponential(2)} N\u00B7m\u00B2/C`, barX, barY - 6);
-
-    ctx.fillStyle = "rgba(56,189,248,0.15)";
-    ctx.beginPath();
-    ctx.roundRect(barX, barY, barW, barH, barH / 2);
-    ctx.fill();
-
-    if (fluxFraction > 0) {
-      ctx.fillStyle = "#38bdf8";
+      ctx.fillStyle = "rgba(0,0,0,0.5)";
       ctx.beginPath();
-      ctx.roundRect(barX, barY, barW * fluxFraction, barH, barH / 2);
+      ctx.roundRect(barX - 4, barY - 20, barW + 8, barH + 32, 6);
       ctx.fill();
+
+      ctx.font = "bold 10px ui-monospace, monospace";
+      ctx.fillStyle = "#38bdf8";
+      ctx.textAlign = "left";
+      ctx.fillText(`|\u03A6| = ${Math.abs(flux).toExponential(2)} N\u00B7m\u00B2/C`, barX, barY - 6);
+
+      ctx.fillStyle = "rgba(56,189,248,0.15)";
+      ctx.beginPath();
+      ctx.roundRect(barX, barY, barW, barH, barH / 2);
+      ctx.fill();
+
+      if (fluxFraction > 0) {
+        ctx.fillStyle = "#38bdf8";
+        ctx.beginPath();
+        ctx.roundRect(barX, barY, barW * fluxFraction, barH, barH / 2);
+        ctx.fill();
+      }
     }
 
     // Draw particles
