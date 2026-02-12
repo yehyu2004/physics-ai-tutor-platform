@@ -13,6 +13,7 @@ import {
   type ChallengeState,
 } from "@/lib/simulation/scoring";
 import { drawMeter } from "@/lib/simulation/drawing";
+import { SimMath } from "@/components/simulations/SimMath";
 
 interface Particle {
   x: number;
@@ -675,22 +676,14 @@ export default function GasMolecules() {
       </div>
 
       <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
-          Kinetic Theory
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-sm text-gray-600 dark:text-gray-400 font-mono">
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
-            KE_avg = (3/2)kT
-          </div>
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
-            v_rms = &radic;(3kT/m)
-          </div>
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">PV = NkT</div>
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
-            P = F/A = Nmv&sup2;/3V
-          </div>
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Key Equations</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-gray-600 dark:text-gray-400 font-mono">
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"><SimMath math="PV = nRT" /></div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"><SimMath math="KE_{avg} = \frac{3}{2}k_BT" /></div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"><SimMath math="v_{rms} = \sqrt{\frac{3k_BT}{m}}" /></div>
         </div>
       </div>
+      <p className="text-xs text-gray-500 dark:text-gray-500 text-center">Adjust temperature and volume to see how gas molecules behave. Watch pressure change in real time!</p>
     </div>
   );
 }

@@ -14,6 +14,7 @@ import {
 } from "@/lib/simulation/scoring";
 import { drawInfoPanel } from "@/lib/simulation/drawing";
 import { createDragHandler } from "@/lib/simulation/interaction";
+import { SimMath } from "@/components/simulations/SimMath";
 
 // Energy flow particle: travels along a path between capacitor and inductor
 interface EnergyParticle {
@@ -1106,24 +1107,14 @@ export default function LCOscillations() {
 
       {/* Equations */}
       <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
-          LC Oscillations
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-sm text-gray-600 dark:text-gray-400 font-mono">
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
-            omega = 1/sqrt(LC)
-          </div>
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
-            q(t) = Q0 cos(omega t)
-          </div>
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
-            UE + UB = const
-          </div>
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
-            f = 1/(2pi sqrt(LC))
-          </div>
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Key Equations</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-gray-600 dark:text-gray-400 font-mono">
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"><SimMath math="\omega = \frac{1}{\sqrt{LC}}" /></div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"><SimMath math="q(t) = Q_0\cos(\omega t)" /></div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"><SimMath math="U_E + U_B = \text{const}" /></div>
         </div>
       </div>
+      <p className="text-xs text-gray-500 dark:text-gray-500 text-center">Watch energy oscillate between the capacitor (electric) and inductor (magnetic). Adjust L and C to change frequency!</p>
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import { playSFX, playScore } from "@/lib/simulation/sound";
+import { SimMath } from "@/components/simulations/SimMath";
 
 // --- Decay chain data ---
 interface DecayStep {
@@ -1163,28 +1164,14 @@ export default function DecayChain() {
 
       {/* Equations */}
       <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Nuclear Decay Equations</h3>
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Key Equations</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-gray-600 dark:text-gray-400 font-mono">
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
-            {"\u03B1: "}
-            {superscript(0)}X {"\u2192 "}
-            {superscript(0)}Y + {superscript(4)}{subscript(2)}He
-            <span className="block text-xs text-gray-400 dark:text-gray-500 mt-1">A-4, Z-2</span>
-          </div>
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
-            {"\u03B2\u207B: "}
-            {superscript(0)}X {"\u2192 "}
-            {superscript(0)}Y + e{"\u207B"} + {"\u03BD\u0305"}
-            <span className="block text-xs text-gray-400 dark:text-gray-500 mt-1">A same, Z+1</span>
-          </div>
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
-            {"\u03B2\u207A: "}
-            {superscript(0)}X {"\u2192 "}
-            {superscript(0)}Y + e{"\u207A"} + {"\u03BD"}
-            <span className="block text-xs text-gray-400 dark:text-gray-500 mt-1">A same, Z-1</span>
-          </div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"><SimMath math="\frac{dN}{dt} = -\lambda N" /></div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"><SimMath math="A = \lambda N" /></div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"><SimMath math="N_2 = \frac{\lambda_1 N_{10}}{\lambda_2 - \lambda_1}(e^{-\lambda_1 t} - e^{-\lambda_2 t})" /></div>
         </div>
       </div>
+      <p className="text-xs text-gray-500 dark:text-gray-500 text-center">Watch isotopes decay through a chain of daughter products. Each has its own half-life and decay mode!</p>
     </div>
   );
 }

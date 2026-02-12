@@ -12,6 +12,7 @@ import {
   type ChallengeState,
 } from "@/lib/simulation/scoring";
 import { createDragHandler } from "@/lib/simulation/interaction";
+import { SimMath } from "@/components/simulations/SimMath";
 
 // Spectral line colors mapped to wavelength ranges
 function wavelengthToColor(nm: number): string {
@@ -956,15 +957,14 @@ export default function HydrogenAtom() {
       )}
 
       <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Hydrogen Atom</h3>
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Key Equations</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-gray-600 dark:text-gray-400 font-mono">
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">E_n = -13.6/n^2 eV</div>
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">r_n = n^2 a_0 (a_0 = 0.053nm)</div>
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
-            lambda = 1240 / dE nm
-          </div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"><SimMath math="E_n = -\frac{13.6}{n^2} \text{ eV}" /></div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"><SimMath math="r_n = n^2 a_0" /></div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"><SimMath math="a_0 = 0.053 \text{ nm}" /></div>
         </div>
       </div>
+      <p className="text-xs text-gray-500 dark:text-gray-500 text-center">Click energy levels to see electron transitions. Toggle the probability cloud to visualize the wavefunction!</p>
     </div>
   );
 }

@@ -13,6 +13,7 @@ import {
 } from "@/lib/simulation/scoring";
 import { drawInfoPanel, drawMeter } from "@/lib/simulation/drawing";
 import { createDragHandler, isPointInRect } from "@/lib/simulation/interaction";
+import { SimMath } from "@/components/simulations/SimMath";
 
 export default function FaradayLaw() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -697,21 +698,13 @@ export default function FaradayLaw() {
         </div>
       </div>
       <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
-          Faraday&apos;s Law
-        </h3>
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Key Equations</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-gray-600 dark:text-gray-400 font-mono">
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
-            {"\u03B5"} = {"\u2212"}N d{"\u03A6"}/dt
-          </div>
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
-            {"\u03A6"} = B {"\u00B7"} A {"\u00B7"} cos{"\u03B8"}
-          </div>
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
-            Lenz&apos;s law: opposes change
-          </div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"><SimMath math="\varepsilon = -N\frac{d\Phi_B}{dt}" /></div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"><SimMath math="\Phi_B = BA\cos\theta" /></div>
         </div>
       </div>
+      <p className="text-xs text-gray-500 dark:text-gray-500 text-center">Move the magnet through the coil to induce an EMF. Faster motion = larger induced voltage!</p>
       {challengeActive && (
         <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/5 p-4">
           <h3 className="text-sm font-semibold text-yellow-500 mb-1">Maximize EMF Challenge</h3>

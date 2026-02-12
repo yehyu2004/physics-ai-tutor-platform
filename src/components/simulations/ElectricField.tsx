@@ -13,6 +13,7 @@ import {
   type ChallengeState,
 } from "@/lib/simulation/scoring";
 import { drawTarget } from "@/lib/simulation/drawing";
+import { SimMath } from "@/components/simulations/SimMath";
 
 interface Charge {
   x: number;
@@ -830,14 +831,14 @@ export default function ElectricField() {
       </div>
 
       <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
-          Coulomb&apos;s Law
-        </h3>
-        <div className="text-sm text-gray-600 dark:text-gray-400 font-mono bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
-          E = kq/r&sup2; &nbsp;&nbsp;|&nbsp;&nbsp; F = kq&#x2081;q&#x2082;/r&sup2;
-          &nbsp;&nbsp;|&nbsp;&nbsp; k = 8.99 &times; 10&#x2079; N&middot;m&sup2;/C&sup2;
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Key Equations</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-gray-600 dark:text-gray-400 font-mono">
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"><SimMath math="\vec{E} = k\frac{q}{r^2}\hat{r}" /></div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"><SimMath math="\vec{F} = q\vec{E}" /></div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"><SimMath math="k = 8.99 \times 10^9 \text{ N·m}^2/\text{C}^2" /></div>
         </div>
       </div>
+      <p className="text-xs text-gray-500 dark:text-gray-500 text-center">Click to add charges. Drag to move them. Toggle field lines and vectors to visualize the electric field!</p>
     </div>
   );
 }

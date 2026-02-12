@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect, useState, useCallback } from "react";
+import { SimMath } from "@/components/simulations/SimMath";
 
 export default function EnergyConservation() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -318,6 +319,19 @@ export default function EnergyConservation() {
           <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">KE₁ + PE₁ = KE₂ + PE₂</div>
         </div>
       </div>
+
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Key Equations</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-gray-600 dark:text-gray-400 font-mono">
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"><SimMath math="KE + PE = E_{total}" /></div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"><SimMath math="\frac{1}{2}mv^2 + mgh = \text{const}" /></div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"><SimMath math="PE = mgh" /></div>
+        </div>
+      </div>
+
+      <p className="text-xs text-gray-500 dark:text-gray-500 text-center">
+        Watch energy transform between kinetic and potential as the ball rolls. Try different track shapes and friction levels!
+      </p>
     </div>
   );
 }

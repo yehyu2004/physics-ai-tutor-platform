@@ -13,6 +13,7 @@ import {
 } from "@/lib/simulation/scoring";
 import { drawMeter } from "@/lib/simulation/drawing";
 import { createDragHandler } from "@/lib/simulation/interaction";
+import { SimMath } from "@/components/simulations/SimMath";
 
 interface ShotParticle {
   x: number;
@@ -1009,21 +1010,13 @@ export default function QuantumTunneling() {
       )}
 
       <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
-          Quantum Tunneling
-        </h3>
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Key Equations</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-gray-600 dark:text-gray-400 font-mono">
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
-            T = e^(-2*kappa*L)
-          </div>
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
-            kappa = sqrt(2m(V_0-E)/h_bar^2)
-          </div>
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
-            -h_bar^2/2m d^2psi/dx^2 + V*psi = E*psi
-          </div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"><SimMath math="T \approx e^{-2\kappa L}" /></div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"><SimMath math="\kappa = \sqrt{\frac{2m(V_0 - E)}{\hbar^2}}" /></div>
         </div>
       </div>
+      <p className="text-xs text-gray-500 dark:text-gray-500 text-center">Adjust particle energy and barrier height/width to see how tunneling probability changes exponentially!</p>
     </div>
   );
 }

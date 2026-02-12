@@ -12,6 +12,7 @@ import {
 } from "@/lib/simulation/scoring";
 import { playSFX, playScore } from "@/lib/simulation/sound";
 import { ParticleSystem } from "@/lib/simulation/particles";
+import { SimMath } from "@/components/simulations/SimMath";
 
 type ChallengeType = "time_dilation" | "length_contraction" | "gamma" | "relativistic_energy";
 type ViewMode = "comparison" | "spaceship" | "twins" | "minkowski";
@@ -1022,14 +1023,15 @@ export default function SpecialRelativity() {
         </div>
       </div>
       <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Special Relativity</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-sm text-gray-600 dark:text-gray-400 font-mono">
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">{"\u03b3"} = 1/{"\u221a"}(1{"\u2212"}v{"\u00b2"}/c{"\u00b2"})</div>
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">{"\u0394"}t = {"\u03b3"}{"\u0394"}t{"\u2080"}</div>
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">L = L{"\u2080"}/{"\u03b3"}</div>
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">E = {"\u03b3"}mc{"\u00b2"}</div>
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Key Equations</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-gray-600 dark:text-gray-400 font-mono">
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"><SimMath math="\gamma = \frac{1}{\sqrt{1 - v^2/c^2}}" /></div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"><SimMath math="t' = \gamma t_0" /></div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"><SimMath math="L = L_0/\gamma" /></div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"><SimMath math="E = \gamma mc^2" /></div>
         </div>
       </div>
+      <p className="text-xs text-gray-500 dark:text-gray-500 text-center">Adjust the velocity slider to see time dilation, length contraction, and the Lorentz factor in action!</p>
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import { playSFX, playScore } from "@/lib/simulation/sound";
 import { getCanvasMousePos } from "@/lib/simulation/interaction";
+import { SimMath } from "@/components/simulations/SimMath";
 
 type BFieldDir = "into" | "outof" | "right" | "up";
 
@@ -971,16 +972,13 @@ export default function MagneticField3D() {
 
       {/* Equations */}
       <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
-          Magnetic Force &amp; Cyclotron Motion
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-sm text-gray-600 dark:text-gray-400 font-mono">
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">F = qv &times; B</div>
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">r = mv&perp;/(|q|B)</div>
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">T = 2&pi;m/(|q|B)</div>
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">&omega; = |q|B/m</div>
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Key Equations</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-gray-600 dark:text-gray-400 font-mono">
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"><SimMath math="\vec{F} = q\vec{v} \times \vec{B}" /></div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"><SimMath math="r = \frac{mv_\perp}{|q|B}" /></div>
         </div>
       </div>
+      <p className="text-xs text-gray-500 dark:text-gray-500 text-center">Launch charged particles through the magnetic field. Use the right-hand rule to predict the force direction!</p>
     </div>
   );
 }

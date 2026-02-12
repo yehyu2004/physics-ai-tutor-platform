@@ -11,6 +11,7 @@ import {
   type ScorePopup,
   type ChallengeState,
 } from "@/lib/simulation/scoring";
+import { SimMath } from "@/components/simulations/SimMath";
 
 interface Particle {
   name: string;
@@ -1112,21 +1113,12 @@ export default function StandardModel() {
       )}
 
       <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
-          Standard Model
-        </h3>
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Key Equations</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-gray-600 dark:text-gray-400 font-mono">
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
-            6 quarks + 6 leptons
-          </div>
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
-            4 gauge bosons + Higgs
-          </div>
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
-            3 generations of matter
-          </div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"><SimMath math="E^2 = (pc)^2 + (mc^2)^2" /></div>
         </div>
       </div>
+      <p className="text-xs text-gray-500 dark:text-gray-500 text-center">Click particles to learn about their properties. Use filters to explore quarks, leptons, and bosons!</p>
     </div>
   );
 }

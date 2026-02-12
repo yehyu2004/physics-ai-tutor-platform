@@ -14,6 +14,7 @@ import {
 } from "@/lib/simulation/scoring";
 import { drawInfoPanel } from "@/lib/simulation/drawing";
 import { createDragHandler, isPointInRect } from "@/lib/simulation/interaction";
+import { SimMath } from "@/components/simulations/SimMath";
 
 interface Electron {
   pos: number; // 0-1 position along the circuit path
@@ -966,21 +967,14 @@ export default function RCCircuit() {
       </div>
 
       <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
-          RC Circuit Equations
-        </h3>
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Key Equations</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-gray-600 dark:text-gray-400 font-mono">
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
-            {"\u03C4"} = RC = {actualTauMs.toFixed(1)} ms
-          </div>
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
-            V_C = V{"\u2080"}(1 {"\u2212"} e^({"\u2212"}t/{"\u03C4"}))
-          </div>
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
-            I = (V{"\u2080"}/R)e^({"\u2212"}t/{"\u03C4"})
-          </div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"><SimMath math="V_C(t) = V_0(1 - e^{-t/RC})" /></div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"><SimMath math="\tau = RC" /></div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"><SimMath math="i(t) = \frac{V_0}{R}e^{-t/RC}" /></div>
         </div>
       </div>
+      <p className="text-xs text-gray-500 dark:text-gray-500 text-center">Adjust R and C to change the time constant. Watch the capacitor charge and discharge exponentially!</p>
 
       {challengeActive && (
         <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/5 p-4">

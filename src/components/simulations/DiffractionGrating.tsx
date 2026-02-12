@@ -13,6 +13,7 @@ import {
 } from "@/lib/simulation/scoring";
 import { playSFX, playScore } from "@/lib/simulation/sound";
 import { ParticleSystem } from "@/lib/simulation/particles";
+import { SimMath } from "@/components/simulations/SimMath";
 
 interface Measurement {
   y: number;
@@ -640,13 +641,13 @@ export default function DiffractionGrating() {
         </div>
       </div>
       <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Diffraction Grating</h3>
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Key Equations</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-gray-600 dark:text-gray-400 font-mono">
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">d sin{"\u03b8"} = m{"\u03bb"} (maxima)</div>
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">I {"\u221d"} (sin(N{"\u03b2"})/sin({"\u03b2"})){"\u00b2"}</div>
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">N slits {"\u2192"} sharper peaks</div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"><SimMath math="d\sin\theta = m\lambda" /></div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"><SimMath math="R = mN" /></div>
         </div>
       </div>
+      <p className="text-xs text-gray-500 dark:text-gray-500 text-center">Adjust the number of slits and wavelength to see how the diffraction pattern changes!</p>
     </div>
   );
 }
