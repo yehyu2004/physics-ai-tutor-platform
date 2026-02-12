@@ -125,7 +125,7 @@ export default function AdminUserActivityPage() {
   };
 
   const activityFilters = [
-    { key: "all", label: "All" },
+    { key: "all", label: "All Activities" },
     { key: "chat", label: "Chat" },
     { key: "simulation", label: "Simulation" },
     { key: "submission", label: "Submission" },
@@ -133,10 +133,10 @@ export default function AdminUserActivityPage() {
   ];
 
   const rangeFilters = [
-    { key: "7", label: "7d" },
-    { key: "30", label: "30d" },
-    { key: "90", label: "90d" },
-    { key: "all", label: "All" },
+    { key: "7", label: "7 Days" },
+    { key: "30", label: "30 Days" },
+    { key: "90", label: "90 Days" },
+    { key: "all", label: "All Time" },
   ];
 
   return (
@@ -165,38 +165,28 @@ export default function AdminUserActivityPage() {
         </Select>
 
         {/* Activity type filter */}
-        <div className="flex items-center gap-1.5">
-          {activityFilters.map((f) => (
-            <button
-              key={f.key}
-              onClick={() => setActivityFilter(f.key)}
-              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
-                activityFilter === f.key
-                  ? "bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900"
-                  : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
+        <Select value={activityFilter} onValueChange={setActivityFilter}>
+          <SelectTrigger className="w-[150px]">
+            <SelectValue placeholder="All Activities" />
+          </SelectTrigger>
+          <SelectContent>
+            {activityFilters.map((f) => (
+              <SelectItem key={f.key} value={f.key}>{f.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
         {/* Date range filter */}
-        <div className="flex items-center gap-1.5">
-          {rangeFilters.map((f) => (
-            <button
-              key={f.key}
-              onClick={() => setDateRange(f.key)}
-              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
-                dateRange === f.key
-                  ? "bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900"
-                  : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
+        <Select value={dateRange} onValueChange={setDateRange}>
+          <SelectTrigger className="w-[130px]">
+            <SelectValue placeholder="30 Days" />
+          </SelectTrigger>
+          <SelectContent>
+            {rangeFilters.map((f) => (
+              <SelectItem key={f.key} value={f.key}>{f.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
         {/* CSV download */}
         <div className="ml-auto">
