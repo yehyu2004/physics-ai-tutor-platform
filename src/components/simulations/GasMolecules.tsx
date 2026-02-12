@@ -698,6 +698,8 @@ export default function GasMolecules() {
               pistonRef.current = 1.0;
               setTemperature(300);
               setNumParticles(80);
+              setChallengeMode(false);
+              challengeRef.current = { ...challengeRef.current, active: false };
               initParticles(80, 300);
             }}
             className="flex-1 h-10 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium transition-colors"
