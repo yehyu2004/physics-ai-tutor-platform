@@ -24,6 +24,17 @@ enum AssignmentType {
   FILE_UPLOAD
 }
 
+enum ActivityCategory {
+  AI_CHAT
+  ASSIGNMENT_VIEW
+  ASSIGNMENT_SUBMIT
+  GRADING
+  SIMULATION
+  PROBLEM_GEN
+  ANALYTICS_VIEW
+  ADMIN_ACTION
+}
+
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -55,6 +66,21 @@ model User {
   examModeToggles ExamMode[] @relation("ExamModeToggledBy")
   gradeAppeals    GradeAppeal[]    @relation("AppealStudent")
   appealMessages  AppealMessage[]  @relation("AppealMessageAuthor")
+  activities      UserActivity[]
+}
+
+model UserActivity {
+  id         String           @id @default(cuid())
+  userId     String
+  category   ActivityCategory
+  detail     String?
+  durationMs Int?
+  createdAt  DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, category, createdAt])
 }
 
 model Account {
@@ -115,6 +141,7 @@ model Message {
   imageUrls      String[] @default([])
   model          String?  // "gpt-5-mini" or "claude-haiku-4.5"
   mode           String?  // "normal" or "socratic"
+  toolCalls      Json?    // AI tool call data: [{ language, code, output, imageData }]
   createdAt      DateTime @default(now())
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
