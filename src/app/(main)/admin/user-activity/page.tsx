@@ -64,15 +64,6 @@ interface ActivityData {
   csvData: { id: string; userName: string; userEmail: string; category: string; detail: string | null; durationMs: number | null; createdAt: string }[];
 }
 
-function formatDuration(ms: number): string {
-  if (ms < 1000) return "0s";
-  const totalSeconds = Math.floor(ms / 1000);
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  if (hours > 0) return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
-  if (minutes > 0) return `${minutes}m`;
-  return `${totalSeconds}s`;
-}
 
 
 export default function AdminUserActivityPage() {
