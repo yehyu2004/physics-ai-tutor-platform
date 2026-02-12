@@ -643,6 +643,8 @@ export default function ConstantAcceleration() {
   }, [challengeMode, predictionMode, isRunning, draw]);
 
   const reset = useCallback(() => {
+    cancelAnimationFrame(animRef.current);
+    setIsRunning(false);
     timeRef.current = 0;
     historyRef.current = [];
     lastTsRef.current = null;
@@ -669,6 +671,11 @@ export default function ConstantAcceleration() {
       predictionLineRef.current = null;
       setPrediction(null);
       setShowPredictionResult(false);
+      // Stop the sim so the user can set params before pressing Play
+      setIsRunning(false);
+      cancelAnimationFrame(animRef.current);
+      // Default to negative acceleration for braking challenge
+      if (accel >= 0) setAccel(-2);
     }
     hasScored.current = false;
     carStoppedRef.current = false;
