@@ -34,6 +34,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
+    // Professors cannot impersonate admins
+    if (userRole === "PROFESSOR" && targetUser.role === "ADMIN") {
+      return NextResponse.json({ error: "Professors cannot impersonate admins" }, { status: 403 });
+    }
+
     const cookieStore = await cookies();
     cookieStore.set(IMPERSONATE_COOKIE, userId, {
       httpOnly: true,
