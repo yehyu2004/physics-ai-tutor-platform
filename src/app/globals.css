@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Prevent mobile browsers from intercepting touch for scrolling on simulation canvases */
+canvas {
+  touch-action: none;
+}
+
 :root {
   --background: #fafafa;
   --foreground: #171717;
