@@ -1,68 +1,13 @@
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 
-export const openai = new OpenAI({
+const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-export const anthropic = new Anthropic({
+const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
-
-const TOOL_DESCRIPTION = `Execute Python, JavaScript, or TypeScript code in a sandboxed environment. Use this to:
-- Run numerical calculations and verify physics solutions
-- Generate SVG visualizations and plots (print SVG markup to stdout)
-- Demonstrate physics concepts with computed data
-- Validate mathematical derivations programmatically
-
-IMPORTANT: The sandbox has NO external packages (no matplotlib, numpy, scipy, PIL). For plots and diagrams:
-- Generate SVG markup using string formatting and print it to stdout
-- Use Python's built-in math module for calculations
-- The output will be rendered inline if it starts with <svg
-
-Only use this tool when computation or visualization genuinely helps. Do not use it for simple arithmetic.`;
-
-export const EXECUTE_CODE_TOOL_OPENAI = {
-  type: "function" as const,
-  name: "execute_code",
-  description: TOOL_DESCRIPTION,
-  parameters: {
-    type: "object" as const,
-    properties: {
-      language: {
-        type: "string" as const,
-        enum: ["python", "javascript", "typescript"],
-        description: "Programming language to execute",
-      },
-      code: {
-        type: "string" as const,
-        description: "The code to execute. Must print output to stdout.",
-      },
-    },
-    required: ["language", "code"],
-  },
-  strict: false,
-};
-
-export const EXECUTE_CODE_TOOL_ANTHROPIC: Anthropic.Tool = {
-  name: "execute_code",
-  description: TOOL_DESCRIPTION,
-  input_schema: {
-    type: "object" as const,
-    properties: {
-      language: {
-        type: "string",
-        enum: ["python", "javascript", "typescript"],
-        description: "Programming language to execute",
-      },
-      code: {
-        type: "string",
-        description: "The code to execute. Must print output to stdout.",
-      },
-    },
-    required: ["language", "code"],
-  },
-};
 
 const DEFAULT_SYSTEM_PROMPT = `You are a helpful physics tutor for university-level General Physics students at NTHU (National Tsing Hua University).
 
@@ -116,19 +61,6 @@ DIAGRAMS — proactively include visuals whenever they would aid understanding. 
      <text x="200" y="30" text-anchor="middle" font-size="14">E (along ŷ)</text>
    </svg>
    \`\`\`
-
-CODE EXECUTION — CRITICAL RULES:
-You have an execute_code tool. When the student asks you to calculate, compute, plot, graph, draw, simulate, or verify anything:
-1. ALWAYS call the execute_code tool to run the code. Do NOT just show code in a markdown code block — actually EXECUTE it.
-2. NEVER give the student code to run themselves. You have a sandbox — use it.
-3. For plots/graphs: generate SVG markup via Python and print to stdout (no matplotlib/numpy available, use math module + string formatting).
-4. For calculations: run the computation and report the numerical result.
-5. Only skip the tool for trivial arithmetic you can do inline with LaTeX (like 2+2).
-
-Example — if asked to plot sin(x), call execute_code with Python:
-import math
-points = " ".join(f"{x},{200 - int(80*math.sin(x*math.pi/50))}" for x in range(0, 401, 2))
-print(f'<svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><polyline points="{points}" fill="none" stroke="#3b82f6" stroke-width="2"/></svg>')
 
 Always show your work and explain the reasoning behind each step.`;
 
@@ -235,7 +167,7 @@ async function streamOpenAI(
     model,
     input,
     reasoning: { effort: "low", summary: "detailed" },
-    tools: [{ type: "web_search_preview" }, EXECUTE_CODE_TOOL_OPENAI],
+    tools: [{ type: "web_search_preview" }],
     stream: true,
   });
 
@@ -286,7 +218,6 @@ async function streamAnthropic(
     max_tokens: 4096,
     system: systemPrompt,
     messages: anthropicMessages,
-    tools: [EXECUTE_CODE_TOOL_ANTHROPIC],
   });
 
   return stream;
