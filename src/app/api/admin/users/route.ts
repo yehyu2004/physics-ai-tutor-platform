@@ -79,6 +79,23 @@ export async function PATCH(req: Request) {
       }
     }
 
+    // Role hierarchy: prevent moderating higher-ranked users
+    if (action && ["ban", "unban", "restrict", "unrestrict"].includes(action)) {
+      const targetUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { role: true },
+      });
+      if (targetUser) {
+        const targetRole = targetUser.role;
+        if (userRole === "TA" && (targetRole === "ADMIN" || targetRole === "PROFESSOR")) {
+          return NextResponse.json({ error: "Forbidden: TAs cannot moderate professors or admins" }, { status: 403 });
+        }
+        if (userRole === "PROFESSOR" && targetRole === "ADMIN") {
+          return NextResponse.json({ error: "Forbidden: Professors cannot moderate admins" }, { status: 403 });
+        }
+      }
+    }
+
     if (action === "ban") {
       await prisma.user.update({
         where: { id: userId },

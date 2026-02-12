@@ -25,6 +25,22 @@ export async function POST(
       return NextResponse.json({ error: "Invalid action" }, { status: 400 });
     }
 
+    // Role hierarchy: prevent moderating higher-ranked users
+    const targetUser = await prisma.user.findUnique({
+      where: { id: targetUserId },
+      select: { role: true },
+    });
+    if (!targetUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+    const targetRole = targetUser.role;
+    if (userRole === "TA" && (targetRole === "ADMIN" || targetRole === "PROFESSOR")) {
+      return NextResponse.json({ error: "Forbidden: TAs cannot moderate professors or admins" }, { status: 403 });
+    }
+    if (userRole === "PROFESSOR" && targetRole === "ADMIN") {
+      return NextResponse.json({ error: "Forbidden: Professors cannot moderate admins" }, { status: 403 });
+    }
+
     const updateData: Record<string, unknown> = {};
 
     if (action === "ban") {
