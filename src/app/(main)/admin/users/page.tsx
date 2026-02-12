@@ -40,7 +40,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { formatShortDate } from "@/lib/utils";
+import { formatDateOnly } from "@/lib/utils";
 
 interface User {
   id: string;
@@ -479,7 +479,7 @@ export default function AdminUsersPage() {
 
                 <div className="flex items-center gap-2 sm:gap-3 flex-wrap pl-12 sm:pl-0">
                   <span className="text-xs text-gray-400 dark:text-gray-500 hidden sm:block">
-                    Joined {formatShortDate(user.createdAt)}
+                    Joined {formatDateOnly(user.createdAt)}
                   </span>
 
                   {/* Role selector - Admin only */}

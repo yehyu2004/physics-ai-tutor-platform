@@ -24,6 +24,14 @@ export function formatShortDate(date: Date | string) {
   }).format(new Date(date));
 }
 
+export function formatDateOnly(date: Date | string) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(date));
+}
+
 export function getInitials(name: string) {
   return name
     .split(" ")
