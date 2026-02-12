@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, lazy, Suspense } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
@@ -9,9 +9,10 @@ import { Check, Copy, Play, Edit3, Save } from "lucide-react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import "katex/dist/katex.min.css";
+import dynamic from "next/dynamic";
 
-const MermaidDiagram = lazy(() => import("@/components/chat/MermaidDiagram"));
-const DesmosGraph = lazy(() => import("@/components/chat/DesmosGraph"));
+const MermaidDiagram = dynamic(() => import("@/components/chat/MermaidDiagram"), { ssr: false });
+const DesmosGraph = dynamic(() => import("@/components/chat/DesmosGraph"), { ssr: false });
 
 function normalizeLatex(content: string): string {
   // Convert \[...\] to $$...$$ and \(...\) to $...$
@@ -280,18 +281,10 @@ export function MarkdownContent({ content, className }: MarkdownContentProps) {
               }
             }
             if (className?.includes("language-mermaid")) {
-              return (
-                <Suspense fallback={<div className="my-3 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg text-sm text-gray-500 animate-pulse">Rendering diagram...</div>}>
-                  <MermaidDiagram content={code} />
-                </Suspense>
-              );
+              return <MermaidDiagram content={code} />;
             }
             if (className?.includes("language-desmos")) {
-              return (
-                <Suspense fallback={<div className="my-3 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg text-sm text-gray-500 animate-pulse">Loading graph...</div>}>
-                  <DesmosGraph code={code} />
-                </Suspense>
-              );
+              return <DesmosGraph code={code} />;
             }
             const isBlock = className?.includes("language-");
             if (isBlock) {

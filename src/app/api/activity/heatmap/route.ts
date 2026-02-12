@@ -1,0 +1,50 @@
+import { NextResponse } from "next/server";
+import { getEffectiveSession } from "@/lib/impersonate";
+import { prisma } from "@/lib/prisma";
+
+export async function GET() {
+  try {
+    const session = await getEffectiveSession();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userId = (session.user as { id: string }).id;
+
+    // Get activities from the past 365 days
+    const yearAgo = new Date();
+    yearAgo.setFullYear(yearAgo.getFullYear() - 1);
+    yearAgo.setHours(0, 0, 0, 0);
+
+    const activities = await prisma.userActivity.findMany({
+      where: {
+        userId,
+        createdAt: { gte: yearAgo },
+      },
+      select: { createdAt: true },
+    });
+
+    // Aggregate by date
+    const countsByDate: Record<string, number> = {};
+    for (const a of activities) {
+      const key = a.createdAt.toISOString().split("T")[0];
+      countsByDate[key] = (countsByDate[key] || 0) + 1;
+    }
+
+    // Build full 365-day array
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const data: { date: string; count: number }[] = [];
+
+    for (let i = 364; i >= 0; i--) {
+      const d = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
+      const key = d.toISOString().split("T")[0];
+      data.push({ date: key, count: countsByDate[key] || 0 });
+    }
+
+    return NextResponse.json({ data });
+  } catch (error) {
+    console.error("Heatmap error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}

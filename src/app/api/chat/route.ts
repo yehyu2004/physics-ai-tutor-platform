@@ -181,13 +181,16 @@ export async function POST(req: Request) {
 
         if (pendingToolCalls.length === 0) break;
 
+        console.log(`[chat] OpenAI tool calls: ${pendingToolCalls.map(tc => tc.name).join(", ")}, responseId: ${completedResponseId}`);
         const toolOutputInputs: any[] = [];
         for (const tc of pendingToolCalls) {
           if (tc.name !== "execute_code") continue;
           try {
             const args = JSON.parse(tc.arguments);
+            console.log(`[chat] Executing ${args.language} code...`);
             emit(ctrl, enc, { type: "tool_call", language: args.language, code: args.code });
             const result = await executeCodeViaPiston(args.language, args.code);
+            console.log(`[chat] Execution done: success=${result.success}, output=${result.output.slice(0, 100)}`);
             collectedToolCalls.push({ language: args.language, code: args.code, output: result.output, error: result.error, hasImage: result.hasImage, imageData: result.imageData });
             emit(ctrl, enc, { type: "tool_result", output: result.output, error: result.error, hasImage: result.hasImage, imageData: result.imageData });
             toolOutputInputs.push({ type: "function_call_output", call_id: tc.call_id, output: result.output.slice(0, 50000) });
@@ -198,7 +201,9 @@ export async function POST(req: Request) {
         }
 
         if (toolOutputInputs.length === 0) break;
+        console.log(`[chat] Sending tool results back to OpenAI with previous_response_id=${completedResponseId}`);
         stream = await openai.responses.create({ model: mdl, input: toolOutputInputs, previous_response_id: completedResponseId, stream: true });
+        console.log("[chat] OpenAI continuation stream created, iterating...");
       }
     };
 

@@ -29,6 +29,10 @@ export async function executeCodeViaPiston(
   }
 
   try {
+    console.log(`[execute_code] Running ${language} code (${code.length} chars)...`);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+
     const response = await fetch("https://emkc.org/api/v2/piston/execute", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -37,7 +41,9 @@ export async function executeCodeViaPiston(
         version: langConfig.version,
         files: [{ content: code }],
       }),
+      signal: controller.signal,
     });
+    clearTimeout(timeout);
 
     if (!response.ok) {
       return {
