@@ -716,13 +716,27 @@ export default function ConstantAcceleration() {
   };
 
   const handleLaunch = () => {
-    if (!isRunning && timeRef.current === 0) {
+    if (isRunning) {
+      // Pause
+      setIsRunning(false);
+      return;
+    }
+    // If the car already stopped (challenge/prediction completed), reset first
+    if (carStoppedRef.current || outOfBoundsRef.current || timeRef.current > 0 && hasScored.current) {
+      reset();
+      // Small delay so reset takes effect before starting
+      setTimeout(() => {
+        lastTsRef.current = null;
+        playSFX("launch");
+        setIsRunning(true);
+      }, 50);
+      return;
+    }
+    if (timeRef.current === 0) {
       playSFX("launch");
     }
-    if (!isRunning) {
-      lastTsRef.current = null;
-    }
-    setIsRunning(!isRunning);
+    lastTsRef.current = null;
+    setIsRunning(true);
   };
 
   return (
