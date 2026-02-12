@@ -1,10 +1,11 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { ArrowLeft, BookOpen } from "lucide-react";
 import { useTrackTime } from "@/lib/use-track-time";
+import { useEffectiveSession } from "@/lib/effective-session-context";
 import { findSimulationById } from "@/data/halliday-chapters";
 
 // Simulation components
@@ -133,8 +134,36 @@ export default function SimulationViewClient({
   simulationId: string;
 }) {
   useTrackTime("SIMULATION");
+  const session = useEffectiveSession();
+  const [examBlocked, setExamBlocked] = useState(false);
   const data = findSimulationById(simulationId);
   const SimComponent = simulationComponents[simulationId];
+
+  useEffect(() => {
+    if (session?.role === "STUDENT") {
+      fetch("/api/exam-mode")
+        .then((res) => res.ok ? res.json() : null)
+        .then((d) => { if (d?.isActive) setExamBlocked(true); })
+        .catch(() => {});
+    }
+  }, [session?.role]);
+
+  if (examBlocked) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-4">
+        <div className="h-16 w-16 rounded-2xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+          <BookOpen className="h-8 w-8 text-red-500" />
+        </div>
+        <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Simulation Unavailable</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md">
+          Simulations are disabled during exam mode. They will be available again once exam mode is turned off.
+        </p>
+        <Link href="/dashboard" className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline">
+          Return to Dashboard
+        </Link>
+      </div>
+    );
+  }
 
   if (!data || !SimComponent) {
     return (

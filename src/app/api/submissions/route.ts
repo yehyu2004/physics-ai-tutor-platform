@@ -50,6 +50,7 @@ export async function POST(req: Request) {
 
     const existingSubmission = await prisma.submission.findFirst({
       where: { assignmentId, userId },
+      include: { answers: { select: { score: true } } },
     });
 
     if (isDraft) {
@@ -113,7 +114,26 @@ export async function POST(req: Request) {
         { status: 403 }
       );
     }
+    // Block resubmit if grading has started or finished
+    if (existingSubmission && !existingSubmission.isDraft) {
+      const gradingStarted = existingSubmission.gradedAt !== null || existingSubmission.answers.some((a) => a.score !== null);
+      if (gradingStarted) {
+        return NextResponse.json(
+          { error: existingSubmission.gradedAt ? "This submission has been graded and cannot be resubmitted." : "This submission is being graded and cannot be resubmitted." },
+          { status: 403 }
+        );
+      }
+    }
     if (existingSubmission) {
+      // Clean up old uploaded file if it exists
+      if (existingSubmission.fileUrl) {
+        try {
+          const fs = await import("fs/promises");
+          const path = await import("path");
+          const filePath = path.join(process.cwd(), "public", existingSubmission.fileUrl);
+          await fs.unlink(filePath).catch(() => {});
+        } catch { /* ignore cleanup errors */ }
+      }
       await prisma.submission.delete({
         where: { id: existingSubmission.id },
       });

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { streamChat, SOCRATIC_SYSTEM_PROMPT, EXAM_MODE_SYSTEM_PROMPT, type ChatMessage, type AIProvider } from "@/lib/ai";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { checkContentFlags, handleContentFlag, trackRateLimitAbuse } from "@/lib/abuse-detection";
+import { checkAndBanSpammer } from "@/lib/spam-guard";
 import Anthropic from "@anthropic-ai/sdk";
 
 export async function POST(req: Request) {
@@ -71,6 +72,17 @@ export async function POST(req: Request) {
     let convId = conversationId;
 
     if (!convId) {
+      // Enforce conversation limit (50 active conversations per user)
+      const activeConvCount = await prisma.conversation.count({
+        where: { userId, isDeleted: false },
+      });
+      if (activeConvCount >= 50) {
+        return Response.json(
+          { error: "You have reached the maximum of 50 conversations. Please delete some old conversations to create a new one." },
+          { status: 429 }
+        );
+      }
+
       const conversation = await prisma.conversation.create({
         data: {
           userId,
@@ -89,6 +101,9 @@ export async function POST(req: Request) {
         mode: mode || "normal",
       },
     });
+
+    // Check for chat spam (30 messages/min auto-ban, non-blocking)
+    checkAndBanSpammer({ userId, source: "chat" }).catch(() => {});
 
     // Load last 50 messages for AI context (avoids unbounded query + token limits)
     const recentMessages = await prisma.message.findMany({

@@ -16,7 +16,10 @@ export async function DELETE(
 
     const submission = await prisma.submission.findUnique({
       where: { id: params.id },
-      include: { assignment: { select: { lockAfterSubmit: true } } },
+      include: {
+        assignment: { select: { lockAfterSubmit: true } },
+        answers: { select: { score: true } },
+      },
     });
 
     if (!submission) {
@@ -30,6 +33,15 @@ export async function DELETE(
     if (submission.assignment.lockAfterSubmit && !submission.isDraft) {
       return NextResponse.json(
         { error: "This assignment is locked after submission. You cannot delete or resubmit." },
+        { status: 403 }
+      );
+    }
+
+    // Block if grading has started (any answer has a score) or is finished
+    const gradingStarted = submission.gradedAt !== null || submission.answers.some((a) => a.score !== null);
+    if (gradingStarted && !submission.isDraft) {
+      return NextResponse.json(
+        { error: submission.gradedAt ? "This submission has been graded and cannot be deleted." : "This submission is being graded and cannot be deleted." },
         { status: 403 }
       );
     }

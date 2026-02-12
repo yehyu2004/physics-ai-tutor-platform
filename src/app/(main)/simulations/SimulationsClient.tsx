@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useTrackTime } from "@/lib/use-track-time";
+import { useEffectiveSession } from "@/lib/effective-session-context";
 import Link from "next/link";
 import {
   Search,
@@ -30,9 +31,20 @@ const partIcons: Record<number, React.ElementType> = {
 
 export default function SimulationsClient() {
   useTrackTime("SIMULATION");
+  const session = useEffectiveSession();
+  const [examModeActive, setExamModeActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedPart, setExpandedPart] = useState<number | null>(null);
   const [expandedChapter, setExpandedChapter] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (session?.role === "STUDENT") {
+      fetch("/api/exam-mode")
+        .then((res) => res.ok ? res.json() : null)
+        .then((data) => { if (data) setExamModeActive(data.isActive); })
+        .catch(() => {});
+    }
+  }, [session?.role]);
 
   const allSimulations = useMemo(() => getAllSimulations(), []);
 
@@ -68,6 +80,20 @@ export default function SimulationsClient() {
         s.part.toLowerCase().includes(q)
     );
   }, [searchQuery, allSimulations]);
+
+  if (examModeActive && session?.role === "STUDENT") {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-4">
+        <div className="h-16 w-16 rounded-2xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+          <BookOpen className="h-8 w-8 text-red-500" />
+        </div>
+        <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Simulations Unavailable</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md">
+          Simulations are disabled during exam mode. Please focus on your exam. They will be available again once exam mode is turned off.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen">

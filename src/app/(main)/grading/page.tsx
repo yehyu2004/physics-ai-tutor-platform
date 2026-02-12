@@ -642,7 +642,12 @@ export default function GradingPage() {
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{sub.userName}</p>
                           <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{sub.userEmail}</p>
-                          <p className="text-[10px] text-gray-400 dark:text-gray-500">Submitted {new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(sub.submittedAt))}</p>
+                          <p className="text-[10px] text-gray-400 dark:text-gray-500">
+                            Submitted {new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(sub.submittedAt))}
+                            {assignmentInfo?.dueDate && new Date(sub.submittedAt) > new Date(assignmentInfo.dueDate) && (
+                              <span className="ml-1.5 inline-flex items-center gap-0.5 text-[10px] font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950 px-1.5 py-0.5 rounded-full">Late</span>
+                            )}
+                          </p>
                         </div>
                       </div>
                       <div className="mt-2 ml-10 space-y-1">
@@ -696,6 +701,11 @@ export default function GradingPage() {
                           <p className="text-xs text-gray-400 dark:text-gray-500">
                             &middot; Graded by {selectedSubmission.gradedByName}
                           </p>
+                        )}
+                        {assignmentInfo?.dueDate && new Date(selectedSubmission.submittedAt) > new Date(assignmentInfo.dueDate) && (
+                          <Badge className="bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800 text-[10px]">
+                            Late
+                          </Badge>
                         )}
                         {allAutoGraded && selectedSubmission.answers.length > 0 && (
                           <Badge className="bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800 text-[10px]">

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getEffectiveSession } from "@/lib/impersonate";
 import { prisma } from "@/lib/prisma";
+import { checkAndBanSpammer } from "@/lib/spam-guard";
 
 // GET: Fetch appeals for a submission (student sees own, TA/ADMIN sees all)
 export async function GET(req: Request) {
@@ -257,6 +258,11 @@ export async function PATCH(req: Request) {
           imageUrls: msgImageUrls || undefined,
         },
       });
+
+      // Check for appeal spam (30 messages/min auto-ban, non-blocking)
+      if (!isStaff) {
+        checkAndBanSpammer({ userId, source: "appeal" }).catch(() => {});
+      }
     }
 
     // Only staff can change status or score

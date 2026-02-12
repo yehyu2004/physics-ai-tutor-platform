@@ -34,6 +34,7 @@ export const config = {
     "/analytics/:path*",
     "/problems/:path*",
     "/grading/:path*",
+    "/simulations/:path*",
     "/admin/:path*",
   ],
 };
