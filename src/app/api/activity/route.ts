@@ -25,7 +25,7 @@ async function maybeCleanupOldRecords() {
 }
 
 // Spam threshold: 30+ activity records in 1 minute triggers auto-ban
-const SPAM_THRESHOLD = 30;
+const SPAM_THRESHOLD = 40;
 const SPAM_WINDOW_MS = 60 * 1000;
 
 async function checkAndBanSpammer(userId: string) {
