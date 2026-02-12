@@ -55,6 +55,7 @@ model User {
   examModeToggles ExamMode[] @relation("ExamModeToggledBy")
   gradeAppeals    GradeAppeal[]    @relation("AppealStudent")
   appealMessages  AppealMessage[]  @relation("AppealMessageAuthor")
+  activities      UserActivity[]
 }
 
 model Account {
@@ -330,4 +331,17 @@ model AppealMessage {
   user   User        @relation("AppealMessageAuthor", fields: [userId], references: [id])
 
   @@index([appealId, createdAt])
+}
+
+model UserActivity {
+  id         String   @id @default(cuid())
+  userId     String
+  category   String
+  detail     String?
+  durationMs Int?
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }
