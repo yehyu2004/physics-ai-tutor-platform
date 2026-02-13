@@ -664,6 +664,33 @@ export default function AssignmentDetailPage({
 
       {assignment.type === "QUIZ" && (!existingSubmission || existingSubmission.isDraft) && userRole === "STUDENT" && (
         <div className="space-y-4">
+          {/* Progress indicator */}
+          {(() => {
+            const total = assignment.questions.length;
+            const answered = assignment.questions.filter(q =>
+              (answers[q.id]?.trim()) || (answerImages[q.id]?.length > 0)
+            ).length;
+            return (
+              <div className="flex items-center gap-3 px-4 py-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Progress: {answered}/{total} questions answered
+                    </span>
+                    {answered === total && (
+                      <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">All done!</span>
+                    )}
+                  </div>
+                  <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-300 ${answered === total ? "bg-emerald-500" : "bg-blue-500"}`}
+                      style={{ width: `${total > 0 ? (answered / total) * 100 : 0}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
           {assignment.questions.map((q, index) => (
             <Card key={q.id}>
               <CardHeader>

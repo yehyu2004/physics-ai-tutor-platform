@@ -929,6 +929,25 @@ export default function GradingPage() {
 
                 {/* Panel Body */}
                 <div className="flex-1 overflow-auto p-6 space-y-5">
+                  {/* Grading progress bar */}
+                  {selectedSubmission.answers.length > 0 && !allAutoGraded && gradingMode === "per-question" && (
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400 shrink-0">
+                        Graded {confirmedAnswers.size}/{selectedSubmission.answers.filter(a => !a.autoGraded).length}
+                      </span>
+                      <div className="flex-1 h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-300 ${
+                            confirmedAnswers.size >= selectedSubmission.answers.filter(a => !a.autoGraded).length ? "bg-emerald-500" : "bg-blue-500"
+                          }`}
+                          style={{ width: `${selectedSubmission.answers.filter(a => !a.autoGraded).length > 0 ? (confirmedAnswers.size / selectedSubmission.answers.filter(a => !a.autoGraded).length) * 100 : 0}%` }}
+                        />
+                      </div>
+                      {confirmedAnswers.size >= selectedSubmission.answers.filter(a => !a.autoGraded).length && (
+                        <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 shrink-0">Ready to finalize</span>
+                      )}
+                    </div>
+                  )}
                   {/* Draft restored banner */}
                   {gradingDraftRestored && (
                     <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg px-4 py-3 flex items-center gap-2">
