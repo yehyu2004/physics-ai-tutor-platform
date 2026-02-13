@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getEffectiveSession } from "@/lib/impersonate";
 import { prisma } from "@/lib/prisma";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const session = await getEffectiveSession();
     if (!session?.user) {
@@ -12,10 +12,26 @@ export async function GET() {
     const userRole = (session.user as { role?: string }).role;
     const userId = (session.user as { id: string }).id;
 
+    const { searchParams } = new URL(req.url);
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
+    const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get("pageSize") || "15")));
+    const filterType = searchParams.get("filter"); // "published" | "drafts" | null
+
+    const whereClause = userRole === "STUDENT"
+      ? { published: true }
+      : filterType === "published"
+        ? { published: true }
+        : filterType === "drafts"
+          ? { published: false }
+          : {};
+
+    const totalCount = await prisma.assignment.count({ where: whereClause });
+
     const assignments = await prisma.assignment.findMany({
-      where: userRole === "STUDENT" ? { published: true } : {},
+      where: whereClause,
       orderBy: { createdAt: "desc" },
-      take: 100,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
       include: {
         createdBy: { select: { name: true } },
         _count: {
@@ -88,7 +104,7 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json({ assignments: formatted });
+    return NextResponse.json({ assignments: formatted, totalCount, page, pageSize });
   } catch (error) {
     console.error("Assignments error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
