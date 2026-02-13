@@ -114,7 +114,6 @@ export default function GradingPage() {
   const assignmentTotalPages = Math.max(1, Math.ceil(assignmentTotalCount / assignmentPageSize));
   const [assignmentFilter, setAssignmentFilter] = useState<"all" | "ungraded" | "pending">("all");
   const [assignmentSearch, setAssignmentSearch] = useState("");
-  const [activeSearch, setActiveSearch] = useState("");
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<string>(initialAssignmentId || "");
   const [assignmentInfo, setAssignmentInfo] = useState<AssignmentInfo | null>(null);
   const [submissions, setSubmissions] = useState<SubmissionForGrading[]>([]);
@@ -241,8 +240,8 @@ export default function GradingPage() {
   }, []);
 
   useEffect(() => {
-    fetchAssignmentList(assignmentPage, assignmentPageSize, activeSearch);
-  }, [fetchAssignmentList, assignmentPage, assignmentPageSize, activeSearch]);
+    fetchAssignmentList(assignmentPage, assignmentPageSize);
+  }, [fetchAssignmentList, assignmentPage, assignmentPageSize]);
 
   const fetchSubmissions = useCallback((assignmentId: string) => {
     if (!assignmentId) return;
@@ -559,49 +558,50 @@ export default function GradingPage() {
 
       {/* Assignment Selector */}
       <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-        <Select value={selectedAssignmentId} onValueChange={setSelectedAssignmentId}>
-          <SelectTrigger className="w-full sm:w-80">
-            <SelectValue placeholder="Select an assignment to grade" />
-          </SelectTrigger>
-          <SelectContent>
-            {assignments
-              .filter((a) =>
-                assignmentFilter === "ungraded" ? a.ungradedCount > 0
-                : assignmentFilter === "pending" ? a.openAppealCount > 0
-                : true
-              )
-              .map((a) => (
-              <SelectItem key={a.id} value={a.id}>
-                <div>
-                  <div className="truncate">{a.title}</div>
-                  <div className="flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500">
-                    <span>{a.submissionCount} submissions</span>
-                    {a.ungradedCount > 0 && (
-                      <span className="px-1.5 py-0.5 rounded font-semibold text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400">
-                        {a.ungradedCount} ungraded
-                      </span>
-                    )}
-                    {a.openAppealCount > 0 && (
-                      <span className="px-1.5 py-0.5 rounded font-semibold text-[10px] bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-400">
-                        {a.openAppealCount} pending
-                      </span>
-                    )}
+        <div className="w-full sm:w-96">
+          <div className="relative mb-2">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Filter assignments..."
+              value={assignmentSearch}
+              onChange={(e) => setAssignmentSearch(e.target.value)}
+              className="pl-9 h-9"
+            />
+          </div>
+          <Select value={selectedAssignmentId} onValueChange={setSelectedAssignmentId}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select an assignment to grade" />
+            </SelectTrigger>
+            <SelectContent>
+              {assignments
+                .filter((a) => {
+                  if (assignmentFilter === "ungraded" && a.ungradedCount <= 0) return false;
+                  if (assignmentFilter === "pending" && a.openAppealCount <= 0) return false;
+                  if (assignmentSearch && !a.title.toLowerCase().includes(assignmentSearch.toLowerCase())) return false;
+                  return true;
+                })
+                .map((a) => (
+                <SelectItem key={a.id} value={a.id}>
+                  <div>
+                    <div className="truncate">{a.title}</div>
+                    <div className="flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500">
+                      <span>{a.submissionCount} submissions</span>
+                      {a.ungradedCount > 0 && (
+                        <span className="px-1.5 py-0.5 rounded font-semibold text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400">
+                          {a.ungradedCount} ungraded
+                        </span>
+                      )}
+                      {a.openAppealCount > 0 && (
+                        <span className="px-1.5 py-0.5 rounded font-semibold text-[10px] bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-400">
+                          {a.openAppealCount} pending
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <div className="relative w-full sm:w-56">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            placeholder="Search and press Enter..."
-            value={assignmentSearch}
-            onChange={(e) => setAssignmentSearch(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") { setActiveSearch(assignmentSearch); setAssignmentPage(1); } }}
-            className="pl-9 h-9"
-          />
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Assignment list pagination */}
