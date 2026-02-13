@@ -18,6 +18,7 @@ import {
   ShieldAlert,
   Menu,
   Mail,
+  CircleDot,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -169,6 +170,14 @@ export default function Topbar({ userName, userEmail, userImage, userRole, onMob
       prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
     );
     setUnreadCount((prev) => Math.max(0, prev - 1));
+  };
+
+  const markAsUnread = async (id: string) => {
+    await fetch(`/api/notifications/${id}/read`, { method: "DELETE" });
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, isRead: false } : n))
+    );
+    setUnreadCount((prev) => prev + 1);
   };
 
   const markAllRead = async () => {
@@ -450,30 +459,44 @@ export default function Topbar({ userName, userEmail, userImage, userRole, onMob
                           {timeAgo(n.createdAt)}
                         </span>
                       </div>
-                      {isStaff && (
-                        <div className="flex items-center gap-0.5 shrink-0 pt-0.5">
+                      <div className="flex items-center gap-0.5 shrink-0 pt-0.5">
+                        {n.isRead && (
                           <button
-                            className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                            className="p-1.5 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                             onClick={(e) => {
                               e.stopPropagation();
-                              openEditDialog(n);
+                              markAsUnread(n.id);
                             }}
-                            title="Edit"
+                            title="Mark as unread"
                           >
-                            <Pencil className="h-3.5 w-3.5" />
+                            <CircleDot className="h-3.5 w-3.5" />
                           </button>
-                          <button
-                            className="p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-600 transition-colors"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDelete(n.id);
-                            }}
-                            title="Delete"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      )}
+                        )}
+                        {isStaff && (
+                          <>
+                            <button
+                              className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openEditDialog(n);
+                              }}
+                              title="Edit"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              className="p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-600 transition-colors"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(n.id);
+                              }}
+                              title="Delete"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   ))
                 )}
