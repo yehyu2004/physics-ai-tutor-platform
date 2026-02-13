@@ -8,65 +8,74 @@ import { useTrackTime } from "@/lib/use-track-time";
 import { useEffectiveSession } from "@/lib/effective-session-context";
 import { findSimulationById } from "@/data/halliday-chapters";
 
-// Simulation components
-import ProjectileMotion from "@/components/simulations/ProjectileMotion";
-import SimpleHarmonicMotion from "@/components/simulations/SimpleHarmonicMotion";
-import WaveInterference from "@/components/simulations/WaveInterference";
-import ElectricField from "@/components/simulations/ElectricField";
-import PendulumSim from "@/components/simulations/PendulumSim";
-import OrbitalMotion from "@/components/simulations/OrbitalMotion";
-import DoubleSlit from "@/components/simulations/DoubleSlit";
-import GasMolecules from "@/components/simulations/GasMolecules";
-import ConstantAcceleration from "@/components/simulations/ConstantAcceleration";
-import CircularMotion from "@/components/simulations/CircularMotion";
-import InclinedPlane from "@/components/simulations/InclinedPlane";
-import EnergyConservation from "@/components/simulations/EnergyConservation";
-import Collisions from "@/components/simulations/Collisions";
-import ChargedParticleMagnetic from "@/components/simulations/ChargedParticleMagnetic";
-import LensOptics from "@/components/simulations/LensOptics";
-import QuantumTunneling from "@/components/simulations/QuantumTunneling";
-import VectorAddition from "@/components/simulations/VectorAddition";
-import DragTerminalVelocity from "@/components/simulations/DragTerminalVelocity";
-import TorqueRotation from "@/components/simulations/TorqueRotation";
-import Buoyancy from "@/components/simulations/Buoyancy";
-import DopplerEffect from "@/components/simulations/DopplerEffect";
-import RCCircuit from "@/components/simulations/RCCircuit";
-import FaradayLaw from "@/components/simulations/FaradayLaw";
-import EMWave from "@/components/simulations/EMWave";
-import DiffractionGrating from "@/components/simulations/DiffractionGrating";
-import SpecialRelativity from "@/components/simulations/SpecialRelativity";
-import ParticleInBox from "@/components/simulations/ParticleInBox";
-import RadioactiveDecay from "@/components/simulations/RadioactiveDecay";
-import WorkEnergy from "@/components/simulations/WorkEnergy";
-import AngularMomentum from "@/components/simulations/AngularMomentum";
-import SpinningTop from "@/components/simulations/SpinningTop";
-import ThermalEquilibrium from "@/components/simulations/ThermalEquilibrium";
-import HeatEngine from "@/components/simulations/HeatEngine";
-import Equipotential from "@/components/simulations/Equipotential";
-import Capacitor from "@/components/simulations/Capacitor";
-import OhmsLaw from "@/components/simulations/OhmsLaw";
-import BiotSavart from "@/components/simulations/BiotSavart";
-import LCOscillations from "@/components/simulations/LCOscillations";
-import HydrogenAtom from "@/components/simulations/HydrogenAtom";
-import NuclearFission from "@/components/simulations/NuclearFission";
-import StandardModel from "@/components/simulations/StandardModel";
-import ProjectileChallenge from "@/components/simulations/ProjectileChallenge";
-import CollisionLab from "@/components/simulations/CollisionLab";
-import EscapeVelocity from "@/components/simulations/EscapeVelocity";
-import RollerCoasterDesigner from "@/components/simulations/RollerCoasterDesigner";
-import CircuitBuilder from "@/components/simulations/CircuitBuilder";
-import RippleTank from "@/components/simulations/RippleTank";
-import PhotoelectricEffect from "@/components/simulations/PhotoelectricEffect";
-import GravitySandbox from "@/components/simulations/GravitySandbox";
-import MagneticField3D from "@/components/simulations/MagneticField3D";
-import DecayChain from "@/components/simulations/DecayChain";
+// Loading placeholder for simulation components
+const SimulationLoading = () => (
+  <div className="flex items-center justify-center min-h-[400px]">
+    <p className="text-gray-500 dark:text-gray-400">Loading simulation...</p>
+  </div>
+);
 
-const MeasurementLab = dynamic(() => import("@/components/simulations/MeasurementLab"), { ssr: false });
-const BeamBalance = dynamic(() => import("@/components/simulations/BeamBalance"), { ssr: false });
-const CoulombLaw = dynamic(() => import("@/components/simulations/CoulombLaw"), { ssr: false });
-const GaussLaw = dynamic(() => import("@/components/simulations/GaussLaw"), { ssr: false });
-const MaxwellEquations = dynamic(() => import("@/components/simulations/MaxwellEquations"), { ssr: false });
-const BandStructure = dynamic(() => import("@/components/simulations/BandStructure"), { ssr: false });
+// All simulation components are dynamically imported to keep the initial bundle small.
+// Only the simulation the user navigates to will be loaded.
+const dynamicOpts = { ssr: false, loading: SimulationLoading };
+
+const ConstantAcceleration = dynamic(() => import("@/components/simulations/ConstantAcceleration"), dynamicOpts);
+const ProjectileMotion = dynamic(() => import("@/components/simulations/ProjectileMotion"), dynamicOpts);
+const VectorAddition = dynamic(() => import("@/components/simulations/VectorAddition"), dynamicOpts);
+const CircularMotion = dynamic(() => import("@/components/simulations/CircularMotion"), dynamicOpts);
+const InclinedPlane = dynamic(() => import("@/components/simulations/InclinedPlane"), dynamicOpts);
+const DragTerminalVelocity = dynamic(() => import("@/components/simulations/DragTerminalVelocity"), dynamicOpts);
+const EnergyConservation = dynamic(() => import("@/components/simulations/EnergyConservation"), dynamicOpts);
+const Collisions = dynamic(() => import("@/components/simulations/Collisions"), dynamicOpts);
+const TorqueRotation = dynamic(() => import("@/components/simulations/TorqueRotation"), dynamicOpts);
+const SimpleHarmonicMotion = dynamic(() => import("@/components/simulations/SimpleHarmonicMotion"), dynamicOpts);
+const PendulumSim = dynamic(() => import("@/components/simulations/PendulumSim"), dynamicOpts);
+const WaveInterference = dynamic(() => import("@/components/simulations/WaveInterference"), dynamicOpts);
+const OrbitalMotion = dynamic(() => import("@/components/simulations/OrbitalMotion"), dynamicOpts);
+const Buoyancy = dynamic(() => import("@/components/simulations/Buoyancy"), dynamicOpts);
+const DopplerEffect = dynamic(() => import("@/components/simulations/DopplerEffect"), dynamicOpts);
+const GasMolecules = dynamic(() => import("@/components/simulations/GasMolecules"), dynamicOpts);
+const ElectricField = dynamic(() => import("@/components/simulations/ElectricField"), dynamicOpts);
+const ChargedParticleMagnetic = dynamic(() => import("@/components/simulations/ChargedParticleMagnetic"), dynamicOpts);
+const RCCircuit = dynamic(() => import("@/components/simulations/RCCircuit"), dynamicOpts);
+const FaradayLaw = dynamic(() => import("@/components/simulations/FaradayLaw"), dynamicOpts);
+const EMWave = dynamic(() => import("@/components/simulations/EMWave"), dynamicOpts);
+const LensOptics = dynamic(() => import("@/components/simulations/LensOptics"), dynamicOpts);
+const DoubleSlit = dynamic(() => import("@/components/simulations/DoubleSlit"), dynamicOpts);
+const DiffractionGrating = dynamic(() => import("@/components/simulations/DiffractionGrating"), dynamicOpts);
+const QuantumTunneling = dynamic(() => import("@/components/simulations/QuantumTunneling"), dynamicOpts);
+const SpecialRelativity = dynamic(() => import("@/components/simulations/SpecialRelativity"), dynamicOpts);
+const ParticleInBox = dynamic(() => import("@/components/simulations/ParticleInBox"), dynamicOpts);
+const RadioactiveDecay = dynamic(() => import("@/components/simulations/RadioactiveDecay"), dynamicOpts);
+const WorkEnergy = dynamic(() => import("@/components/simulations/WorkEnergy"), dynamicOpts);
+const AngularMomentum = dynamic(() => import("@/components/simulations/AngularMomentum"), dynamicOpts);
+const SpinningTop = dynamic(() => import("@/components/simulations/SpinningTop"), dynamicOpts);
+const ThermalEquilibrium = dynamic(() => import("@/components/simulations/ThermalEquilibrium"), dynamicOpts);
+const HeatEngine = dynamic(() => import("@/components/simulations/HeatEngine"), dynamicOpts);
+const Equipotential = dynamic(() => import("@/components/simulations/Equipotential"), dynamicOpts);
+const Capacitor = dynamic(() => import("@/components/simulations/Capacitor"), dynamicOpts);
+const OhmsLaw = dynamic(() => import("@/components/simulations/OhmsLaw"), dynamicOpts);
+const BiotSavart = dynamic(() => import("@/components/simulations/BiotSavart"), dynamicOpts);
+const LCOscillations = dynamic(() => import("@/components/simulations/LCOscillations"), dynamicOpts);
+const HydrogenAtom = dynamic(() => import("@/components/simulations/HydrogenAtom"), dynamicOpts);
+const NuclearFission = dynamic(() => import("@/components/simulations/NuclearFission"), dynamicOpts);
+const StandardModel = dynamic(() => import("@/components/simulations/StandardModel"), dynamicOpts);
+const ProjectileChallenge = dynamic(() => import("@/components/simulations/ProjectileChallenge"), dynamicOpts);
+const CollisionLab = dynamic(() => import("@/components/simulations/CollisionLab"), dynamicOpts);
+const EscapeVelocity = dynamic(() => import("@/components/simulations/EscapeVelocity"), dynamicOpts);
+const RollerCoasterDesigner = dynamic(() => import("@/components/simulations/RollerCoasterDesigner"), dynamicOpts);
+const CircuitBuilder = dynamic(() => import("@/components/simulations/CircuitBuilder"), dynamicOpts);
+const RippleTank = dynamic(() => import("@/components/simulations/RippleTank"), dynamicOpts);
+const PhotoelectricEffect = dynamic(() => import("@/components/simulations/PhotoelectricEffect"), dynamicOpts);
+const GravitySandbox = dynamic(() => import("@/components/simulations/GravitySandbox"), dynamicOpts);
+const MagneticField3D = dynamic(() => import("@/components/simulations/MagneticField3D"), dynamicOpts);
+const DecayChain = dynamic(() => import("@/components/simulations/DecayChain"), dynamicOpts);
+const MeasurementLab = dynamic(() => import("@/components/simulations/MeasurementLab"), dynamicOpts);
+const BeamBalance = dynamic(() => import("@/components/simulations/BeamBalance"), dynamicOpts);
+const CoulombLaw = dynamic(() => import("@/components/simulations/CoulombLaw"), dynamicOpts);
+const GaussLaw = dynamic(() => import("@/components/simulations/GaussLaw"), dynamicOpts);
+const MaxwellEquations = dynamic(() => import("@/components/simulations/MaxwellEquations"), dynamicOpts);
+const BandStructure = dynamic(() => import("@/components/simulations/BandStructure"), dynamicOpts);
 
 const simulationComponents: Record<string, React.ComponentType> = {
   "constant-acceleration": ConstantAcceleration,
@@ -144,7 +153,7 @@ export default function SimulationViewClient({
       fetch("/api/exam-mode")
         .then((res) => res.ok ? res.json() : null)
         .then((d) => { if (d?.isActive) setExamBlocked(true); })
-        .catch(() => {});
+        .catch((err) => console.error("[exam-mode] Failed to check exam mode:", err));
     }
   }, [session?.role]);
 

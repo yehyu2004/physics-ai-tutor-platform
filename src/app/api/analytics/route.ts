@@ -1,15 +1,13 @@
 import { NextResponse } from "next/server";
-import { getEffectiveSession } from "@/lib/impersonate";
 import { prisma } from "@/lib/prisma";
+import { requireApiAuth, isErrorResponse } from "@/lib/api-auth";
 
 export async function GET() {
   try {
-    const session = await getEffectiveSession();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userId = (session.user as { id: string }).id;
+    const auth = await requireApiAuth();
+    if (isErrorResponse(auth)) return auth;
+    const { user } = auth;
+    const userId = user.id;
 
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 

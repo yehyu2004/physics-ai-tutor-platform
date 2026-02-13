@@ -13,5 +13,5 @@ export function trackActivity(category: ActivityCategory, detail?: string) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ category, detail }),
-  }).catch(() => {});
+  }).catch((err) => console.error("[activity] Failed to track activity:", err));
 }

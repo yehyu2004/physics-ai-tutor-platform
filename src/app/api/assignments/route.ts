@@ -1,32 +1,33 @@
 import { NextResponse } from "next/server";
-import { getEffectiveSession } from "@/lib/impersonate";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
+import { requireApiAuth, requireApiRole, isErrorResponse } from "@/lib/api-auth";
+import { logger } from "@/lib/logger";
 
 export async function GET(req: Request) {
   try {
-    const session = await getEffectiveSession();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userRole = (session.user as { role?: string }).role;
-    const userId = (session.user as { id: string }).id;
+    const auth = await requireApiAuth();
+    if (isErrorResponse(auth)) return auth;
+    const userRole = auth.user.role;
+    const userId = auth.user.id;
 
     const { searchParams } = new URL(req.url);
     const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
     const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get("pageSize") || "15")));
-    const filterType = searchParams.get("filter"); // "published" | "drafts" | null
+    const filterType = searchParams.get("filter"); // "published" | "drafts" | "scheduled" | null
 
     const hasSubmissions = searchParams.get("hasSubmissions") === "true";
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const whereClause: any = userRole === "STUDENT"
-      ? { published: true }
+      ? { published: true, isDeleted: false }
       : filterType === "published"
-        ? { published: true }
+        ? { published: true, isDeleted: false }
         : filterType === "drafts"
-          ? { published: false }
-          : {};
+          ? { published: false, scheduledPublishAt: null, isDeleted: false }
+          : filterType === "scheduled"
+            ? { published: false, scheduledPublishAt: { not: null }, isDeleted: false }
+            : { isDeleted: false };
 
     if (hasSubmissions) {
       whereClause.submissions = { some: { isDraft: false } };
@@ -66,34 +67,21 @@ export async function GET(req: Request) {
       },
     });
 
-    // Fetch open appeal counts per assignment
-    const openAppealCounts = await prisma.gradeAppeal.groupBy({
-      by: ["submissionAnswerId"],
-      where: {
-        status: "OPEN",
-        submissionAnswer: {
-          submission: {
-            assignmentId: { in: assignments.map((a) => a.id) },
-          },
-        },
-      },
-    });
-
-    // Map appeal counts to assignment IDs
-    const appealsBySubmissionAnswer = await prisma.submissionAnswer.findMany({
-      where: {
-        id: { in: openAppealCounts.map((c: { submissionAnswerId: string }) => c.submissionAnswerId) },
-      },
-      select: {
-        id: true,
-        submission: { select: { assignmentId: true } },
-      },
-    });
-
+    // Fetch open appeal counts per assignment in a single query
+    const assignmentIds = assignments.map((a) => a.id);
     const appealCountByAssignment: Record<string, number> = {};
-    for (const sa of appealsBySubmissionAnswer) {
-      const aid = sa.submission.assignmentId;
-      appealCountByAssignment[aid] = (appealCountByAssignment[aid] || 0) + 1;
+    if (assignmentIds.length > 0) {
+      const appealCounts = await prisma.$queryRaw<Array<{ assignmentId: string; count: bigint }>>`
+        SELECT s."assignmentId", COUNT(ga.id) as count
+        FROM "GradeAppeal" ga
+        JOIN "SubmissionAnswer" sa ON sa.id = ga."submissionAnswerId"
+        JOIN "Submission" s ON s.id = sa."submissionId"
+        WHERE ga.status = 'OPEN' AND s."assignmentId" = ANY(${assignmentIds})
+        GROUP BY s."assignmentId"
+      `;
+      for (const row of appealCounts) {
+        appealCountByAssignment[row.assignmentId] = Number(row.count);
+      }
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -142,25 +130,38 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ assignments: formatted, totalCount, page, pageSize });
   } catch (error) {
-    console.error("Assignments error:", error);
+    logger.error("Assignments GET error", {
+      route: "/api/assignments",
+      error: error instanceof Error ? error.message : String(error),
+    });
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === "P2025") {
+        return NextResponse.json({ error: "Resource not found" }, { status: 404 });
+      }
+    }
+
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
 export async function POST(req: Request) {
   try {
-    const session = await getEffectiveSession();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await requireApiRole(["TA", "PROFESSOR", "ADMIN"]);
+    if (isErrorResponse(auth)) return auth;
+    const userId = auth.user.id;
+    const { title, description, dueDate, type, totalPoints, questions, pdfUrl, lockAfterSubmit, scheduledPublishAt, notifyOnPublish } = await req.json();
 
-    const userRole = (session.user as { role?: string }).role;
-    if (userRole !== "TA" && userRole !== "PROFESSOR" && userRole !== "ADMIN") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    // Validate scheduledPublishAt if provided
+    if (scheduledPublishAt) {
+      const scheduledDate = new Date(scheduledPublishAt);
+      if (isNaN(scheduledDate.getTime())) {
+        return NextResponse.json({ error: "Invalid scheduledPublishAt date" }, { status: 400 });
+      }
+      if (scheduledDate <= new Date()) {
+        return NextResponse.json({ error: "Scheduled time must be in the future" }, { status: 400 });
+      }
     }
-
-    const userId = (session.user as { id: string }).id;
-    const { title, description, dueDate, type, totalPoints, questions, pdfUrl, lockAfterSubmit } = await req.json();
 
     const assignment = await prisma.assignment.create({
       data: {
@@ -171,6 +172,8 @@ export async function POST(req: Request) {
         totalPoints: totalPoints || 100,
         pdfUrl: pdfUrl || null,
         lockAfterSubmit: lockAfterSubmit || false,
+        scheduledPublishAt: scheduledPublishAt ? new Date(scheduledPublishAt) : null,
+        notifyOnPublish: notifyOnPublish || false,
         createdById: userId,
         questions: {
           create: (questions || []).map((q: { questionText: string; questionType: string; options?: string[]; correctAnswer?: string; points?: number; diagram?: { type: string; content: string }; imageUrl?: string }, i: number) => ({
@@ -190,7 +193,27 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ assignment });
   } catch (error) {
-    console.error("Create assignment error:", error);
+    logger.error("Assignment creation error", {
+      route: "/api/assignments",
+      error: error instanceof Error ? error.message : String(error),
+    });
+
+    if (error instanceof SyntaxError) {
+      return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+    }
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === "P2025") {
+        return NextResponse.json({ error: "Resource not found" }, { status: 404 });
+      }
+      if (error.code === "P2002") {
+        return NextResponse.json({ error: "Duplicate record conflict" }, { status: 409 });
+      }
+      if (error.code === "P2003") {
+        return NextResponse.json({ error: "Referenced record not found" }, { status: 400 });
+      }
+    }
+
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

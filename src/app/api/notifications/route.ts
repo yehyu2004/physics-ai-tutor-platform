@@ -1,27 +1,32 @@
 import { NextResponse } from "next/server";
-import { getEffectiveSession } from "@/lib/impersonate";
 import { prisma } from "@/lib/prisma";
+import { requireApiAuth, requireApiRole, isErrorResponse } from "@/lib/api-auth";
+import { parsePaginationParams, paginatedResponse } from "@/lib/pagination";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const session = await getEffectiveSession();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await requireApiAuth();
+    if (isErrorResponse(auth)) return auth;
+    const userId = auth.user.id;
 
-    const userId = (session.user as { id: string }).id;
+    const { searchParams } = new URL(req.url);
+    const params = parsePaginationParams(searchParams, { pageSize: 20 });
 
-    const notifications = await prisma.notification.findMany({
-      take: 50,
-      orderBy: { createdAt: "desc" },
-      include: {
-        createdBy: { select: { name: true } },
-        reads: {
-          where: { userId },
-          select: { id: true },
+    const [totalCount, notifications] = await Promise.all([
+      prisma.notification.count(),
+      prisma.notification.findMany({
+        take: params.pageSize,
+        skip: params.skip,
+        orderBy: { createdAt: "desc" },
+        include: {
+          createdBy: { select: { name: true } },
+          reads: {
+            where: { userId },
+            select: { id: true },
+          },
         },
-      },
-    });
+      }),
+    ]);
 
     const mapped = notifications.map((n) => ({
       id: n.id,
@@ -34,7 +39,10 @@ export async function GET() {
 
     const unreadCount = mapped.filter((n) => !n.isRead).length;
 
-    return NextResponse.json({ notifications: mapped, unreadCount });
+    return NextResponse.json({
+      ...paginatedResponse(mapped, totalCount, params),
+      unreadCount,
+    });
   } catch (error) {
     console.error("Notifications GET error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -43,12 +51,9 @@ export async function GET() {
 
 export async function PATCH() {
   try {
-    const session = await getEffectiveSession();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userId = (session.user as { id: string }).id;
+    const auth = await requireApiAuth();
+    if (isErrorResponse(auth)) return auth;
+    const userId = auth.user.id;
 
     const unreadNotifications = await prisma.notification.findMany({
       where: {
@@ -76,17 +81,9 @@ export async function PATCH() {
 
 export async function POST(req: Request) {
   try {
-    const session = await getEffectiveSession();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userRole = (session.user as { role?: string }).role;
-    if (userRole !== "TA" && userRole !== "PROFESSOR" && userRole !== "ADMIN") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    const createdById = (session.user as { id: string }).id;
+    const auth = await requireApiRole(["TA", "PROFESSOR", "ADMIN"]);
+    if (isErrorResponse(auth)) return auth;
+    const createdById = auth.user.id;
     const { title, message } = await req.json();
 
     if (!title || !message) {

@@ -1,40 +1,41 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireApiRole, isErrorResponse } from "@/lib/api-auth";
+import { parsePaginationParams, paginatedResponse } from "@/lib/pagination";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await requireApiRole(["ADMIN", "PROFESSOR"]);
+    if (isErrorResponse(auth)) return auth;
 
-    const userRole = (session.user as { role?: string }).role;
-    if (userRole !== "ADMIN" && userRole !== "PROFESSOR") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const { searchParams } = new URL(req.url);
+    const params = parsePaginationParams(searchParams, { pageSize: 50 });
 
-    const logs = await prisma.auditLog.findMany({
-      take: 200,
-      orderBy: { createdAt: "desc" },
-      include: {
-        user: {
-          select: { name: true, email: true },
+    const [totalCount, logs] = await Promise.all([
+      prisma.auditLog.count(),
+      prisma.auditLog.findMany({
+        take: params.pageSize,
+        skip: params.skip,
+        orderBy: { createdAt: "desc" },
+        include: {
+          user: {
+            select: { name: true, email: true },
+          },
         },
-      },
-    });
+      }),
+    ]);
 
-    return NextResponse.json({
-      logs: logs.map((l) => ({
-        id: l.id,
-        userId: l.userId,
-        userName: l.user.name,
-        userEmail: l.user.email,
-        action: l.action,
-        details: l.details,
-        createdAt: l.createdAt.toISOString(),
-      })),
-    });
+    const mapped = logs.map((l) => ({
+      id: l.id,
+      userId: l.userId,
+      userName: l.user.name,
+      userEmail: l.user.email,
+      action: l.action,
+      details: l.details,
+      createdAt: l.createdAt.toISOString(),
+    }));
+
+    return NextResponse.json(paginatedResponse(mapped, totalCount, params));
   } catch (error) {
     console.error("Audit log error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

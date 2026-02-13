@@ -1,17 +1,14 @@
 import { NextResponse } from "next/server";
-import { getEffectiveSession } from "@/lib/impersonate";
 import { prisma } from "@/lib/prisma";
+import { requireApiAuth, isErrorResponse } from "@/lib/api-auth";
 
 export async function GET() {
   try {
-    const session = await getEffectiveSession();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await requireApiAuth();
+    if (isErrorResponse(auth)) return auth;
+    const userId = auth.user.id;
 
-    const userId = (session.user as { id: string }).id;
-
-    const user = await prisma.user.findUnique({
+    const profile = await prisma.user.findUnique({
       where: { id: userId },
       select: {
         id: true,
@@ -24,11 +21,11 @@ export async function GET() {
       },
     });
 
-    if (!user) {
+    if (!profile) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    return NextResponse.json(user);
+    return NextResponse.json(profile);
   } catch (error) {
     console.error("Profile GET error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -37,12 +34,9 @@ export async function GET() {
 
 export async function PATCH(req: Request) {
   try {
-    const session = await getEffectiveSession();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userId = (session.user as { id: string }).id;
+    const auth = await requireApiAuth();
+    if (isErrorResponse(auth)) return auth;
+    const userId = auth.user.id;
     const body = await req.json();
     const { name, studentId } = body;
 

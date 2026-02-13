@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import SessionProvider from "@/components/providers/SessionProvider";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import { Toaster } from "sonner";
 import "./globals.css";
 
 const geistSans = localFont({
@@ -32,6 +33,7 @@ export default function RootLayout({
       >
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           <SessionProvider>{children}</SessionProvider>
+          <Toaster richColors position="top-right" />
         </ThemeProvider>
       </body>
     </html>

@@ -1,19 +1,17 @@
-import { getEffectiveSession } from "@/lib/impersonate";
 import { prisma } from "@/lib/prisma";
+import { requireApiAuth, isErrorResponse } from "@/lib/api-auth";
 import { streamChat, SOCRATIC_SYSTEM_PROMPT, EXAM_MODE_SYSTEM_PROMPT, type ChatMessage, type AIProvider } from "@/lib/ai";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { checkContentFlags, handleContentFlag, trackRateLimitAbuse } from "@/lib/abuse-detection";
 import { checkAndBanSpammer } from "@/lib/spam-guard";
+import { logger } from "@/lib/logger";
 import Anthropic from "@anthropic-ai/sdk";
 
 export async function POST(req: Request) {
   try {
-    const session = await getEffectiveSession();
-    if (!session?.user) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userId = (session.user as { id: string }).id;
+    const auth = await requireApiAuth();
+    if (isErrorResponse(auth)) return auth;
+    const userId = auth.user.id;
 
     // Check if user is banned or restricted from using AI chat
     const user = await prisma.user.findUnique({
@@ -42,7 +40,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const userName = (session.user as { name?: string }).name || "Unknown";
+    const userName = auth.user.name || "Unknown";
 
     const rateCheck = checkRateLimit(userId, user?.isRestricted || false);
     if (!rateCheck.allowed) {
@@ -54,7 +52,7 @@ export async function POST(req: Request) {
         },
       });
       // Fire-and-forget: track rate limit abuse escalation
-      trackRateLimitAbuse(userId, userName).catch(() => {});
+      trackRateLimitAbuse(userId, userName).catch((err) => console.error("[abuse] Failed to track rate limit abuse:", err));
       return Response.json(
         { error: `Rate limit exceeded. Please wait before sending more messages. Resets at ${new Date(rateCheck.resetAt).toLocaleTimeString()}.` },
         { status: 429 }
@@ -74,7 +72,7 @@ export async function POST(req: Request) {
     // Fire-and-forget: check content for jailbreak/prompt injection patterns
     const contentFlags = checkContentFlags(message);
     if (contentFlags.length > 0) {
-      handleContentFlag(userId, userName, message, contentFlags).catch(() => {});
+      handleContentFlag(userId, userName, message, contentFlags).catch((err) => console.error("[content-flag] Failed to handle content flag:", err));
     }
 
     let convId = conversationId;
@@ -111,7 +109,7 @@ export async function POST(req: Request) {
     });
 
     // Check for chat spam (30 messages/min auto-ban, non-blocking)
-    checkAndBanSpammer({ userId, source: "chat" }).catch(() => {});
+    checkAndBanSpammer({ userId, source: "chat" }).catch((err) => console.error("[spam] Failed to check spammer:", err));
 
     // Load last 50 messages for AI context (avoids unbounded query + token limits)
     const recentMessages = await prisma.message.findMany({
@@ -135,7 +133,7 @@ export async function POST(req: Request) {
     });
 
     // Check exam mode — enforced server-side for students
-    const userRole = (session.user as { role?: string }).role;
+    const userRole = auth.user.role;
     let systemPrompt: string | undefined;
 
     if (userRole === "STUDENT") {
@@ -190,8 +188,19 @@ export async function POST(req: Request) {
             }
           }
         } catch (aiError) {
-          console.error("AI Error:", aiError);
-          fullContent = "I'm sorry, I encountered an error while processing your request. Please check that the AI API keys are configured correctly.";
+          logger.error("AI streaming error", {
+            route: "/api/chat",
+            userId,
+            error: aiError instanceof Error ? aiError.message : String(aiError),
+          });
+
+          if (aiError instanceof Error && (aiError.message.includes("rate limit") || aiError.message.includes("429"))) {
+            fullContent = "The AI service is currently rate limited. Please wait a moment and try again.";
+          } else if (aiError instanceof Error && (aiError.message.includes("401") || aiError.message.includes("authentication") || aiError.message.includes("API key"))) {
+            fullContent = "AI service authentication error. Please contact an administrator to check API key configuration.";
+          } else {
+            fullContent = "I'm sorry, I encountered an error while processing your request. Please try again shortly.";
+          }
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "delta", content: fullContent })}\n\n`));
         }
 
@@ -212,8 +221,21 @@ export async function POST(req: Request) {
             data: { updatedAt: new Date() },
           });
 
-          // Generate AI title for new conversations
-          if (!conversationId && fullContent) {
+        } catch (dbError) {
+          logger.error("Failed to save assistant message to DB", {
+            route: "/api/chat",
+            userId,
+            conversationId: convId,
+            error: dbError instanceof Error ? dbError.message : String(dbError),
+          });
+        }
+
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "done" })}\n\n`));
+        controller.close();
+
+        // Generate AI title for new conversations (fire-and-forget, non-blocking)
+        if (!conversationId && fullContent) {
+          (async () => {
             try {
               const titleClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
               const titleResponse = await titleClient.messages.create({
@@ -231,19 +253,17 @@ export async function POST(req: Request) {
                   where: { id: convId },
                   data: { title: generatedTitle },
                 });
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "title", title: generatedTitle, conversationId: convId })}\n\n`));
               }
             } catch (titleError) {
-              console.error("Title generation error:", titleError);
-              // Keep original truncated title — no action needed
+              logger.warn("Failed to generate conversation title", {
+                route: "/api/chat",
+                userId,
+                conversationId: convId,
+                error: titleError instanceof Error ? titleError.message : String(titleError),
+              });
             }
-          }
-        } catch (dbError) {
-          console.error("DB save error:", dbError);
+          })();
         }
-
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "done" })}\n\n`));
-        controller.close();
       },
     });
 
@@ -255,7 +275,30 @@ export async function POST(req: Request) {
       },
     });
   } catch (error) {
-    console.error("Chat error:", error);
+    logger.error("Chat route error", {
+      route: "/api/chat",
+      error: error instanceof Error ? error.message : String(error),
+    });
+
+    if (error instanceof SyntaxError) {
+      return Response.json({ error: "Invalid request body" }, { status: 400 });
+    }
+
+    if (error instanceof Error) {
+      if (error.message.includes("rate limit") || error.message.includes("429")) {
+        return Response.json(
+          { error: "AI service rate limited. Please try again in a moment." },
+          { status: 429 }
+        );
+      }
+      if (error.message.includes("401") || error.message.includes("API key") || error.message.includes("authentication")) {
+        return Response.json(
+          { error: "AI service configuration error. Please contact an administrator." },
+          { status: 502 }
+        );
+      }
+    }
+
     return Response.json(
       { error: "Internal server error" },
       { status: 500 }

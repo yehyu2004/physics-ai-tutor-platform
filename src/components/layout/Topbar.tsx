@@ -17,7 +17,6 @@ import {
   Trash2,
   ShieldAlert,
   Menu,
-  Mail,
   CircleDot,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -30,6 +29,7 @@ import {
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { isStaff as isStaffRole } from "@/lib/constants";
 import {
   Dialog,
   DialogContent,
@@ -40,6 +40,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { NotifyUsersDialog } from "@/components/ui/notify-users-dialog";
 
 interface TopbarProps {
   userName: string;
@@ -68,6 +69,8 @@ const routeLabels: Record<string, string> = {
   "/grading": "Grading",
   "/admin/users": "Users",
   "/admin/email-records": "Email Records",
+  "/admin/email-templates": "Email Templates",
+  "/admin/scheduled-emails": "Scheduled Emails",
   "/admin/qa-history": "Q&A History",
   "/admin/settings": "Settings",
   "/profile": "Profile",
@@ -95,15 +98,14 @@ export default function Topbar({ userName, userEmail, userImage, userRole, onMob
   const [sending, setSending] = useState(false);
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
-  const [alsoEmail, setAlsoEmail] = useState(false);
-  const [emailRoles, setEmailRoles] = useState<Set<string>>(new Set(["STUDENT"]));
+  const [notifyDialogOpen, setNotifyDialogOpen] = useState(false);
 
   const [examModeActive, setExamModeActive] = useState(false);
   const [examModeMessage, setExamModeMessage] = useState<string | null>(null);
   const [examTooltipOpen, setExamTooltipOpen] = useState(false);
   const [examToggling, setExamToggling] = useState(false);
 
-  const isStaff = userRole === "TA" || userRole === "PROFESSOR" || userRole === "ADMIN";
+  const isStaff = isStaffRole(userRole);
 
   const fetchExamMode = useCallback(async () => {
     try {
@@ -141,8 +143,8 @@ export default function Topbar({ userName, userEmail, userImage, userRole, onMob
       const res = await fetch("/api/notifications");
       if (res.ok) {
         const data = await res.json();
-        setNotifications(data.notifications);
-        setUnreadCount(data.unreadCount);
+        setNotifications(data.notifications ?? []);
+        setUnreadCount(data.unreadCount ?? 0);
       }
     } catch {
       // silently ignore
@@ -187,68 +189,30 @@ export default function Topbar({ userName, userEmail, userImage, userRole, onMob
   };
 
   const openCreateDialog = () => {
-    setEditingId(null);
-    setTitle("");
-    setMessage("");
-    setAlsoEmail(false);
-    setEmailRoles(new Set(["STUDENT"]));
     setNotifOpen(false);
-    setDialogOpen(true);
+    setNotifyDialogOpen(true);
   };
 
   const openEditDialog = (n: NotificationItem) => {
     setEditingId(n.id);
     setTitle(n.title);
     setMessage(n.message);
-    setAlsoEmail(false);
-    setEmailRoles(new Set(["STUDENT"]));
     setNotifOpen(false);
     setDialogOpen(true);
   };
 
-  const handleSend = async () => {
-    if (!title.trim() || !message.trim()) return;
+  const handleEditSave = async () => {
+    if (!editingId || !title.trim() || !message.trim()) return;
     setSending(true);
     try {
-      const url = editingId
-        ? `/api/notifications/${editingId}`
-        : "/api/notifications";
-      const method = editingId ? "PATCH" : "POST";
-      const res = await fetch(url, {
-        method,
+      const res = await fetch(`/api/notifications/${editingId}`, {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: title.trim(), message: message.trim() }),
       });
       if (res.ok) {
-        // Also send email to selected roles if checked
-        if (alsoEmail && emailRoles.size > 0) {
-          try {
-            const usersRes = await fetch("/api/admin/users");
-            if (usersRes.ok) {
-              const usersData = await usersRes.json();
-              const targetIds = (usersData.users || [])
-                .filter((u: { role: string; isBanned: boolean }) => emailRoles.has(u.role) && !u.isBanned)
-                .map((u: { id: string }) => u.id);
-              if (targetIds.length > 0) {
-                await fetch("/api/admin/email", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    userIds: targetIds,
-                    subject: title.trim(),
-                    message: message.trim(),
-                  }),
-                });
-              }
-            }
-          } catch {
-            // Email sending failure shouldn't block notification creation
-          }
-        }
-
         setTitle("");
         setMessage("");
-        setAlsoEmail(false);
         setEditingId(null);
         setDialogOpen(false);
         fetchNotifications();
@@ -256,6 +220,15 @@ export default function Topbar({ userName, userEmail, userImage, userRole, onMob
     } finally {
       setSending(false);
     }
+  };
+
+  const handleCreateAnnouncement = async (subject: string, msg: string) => {
+    await fetch("/api/notifications", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: subject, message: msg }),
+    });
+    fetchNotifications();
   };
 
   const handleDelete = async (id: string) => {
@@ -291,10 +264,11 @@ export default function Topbar({ userName, userEmail, userImage, userRole, onMob
           <button
             onClick={onMobileMenuToggle}
             className="lg:hidden p-1.5 -ml-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            aria-label="Toggle navigation menu"
           >
             <Menu className="h-5 w-5 text-gray-600 dark:text-gray-400" />
           </button>
-          <div className="flex items-center gap-1 text-sm min-w-0">
+          <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-sm min-w-0">
             <Link
               href="/dashboard"
               className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors shrink-0 hidden sm:inline"
@@ -316,7 +290,7 @@ export default function Topbar({ userName, userEmail, userImage, userRole, onMob
                 )}
               </React.Fragment>
             ))}
-          </div>
+          </nav>
         </div>
 
         <div className="flex items-center gap-2">
@@ -377,10 +351,11 @@ export default function Topbar({ userName, userEmail, userImage, userRole, onMob
                 variant="ghost"
                 size="icon"
                 className="relative rounded-lg h-8 w-8 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
               >
                 <Bell className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                 {unreadCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium text-white ring-2 ring-white dark:ring-gray-950">
+                  <span aria-hidden="true" className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium text-white ring-2 ring-white dark:ring-gray-950">
                     {unreadCount > 9 ? "9+" : unreadCount}
                   </span>
                 )}
@@ -424,7 +399,7 @@ export default function Topbar({ userName, userEmail, userImage, userRole, onMob
                 </div>
               )}
 
-              <div className="max-h-[60vh] sm:max-h-80 overflow-y-auto">
+              <div className="max-h-[60vh] sm:max-h-80 overflow-y-auto" role="list" aria-label="Notifications">
                 {notifications.length === 0 ? (
                   <div className="px-4 py-8 text-center text-sm text-gray-400">
                     No notifications yet
@@ -433,10 +408,19 @@ export default function Topbar({ userName, userEmail, userImage, userRole, onMob
                   notifications.map((n) => (
                     <div
                       key={n.id}
+                      role="listitem"
                       className="flex items-start gap-2 px-3 sm:px-4 py-2.5 sm:py-3 border-b border-gray-50 dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors"
                       onClick={() => {
                         if (!n.isRead) markAsRead(n.id);
                       }}
+                      onKeyDown={(e) => {
+                        if ((e.key === "Enter" || e.key === " ") && !n.isRead) {
+                          e.preventDefault();
+                          markAsRead(n.id);
+                        }
+                      }}
+                      tabIndex={0}
+                      aria-label={`${n.isRead ? "" : "Unread: "}${n.title}`}
                     >
                       <div className="flex-1 min-w-0">
                         <div className="flex w-full items-start justify-between gap-2">
@@ -593,46 +577,6 @@ export default function Topbar({ userName, userEmail, userImage, userRole, onMob
                 onChange={(e) => setMessage(e.target.value)}
               />
             </div>
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={alsoEmail}
-                  onChange={(e) => setAlsoEmail(e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800"
-                />
-                <div className="flex items-center gap-1.5">
-                  <Mail className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Also send as email</span>
-                </div>
-              </label>
-              {alsoEmail && (
-                <div className="flex items-center gap-1.5 ml-6">
-                  <span className="text-xs text-gray-500 dark:text-gray-400">To:</span>
-                  {(["STUDENT", "TA", "PROFESSOR", "ADMIN"] as const).map((role) => (
-                    <button
-                      key={role}
-                      type="button"
-                      onClick={() => {
-                        setEmailRoles((prev) => {
-                          const next = new Set(prev);
-                          if (next.has(role)) next.delete(role);
-                          else next.add(role);
-                          return next;
-                        });
-                      }}
-                      className={`text-[11px] px-2 py-0.5 rounded-md border transition-colors ${
-                        emailRoles.has(role)
-                          ? "bg-indigo-100 border-indigo-300 text-indigo-700 dark:bg-indigo-950 dark:border-indigo-700 dark:text-indigo-300"
-                          : "bg-white border-gray-200 text-gray-400 hover:text-gray-600 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-500"
-                      }`}
-                    >
-                      {role === "STUDENT" ? "Students" : role === "TA" ? "TAs" : role === "PROFESSOR" ? "Professors" : "Admins"}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
           </div>
           <DialogFooter>
             <Button
@@ -643,21 +587,34 @@ export default function Topbar({ userName, userEmail, userImage, userRole, onMob
               Cancel
             </Button>
             <Button
-              onClick={handleSend}
+              onClick={handleEditSave}
               disabled={sending || !title.trim() || !message.trim()}
             >
               {sending ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-                  {editingId ? "Saving..." : "Sending..."}
+                  Saving...
                 </>
               ) : (
-                editingId ? "Save Changes" : "Send to All"
+                "Save Changes"
               )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <NotifyUsersDialog
+        open={notifyDialogOpen}
+        onOpenChange={setNotifyDialogOpen}
+        defaultSubject=""
+        defaultMessage=""
+        onBeforeSend={handleCreateAnnouncement}
+        onSent={() => fetchNotifications()}
+        dialogTitle="New Announcement"
+        dialogDescription="Create an announcement and email selected users."
+        sendButtonLabel="Send Announcement"
+        successMessage="Announcement sent successfully"
+      />
     </>
   );
 }

@@ -4,10 +4,13 @@ import { getToken } from "next-auth/jwt";
 
 export async function middleware(request: NextRequest) {
   // Skip auth for E2E tests — test user identity is set via cookie
-  // SECURITY: Only allow in development/test, never in production
+  // SECURITY: Only allow when both E2E_TEST_MODE and E2E_TEST_SECRET are set,
+  // and never in production. The two-key requirement prevents accidental bypass
+  // on staging environments that only have E2E_TEST_MODE set.
   if (
     process.env.E2E_TEST_MODE === "true" &&
-    process.env.NODE_ENV !== "production"
+    process.env.NODE_ENV !== "production" &&
+    process.env.E2E_TEST_SECRET
   ) {
     return NextResponse.next();
   }
@@ -33,6 +36,12 @@ export async function middleware(request: NextRequest) {
   });
 
   if (!token) {
+    // API routes should get a 401 JSON response, not a redirect to login
+    const isApiRoute = request.nextUrl.pathname.startsWith("/api/");
+    if (isApiRoute) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("callbackUrl", request.url);
     return NextResponse.redirect(loginUrl);
@@ -52,5 +61,6 @@ export const config = {
     "/grading/:path*",
     "/simulations/:path*",
     "/admin/:path*",
+    "/api/((?!auth|cron).*)",
   ],
 };

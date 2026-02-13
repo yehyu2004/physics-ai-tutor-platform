@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatShortDate } from "@/lib/utils";
+import { isStaff } from "@/lib/constants";
 
 interface DashboardClientProps {
   userName: string;
@@ -88,7 +89,7 @@ export default function DashboardClient({
   upcomingAssignments,
   openAppeals = [],
 }: DashboardClientProps) {
-  const isStaffRole = userRole === "TA" || userRole === "PROFESSOR" || userRole === "ADMIN";
+  const isStaffRole = isStaff(userRole);
   const quickStartItems = [
     {
       icon: MessageSquare,
@@ -320,7 +321,7 @@ export default function DashboardClient({
                   </Link>
                 </div>
               ) : (
-                <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                <div className="divide-y divide-gray-100 dark:divide-gray-800" role="list" aria-label="Recent conversations">
                   {recentConversations.map((conv) => (
                     <Link
                       key={conv.id}
@@ -386,7 +387,7 @@ export default function DashboardClient({
                     </p>
                   </div>
                 ) : (
-                  <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                  <div className="divide-y divide-gray-100 dark:divide-gray-800" role="list" aria-label="Open appeals">
                     {openAppeals.map((appeal) => (
                       <Link
                         key={appeal.id}
@@ -462,7 +463,7 @@ export default function DashboardClient({
                     </p>
                   </div>
                 ) : (
-                  <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                  <div className="divide-y divide-gray-100 dark:divide-gray-800" role="list" aria-label="Upcoming assignments">
                     {upcomingAssignments.map((assignment) => (
                       <Link
                         key={assignment.id}

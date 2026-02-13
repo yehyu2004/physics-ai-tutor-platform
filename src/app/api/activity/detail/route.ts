@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { getEffectiveSession } from "@/lib/impersonate";
 import { prisma } from "@/lib/prisma";
+import { requireApiAuth, isErrorResponse } from "@/lib/api-auth";
 
 /** Format a Date as YYYY-MM-DD in a given IANA timezone */
 function toDateKey(date: Date, tz: string): string {
@@ -9,12 +9,9 @@ function toDateKey(date: Date, tz: string): string {
 
 export async function GET(req: Request) {
   try {
-    const session = await getEffectiveSession();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userId = (session.user as { id: string }).id;
+    const auth = await requireApiAuth();
+    if (isErrorResponse(auth)) return auth;
+    const userId = auth.user.id;
     const { searchParams } = new URL(req.url);
     const date = searchParams.get("date");
 

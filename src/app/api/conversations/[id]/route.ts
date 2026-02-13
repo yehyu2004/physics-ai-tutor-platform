@@ -1,18 +1,15 @@
 import { NextResponse } from "next/server";
-import { getEffectiveSession } from "@/lib/impersonate";
 import { prisma } from "@/lib/prisma";
+import { requireApiAuth, isErrorResponse } from "@/lib/api-auth";
 
 export async function DELETE(
   req: Request,
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getEffectiveSession();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userId = (session.user as { id: string }).id;
+    const auth = await requireApiAuth();
+    if (isErrorResponse(auth)) return auth;
+    const userId = auth.user.id;
 
     const conversation = await prisma.conversation.findUnique({
       where: { id: params.id },

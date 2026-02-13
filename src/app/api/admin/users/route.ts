@@ -1,22 +1,12 @@
 import { NextResponse } from "next/server";
-import { getEffectiveSession } from "@/lib/impersonate";
 import { prisma } from "@/lib/prisma";
-
-function isAuthorized(role?: string): boolean {
-  return role === "ADMIN" || role === "PROFESSOR" || role === "TA";
-}
+import { requireApiRole, isErrorResponse } from "@/lib/api-auth";
+import { ROLE_HIERARCHY, isStaff } from "@/lib/constants";
 
 export async function GET() {
   try {
-    const session = await getEffectiveSession();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userRole = (session.user as { role?: string }).role;
-    if (!isAuthorized(userRole)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const auth = await requireApiRole(["TA", "PROFESSOR", "ADMIN"]);
+    if (isErrorResponse(auth)) return auth;
 
     const users = await prisma.user.findMany({
       where: { isDeleted: false },
@@ -51,20 +41,14 @@ export async function GET() {
 
 export async function PATCH(req: Request) {
   try {
-    const session = await getEffectiveSession();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userRole = (session.user as { role?: string }).role;
-    if (!isAuthorized(userRole)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const auth = await requireApiRole(["TA", "PROFESSOR", "ADMIN"]);
+    if (isErrorResponse(auth)) return auth;
+    const userRole = auth.user.role;
 
     const { userId, action, role } = await req.json();
 
     // Prevent self-actions
-    if (userId === (session.user as { id?: string }).id) {
+    if (userId === auth.user.id) {
       return NextResponse.json({ error: "Cannot modify your own account" }, { status: 400 });
     }
 
@@ -152,13 +136,16 @@ export async function PATCH(req: Request) {
       if (!["STUDENT", "TA", "PROFESSOR", "ADMIN"].includes(role)) {
         return NextResponse.json({ error: "Invalid role" }, { status: 400 });
       }
-      // Professors cannot promote to ADMIN
-      if (userRole === "PROFESSOR" && role === "ADMIN") {
-        return NextResponse.json({ error: "Forbidden: professors cannot promote to admin" }, { status: 403 });
+      // Role hierarchy: cannot promote someone to your own level or above
+      if (ROLE_HIERARCHY[role] >= ROLE_HIERARCHY[userRole]) {
+        return NextResponse.json(
+          { error: "Cannot promote a user to your own role level or above" },
+          { status: 403 }
+        );
       }
       const data: { role: "STUDENT" | "TA" | "PROFESSOR" | "ADMIN"; isVerified?: boolean } = { role };
       // Auto-verify when promoting to TA, PROFESSOR or ADMIN
-      if (role === "TA" || role === "PROFESSOR" || role === "ADMIN") {
+      if (isStaff(role)) {
         data.isVerified = true;
       }
       await prisma.user.update({
@@ -177,15 +164,9 @@ export async function PATCH(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
-    const session = await getEffectiveSession();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userRole = (session.user as { role?: string }).role;
-    if (!isAuthorized(userRole)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const auth = await requireApiRole(["TA", "PROFESSOR", "ADMIN"]);
+    if (isErrorResponse(auth)) return auth;
+    const userRole = auth.user.role;
 
     const { userId } = await req.json();
 
@@ -195,8 +176,23 @@ export async function DELETE(req: Request) {
     }
 
     // Prevent self-deletion
-    if (userId === (session.user as { id?: string }).id) {
+    if (userId === auth.user.id) {
       return NextResponse.json({ error: "Cannot delete your own account" }, { status: 400 });
+    }
+
+    // Role hierarchy enforcement: cannot delete a user with equal or higher role
+    const targetUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+    if (!targetUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+    if (ROLE_HIERARCHY[userRole] <= ROLE_HIERARCHY[targetUser.role]) {
+      return NextResponse.json(
+        { error: "Cannot delete a user with equal or higher role" },
+        { status: 403 }
+      );
     }
 
     // Soft delete

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { getEffectiveSession } from "@/lib/impersonate";
 import { prisma } from "@/lib/prisma";
+import { requireApiAuth, isErrorResponse } from "@/lib/api-auth";
 
 // Convert a submission back to draft for editing
 export async function PATCH(
@@ -8,12 +8,9 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getEffectiveSession();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userId = (session.user as { id: string }).id;
+    const auth = await requireApiAuth();
+    if (isErrorResponse(auth)) return auth;
+    const userId = auth.user.id;
 
     const submission = await prisma.submission.findUnique({
       where: { id: params.id },
@@ -64,12 +61,9 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getEffectiveSession();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userId = (session.user as { id: string }).id;
+    const auth = await requireApiAuth();
+    if (isErrorResponse(auth)) return auth;
+    const userId = auth.user.id;
 
     const submission = await prisma.submission.findUnique({
       where: { id: params.id },
@@ -103,8 +97,9 @@ export async function DELETE(
       );
     }
 
-    await prisma.submission.delete({
+    await prisma.submission.update({
       where: { id: params.id },
+      data: { isDeleted: true, deletedAt: new Date() },
     });
 
     return NextResponse.json({ success: true });

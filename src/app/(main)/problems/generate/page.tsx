@@ -27,7 +27,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { MarkdownContent } from "@/components/ui/markdown-content";
-import MermaidDiagram from "@/components/chat/MermaidDiagram";
+import dynamic from "next/dynamic";
+
+const MermaidDiagram = dynamic(() => import("@/components/chat/MermaidDiagram"), { ssr: false });
 import {
   DndContext,
   closestCenter,
@@ -53,6 +55,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { toast } from "sonner";
 
 interface GeneratedProblem {
   id?: string;
@@ -235,7 +238,7 @@ export default function ProblemGeneratorPage() {
           setCurrentUser({ id: data.user.id, role: data.user.role || "STUDENT" });
         }
       })
-      .catch(() => {});
+      .catch((err) => console.error("[auth] Failed to fetch session:", err));
   }, []);
 
   const loadPastSets = async () => {
@@ -272,7 +275,7 @@ export default function ProblemGeneratorPage() {
         setPastSets((prev) => prev.filter((s) => s.id !== psId));
       } else {
         const data = await res.json();
-        alert(data.error || "Failed to delete");
+        toast.error(data.error || "Failed to delete");
       }
     } catch (err) {
       console.error(err);

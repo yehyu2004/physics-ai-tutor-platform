@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
-import { getEffectiveSession } from "@/lib/impersonate";
 import { prisma } from "@/lib/prisma";
+import { requireApiRole, isErrorResponse } from "@/lib/api-auth";
 
 function escapeCSV(value: string | null | undefined): string {
   if (value == null) return "";
@@ -13,21 +13,14 @@ function escapeCSV(value: string | null | undefined): string {
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getEffectiveSession();
-    if (!session?.user) {
-      return new Response("Unauthorized", { status: 401 });
-    }
-
-    const userRole = (session.user as { role?: string }).role;
-    if (userRole !== "TA" && userRole !== "PROFESSOR" && userRole !== "ADMIN") {
-      return new Response("Forbidden", { status: 403 });
-    }
+    const auth = await requireApiRole(["TA", "PROFESSOR", "ADMIN"]);
+    if (isErrorResponse(auth)) return auth;
 
     const assignmentId = req.nextUrl.searchParams.get("assignmentId");
 
     const where = assignmentId
-      ? { assignmentId, isDraft: false }
-      : { isDraft: false };
+      ? { assignmentId, isDraft: false, isDeleted: false }
+      : { isDraft: false, isDeleted: false };
 
     const submissions = await prisma.submission.findMany({
       where,

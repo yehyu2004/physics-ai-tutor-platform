@@ -4,10 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && prisma db push --accept-data-loss && next build",
+    "build": "prisma generate && next build",
     "postinstall": "prisma generate",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint && tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "ci": "npm ci && npm run lint && npm run build"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",
@@ -62,10 +64,12 @@
     "rehype-raw": "^7.0.0",
     "remark-math": "^6.0.0",
     "resend": "^6.9.1",
+    "sonner": "^2.0.7",
     "swr": "^2.4.0",
     "tailwind-merge": "^3.4.0",
     "tailwindcss-animate": "^1.0.7",
-    "three": "^0.182.0"
+    "three": "^0.182.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
@@ -73,6 +77,7 @@
     "@types/katex": "^0.16.8",
     "@types/node": "^20",
     "@types/nodemailer": "^7.0.9",
+    "@types/pg": "^8.16.0",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "eslint": "^8",

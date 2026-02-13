@@ -1,21 +1,14 @@
 import { NextResponse } from "next/server";
-import { getEffectiveSession } from "@/lib/impersonate";
 import { prisma } from "@/lib/prisma";
+import { requireApiRole, isErrorResponse } from "@/lib/api-auth";
 
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getEffectiveSession();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userRole = (session.user as { role?: string }).role;
-    if (userRole !== "TA" && userRole !== "PROFESSOR" && userRole !== "ADMIN") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const auth = await requireApiRole(["TA", "PROFESSOR", "ADMIN"]);
+    if (isErrorResponse(auth)) return auth;
 
     const { id } = await params;
     const { title, message } = await req.json();
@@ -49,15 +42,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getEffectiveSession();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userRole = (session.user as { role?: string }).role;
-    if (userRole !== "TA" && userRole !== "PROFESSOR" && userRole !== "ADMIN") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const auth = await requireApiRole(["TA", "PROFESSOR", "ADMIN"]);
+    if (isErrorResponse(auth)) return auth;
 
     const { id } = await params;
 

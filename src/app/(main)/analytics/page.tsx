@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import { Loader2, Brain, MessageSquare, Clock, FileCheck, X } from "lucide-react";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   BarChart,
@@ -17,6 +18,8 @@ import {
 import ContributionGraph from "@/components/activity/ContributionGraph";
 import ActivityBreakdown from "@/components/activity/ActivityBreakdown";
 import { useTrackTime } from "@/lib/use-track-time";
+import { formatDuration } from "@/lib/utils";
+import { CATEGORY_LABELS } from "@/lib/constants";
 
 interface AnalyticsData {
   overview: {
@@ -66,7 +69,7 @@ export default function AnalyticsPage() {
         setBreakdownData(breakdownJson.data || []);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch((err) => { console.error("[analytics] Failed to load analytics data:", err); setLoading(false); });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -77,36 +80,13 @@ export default function AnalyticsPage() {
     fetch(`/api/activity/heatmap?${params}`)
       .then((r) => r.json())
       .then((json) => setHeatmapData(json.data || []))
-      .catch(() => {});
+      .catch((err) => console.error("[analytics] Failed to refresh heatmap:", err));
     // Clear day detail when filter changes
     setSelectedDate(null);
     setDayActivities([]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activityFilter]);
 
-  const formatDuration = (ms: number): string => {
-    if (ms < 1000) return "0s";
-    const totalSeconds = Math.floor(ms / 1000);
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-    if (hours > 0) return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
-    if (minutes > 0) return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
-    return `${seconds}s`;
-  };
-
-  const CATEGORY_LABELS: Record<string, string> = {
-    AI_CHAT: "AI Chat",
-    AI_CHAT_MSG: "Chat Message",
-    SUBMISSION: "Submission",
-    ASSIGNMENT_VIEW: "View Assignments",
-    ASSIGNMENT_SUBMIT: "Submit Work",
-    GRADING: "Grading",
-    SIMULATION: "Simulations",
-    PROBLEM_GEN: "Problem Generator",
-    ANALYTICS_VIEW: "Analytics",
-    ADMIN_ACTION: "Admin",
-  };
 
   const handleSelectDate = useCallback((date: string) => {
     if (selectedDate === date) {
@@ -128,11 +108,7 @@ export default function AnalyticsPage() {
   }, [selectedDate, activityFilter]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-neutral-400 dark:text-neutral-500" />
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   if (!data) {

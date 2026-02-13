@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { getEffectiveSession } from "@/lib/impersonate";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { requireApiRole, isErrorResponse } from "@/lib/api-auth";
 
 const FILTER_CATEGORIES: Record<string, string[]> = {
   chat: ["AI_CHAT"],
@@ -41,17 +42,43 @@ const CATEGORY_COLORS: Record<string, string> = {
   ADMIN_ACTION: "#64748b",
 };
 
+/**
+ * Build SQL WHERE conditions based on filter parameters.
+ * Returns an array of Prisma.Sql fragments to be joined with AND.
+ */
+function buildWhereConditions(
+  startDate: Date,
+  role: string | undefined,
+  filter: string,
+): Prisma.Sql[] {
+  const conditions: Prisma.Sql[] = [
+    Prisma.sql`ua."createdAt" >= ${startDate}`,
+  ];
+
+  if (role) {
+    conditions.push(Prisma.sql`u."role" = ${role}`);
+  }
+
+  if (filter !== "all") {
+    if (filter === "other") {
+      const excludeCats = Object.values(FILTER_CATEGORIES).flat();
+      conditions.push(
+        Prisma.sql`ua."category" NOT IN (${Prisma.join(excludeCats)})`,
+      );
+    } else if (FILTER_CATEGORIES[filter]) {
+      conditions.push(
+        Prisma.sql`ua."category" IN (${Prisma.join(FILTER_CATEGORIES[filter])})`,
+      );
+    }
+  }
+
+  return conditions;
+}
+
 export async function GET(req: Request) {
   try {
-    const session = await getEffectiveSession();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userRole = (session.user as { role?: string }).role;
-    if (userRole !== "ADMIN" && userRole !== "PROFESSOR") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const auth = await requireApiRole(["ADMIN", "PROFESSOR"]);
+    if (isErrorResponse(auth)) return auth;
 
     const { searchParams } = new URL(req.url);
     const role = searchParams.get("role") || undefined;
@@ -59,7 +86,7 @@ export async function GET(req: Request) {
     const range = searchParams.get("range") || "30";
     const exportCsv = searchParams.get("export") === "csv";
 
-    // Build where clause
+    // Build where clause for Prisma queries
     const where: Record<string, unknown> = {};
     if (role) where.user = { role };
 
@@ -111,20 +138,35 @@ export async function GET(req: Request) {
 
     const days = range === "all" ? 365 : parseInt(range, 10);
 
+    // Build start date for raw queries
+    const rawStartDate = new Date();
+    rawStartDate.setDate(rawStartDate.getDate() - days);
+    rawStartDate.setHours(0, 0, 0, 0);
+
+    // Build dynamic WHERE clause for raw queries
+    const conditions = buildWhereConditions(rawStartDate, role, filter);
+    const whereClause = Prisma.sql`WHERE ${Prisma.join(conditions, " AND ")}`;
+    const joinClause = role
+      ? Prisma.sql`FROM "UserActivity" ua JOIN "User" u ON ua."userId" = u."id"`
+      : Prisma.sql`FROM "UserActivity" ua`;
+
     // Run queries in parallel
-    const [trendActivities, categoryGroups, totalCount, totalDuration, uniqueUsers, recentActivities, topUsersRaw] = await Promise.all([
-      // Activities for daily trend (only need category + date)
-      prisma.userActivity.findMany({
-        where,
-        select: {
-          category: true,
-          createdAt: true,
-          user: { select: { role: true } },
-          durationMs: true,
-        },
-        orderBy: { createdAt: "desc" },
-        take: 5000,
-      }),
+    const [dailyTrendRaw, roleBreakdownRaw, categoryGroups, totalCount, totalDuration, uniqueUsers, recentActivities, topUsersRaw] = await Promise.all([
+      // Daily trend aggregated in the database (category + day + count)
+      prisma.$queryRaw<Array<{ date: Date; category: string; count: number }>>`
+        SELECT DATE_TRUNC('day', ua."createdAt") as date, ua."category", COUNT(*)::int as count
+        ${joinClause}
+        ${whereClause}
+        GROUP BY DATE_TRUNC('day', ua."createdAt"), ua."category"
+        ORDER BY date
+      `,
+      // Role breakdown aggregated in the database
+      prisma.$queryRaw<Array<{ role: string; count: number; total_ms: number }>>`
+        SELECT u."role", COUNT(*)::int as count, COALESCE(SUM(ua."durationMs"), 0)::int as total_ms
+        FROM "UserActivity" ua JOIN "User" u ON ua."userId" = u."id"
+        ${whereClause}
+        GROUP BY u."role"
+      `,
       // Group by category for time breakdown
       prisma.userActivity.groupBy({
         by: ["category"],
@@ -169,7 +211,7 @@ export async function GET(req: Request) {
       avgDailyActivities: days > 0 ? Math.round(totalCount / days) : totalCount,
     };
 
-    // Daily trend — build date→category→count map
+    // Daily trend — build date->category->count map from aggregated results
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const trendMap: Record<string, Record<string, number>> = {};
@@ -181,17 +223,12 @@ export async function GET(req: Request) {
       for (const cat of ALL_CATEGORIES) trendMap[key][cat] = 0;
     }
 
-    // Also gather role data for the breakdown
-    const roleMap: Record<string, { count: number; totalMs: number }> = {};
-    for (const a of trendActivities) {
-      const key = a.createdAt.toISOString().split("T")[0];
-      if (trendMap[key] && trendMap[key][a.category] !== undefined) {
-        trendMap[key][a.category]++;
+    // Populate from aggregated DB results instead of iterating over individual records
+    for (const row of dailyTrendRaw) {
+      const key = new Date(row.date).toISOString().split("T")[0];
+      if (trendMap[key] && trendMap[key][row.category] !== undefined) {
+        trendMap[key][row.category] = row.count;
       }
-      const r = (a.user as { role?: string }).role || "STUDENT";
-      if (!roleMap[r]) roleMap[r] = { count: 0, totalMs: 0 };
-      roleMap[r].count++;
-      roleMap[r].totalMs += a.durationMs || 0;
     }
 
     // Determine which categories to include in the trend based on filter
@@ -228,17 +265,17 @@ export async function GET(req: Request) {
       color: CATEGORY_COLORS[g.category] || "#94a3b8",
     })).sort((a, b) => b.totalMs - a.totalMs);
 
-    // Time by role
+    // Time by role — from aggregated DB results
     const ROLE_LABELS: Record<string, string> = {
       STUDENT: "Student",
       TA: "TA",
       PROFESSOR: "Professor",
       ADMIN: "Admin",
     };
-    const timeByRole = Object.entries(roleMap).map(([r, data]) => ({
-      label: ROLE_LABELS[r] || r,
-      count: data.count,
-      totalMs: data.totalMs,
+    const timeByRole = roleBreakdownRaw.map((row) => ({
+      label: ROLE_LABELS[row.role] || row.role,
+      count: row.count,
+      totalMs: row.total_ms,
     })).sort((a, b) => b.totalMs - a.totalMs);
 
     // Recent activity feed

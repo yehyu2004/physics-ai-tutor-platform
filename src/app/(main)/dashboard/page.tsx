@@ -2,7 +2,10 @@ import { getEffectiveSession } from "@/lib/impersonate";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { formatDate } from "@/lib/utils";
+import { isStaff } from "@/lib/constants";
 import DashboardClient from "./DashboardClient";
+
+export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const session = await getEffectiveSession();
@@ -51,10 +54,10 @@ export default async function DashboardPage() {
 
   let taStats = null;
   let openAppeals: { id: string; studentName: string; assignmentTitle: string; assignmentId: string; status: string; createdAt: string }[] = [];
-  if (role === "TA" || role === "PROFESSOR" || role === "ADMIN") {
+  if (isStaff(role)) {
     const [pendingGrading, createdAssignments, openAppealCount, recentAppeals] = await Promise.all([
       prisma.submission.count({
-        where: { totalScore: null, isDraft: false },
+        where: { gradedAt: null, isDraft: false },
       }),
       prisma.assignment.count({
         where: { createdById: userId },

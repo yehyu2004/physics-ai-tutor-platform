@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from "react";
 import {
-  Loader2,
   GraduationCap,
   CheckCircle2,
   Clock,
@@ -10,8 +9,11 @@ import {
   Award,
   BarChart3,
 } from "lucide-react";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { formatShortDate } from "@/lib/utils";
+import { api } from "@/lib/api-client";
 
 interface GradeEntry {
   id: string;
@@ -49,8 +51,7 @@ export default function GradesPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/grades")
-      .then((res) => res.json())
+    api.get<{ grades: GradeEntry[] }>("/api/grades")
       .then((data) => {
         setGrades(data.grades || []);
         setLoading(false);
@@ -59,12 +60,7 @@ export default function GradesPage() {
   }, []);
 
   if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 gap-3">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400 dark:text-gray-500" />
-        <p className="text-sm text-gray-400 dark:text-gray-500">Loading grades...</p>
-      </div>
-    );
+    return <LoadingSpinner message="Loading grades..." />;
   }
 
   const gradedEntries = grades.filter((g) => g.score !== null);
@@ -141,21 +137,17 @@ export default function GradesPage() {
 
       {/* Grades List */}
       {grades.length === 0 ? (
-        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 py-16 text-center shadow-sm">
-          <div className="mx-auto w-14 h-14 rounded-full bg-gray-50 dark:bg-gray-800 flex items-center justify-center mb-4">
-            <GraduationCap className="h-7 w-7 text-gray-400 dark:text-gray-500" />
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">No grades yet</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-sm mx-auto">
-            Submit assignments to see your grades here.
-          </p>
-        </div>
+        <EmptyState
+          icon={GraduationCap}
+          title="No grades yet"
+          description="Submit assignments to see your grades here."
+        />
       ) : (
         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden shadow-sm">
           <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
             <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">All Grades</h2>
           </div>
-          <div className="divide-y divide-gray-100 dark:divide-gray-800">
+          <div className="divide-y divide-gray-100 dark:divide-gray-800" role="list" aria-label="Grade entries">
             {grades.map((grade) => {
               const scored = grade.score !== null;
               const pct = scored ? Math.round(((grade.score as number) / grade.totalPoints) * 100) : 0;
@@ -164,6 +156,7 @@ export default function GradesPage() {
               return (
                 <div
                   key={grade.id}
+                  role="listitem"
                   className="flex items-center gap-4 px-6 py-4 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
                 >
                   <div className="flex-1 min-w-0">

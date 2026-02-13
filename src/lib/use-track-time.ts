@@ -21,7 +21,7 @@ export function useTrackTime(category: ActivityCategory, detail?: string) {
       .then((json) => {
         if (json.id) activityIdRef.current = json.id;
       })
-      .catch(() => {});
+      .catch((err) => console.error("[activity] Failed to create activity:", err));
 
     const sendDuration = () => {
       const id = activityIdRef.current;
@@ -40,7 +40,7 @@ export function useTrackTime(category: ActivityCategory, detail?: string) {
           headers: { "Content-Type": "application/json" },
           body: payload,
           keepalive: true,
-        }).catch(() => {});
+        }).catch((err) => console.error("[activity] Failed to send duration:", err));
       }
     };
 

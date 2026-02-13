@@ -1,0 +1,57 @@
+export interface AppealMessage {
+  id: string;
+  content: string;
+  imageUrls?: string[];
+  createdAt: string;
+  user: { id: string; name: string | null; role: string };
+}
+
+export interface Appeal {
+  id: string;
+  status: string;
+  reason: string;
+  imageUrls?: string[];
+  createdAt: string;
+  student: { id: string; name: string | null };
+  messages: AppealMessage[];
+}
+
+export interface AssignmentInfo {
+  title: string;
+  type: string;
+  totalPoints: number;
+  dueDate: string | null;
+}
+
+export interface SubmissionAnswer {
+  id: string;
+  questionText: string;
+  questionType: string;
+  answer: string | null;
+  answerImageUrls?: string[];
+  feedbackImageUrls?: string[];
+  score: number | null;
+  feedback: string | null;
+  autoGraded: boolean;
+  maxPoints: number;
+  leftBlank?: boolean;
+  appeals: Appeal[];
+}
+
+export interface SubmissionForGrading {
+  id: string;
+  userName: string;
+  userEmail: string;
+  submittedAt: string;
+  totalScore: number | null;
+  gradedAt: string | null;
+  gradedByName: string | null;
+  fileUrl: string | null;
+  overallFeedback: string | null;
+  openAppealCount: number;
+  totalAppealCount: number;
+  answers: SubmissionAnswer[];
+}
+
+export type GradingMode = "per-question" | "overall";
+export type FilterMode = "all" | "ungraded" | "graded" | "appeals";

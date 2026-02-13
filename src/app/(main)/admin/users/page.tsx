@@ -3,6 +3,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useEffectiveSession } from "@/lib/effective-session-context";
+import { isStaff as isStaffRole } from "@/lib/constants";
+import { api } from "@/lib/api-client";
 import {
   Loader2,
   ShieldBan,
@@ -41,26 +43,15 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { formatDateOnly } from "@/lib/utils";
-
-interface User {
-  id: string;
-  name: string | null;
-  email: string;
-  studentId: string | null;
-  role: "STUDENT" | "TA" | "PROFESSOR" | "ADMIN";
-  isBanned: boolean;
-  bannedAt: string | null;
-  isRestricted: boolean;
-  isVerified: boolean;
-  createdAt: string;
-}
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import type { UserListItem } from "@/types";
 
 export default function AdminUsersPage() {
   const router = useRouter();
   const effectiveSession = useEffectiveSession();
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<UserListItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<UserListItem | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const currentUserId = effectiveSession.id;
@@ -78,8 +69,7 @@ export default function AdminUsersPage() {
   const selectAllRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    fetch("/api/admin/users")
-      .then((res) => res.json())
+    api.get<{ users: UserListItem[] }>("/api/admin/users")
       .then((data) => {
         setUsers(data.users || []);
         setLoading(false);
@@ -100,9 +90,9 @@ export default function AdminUsersPage() {
             u.id === userId
               ? {
                   ...u,
-                  role: newRole as User["role"],
+                  role: newRole as UserListItem["role"],
                   // Auto-verify when promoting to TA/ADMIN
-                  isVerified: newRole === "TA" || newRole === "PROFESSOR" || newRole === "ADMIN" ? true : u.isVerified,
+                  isVerified: isStaffRole(newRole) ? true : u.isVerified,
                 }
               : u
           )
@@ -268,12 +258,7 @@ export default function AdminUsersPage() {
   const selectedUsersList = users.filter((u) => selectedUsers.has(u.id));
 
   if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 gap-3">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400 dark:text-gray-500" />
-        <p className="text-sm text-gray-400 dark:text-gray-500">Loading users...</p>
-      </div>
-    );
+    return <LoadingSpinner message="Loading users..." />;
   }
 
   const studentCount = users.filter((u) => u.role === "STUDENT").length;
@@ -411,10 +396,11 @@ export default function AdminUsersPage() {
             checked={users.length > 0 && selectedUsers.size === users.length}
             onChange={toggleSelectAll}
             className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 cursor-pointer"
+            aria-label="Select all users"
           />
           <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">All Users</h2>
         </div>
-        <div className="divide-y divide-gray-100 dark:divide-gray-800">
+        <div className="divide-y divide-gray-100 dark:divide-gray-800" role="list" aria-label="User list">
           {users.map((user) => {
             const isSelf = user.id === currentUserId;
             const isLoading = actionLoading === user.id;
@@ -422,6 +408,7 @@ export default function AdminUsersPage() {
             return (
               <div
                 key={user.id}
+                role="listitem"
                 className={`flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 sm:px-6 py-4 gap-3 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors ${
                   user.isBanned ? "bg-red-50/30 dark:bg-red-950/30" : ""
                 }`}
@@ -432,6 +419,7 @@ export default function AdminUsersPage() {
                     checked={selectedUsers.has(user.id)}
                     onChange={() => toggleSelectUser(user.id)}
                     className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 cursor-pointer shrink-0"
+                    aria-label={`Select ${user.name || "user"}`}
                   />
                   <div
                     className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${

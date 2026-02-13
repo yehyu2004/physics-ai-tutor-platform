@@ -255,7 +255,7 @@ export function MarkdownContent({ content, className }: MarkdownContentProps) {
   }, [content]);
 
   return (
-    <div ref={contentRef} className={className}>
+    <div ref={contentRef} className={`min-w-0 ${className ?? ""}`}>
       <ReactMarkdown
         remarkPlugins={[remarkMath]}
         rehypePlugins={[rehypeRaw, rehypeKatex]}

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
+import { accountSuspendedEmail, userAutoBannedStaffEmail } from "@/lib/email-templates";
 
 /**
  * Check if a user should be auto-banned for spam.
@@ -77,23 +78,7 @@ export async function checkAndBanSpammer({
     const email = user.email;
     if (email) {
       const subject = "PhysTutor Account Suspended — Unusual Activity Detected";
-      const html = `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-          <div style="background: #4f46e5; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
-            <h2 style="margin: 0;">PhysTutor — Account Suspended</h2>
-          </div>
-          <div style="padding: 24px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
-            <p>Hi ${name},</p>
-            <p>Your PhysTutor account has been <strong>temporarily suspended</strong> due to unusual activity.</p>
-            <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 12px 16px; margin: 16px 0; border-radius: 4px;">
-              <strong>Reason:</strong> Our system detected ${recentCount} rapid ${sourceLabel} within 1 minute, which exceeds normal usage patterns.
-            </div>
-            <p>If you believe this was a mistake, please contact your TA or Professor to have your account reviewed and reinstated.</p>
-            <p style="color: #9ca3af; font-size: 12px; margin-top: 16px;">This is an automated message. Please do not reply to this email.</p>
-            <p style="color: #6b7280; font-size: 14px; margin-top: 24px;">— PhysTutor System</p>
-          </div>
-        </div>
-      `;
+      const html = accountSuspendedEmail({ userName: name, recentCount, sourceLabel });
       await sendEmail({ to: email, subject, html });
 
       // Log email in audit
@@ -124,18 +109,12 @@ export async function checkAndBanSpammer({
         await sendEmail({
           to: taEmails,
           subject: `[PhysTutor] User auto-banned: ${(name || "").replace(/[\r\n]/g, "")} (${(email || "").replace(/[\r\n]/g, "")})`,
-          html: `
-            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-              <div style="background: #dc2626; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
-                <h2 style="margin: 0;">User Auto-Banned</h2>
-              </div>
-              <div style="padding: 24px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
-                <p><strong>${name}</strong> (${email}) has been automatically banned.</p>
-                <p><strong>Reason:</strong> ${reason}</p>
-                <p>Visit <a href="${process.env.NEXTAUTH_URL || ""}/admin/users">User Management</a> to review and unban if needed.</p>
-              </div>
-            </div>
-          `,
+          html: userAutoBannedStaffEmail({
+            userName: name,
+            userEmail: email,
+            reason,
+            adminUrl: process.env.NEXTAUTH_URL || "",
+          }),
         });
       }
     }

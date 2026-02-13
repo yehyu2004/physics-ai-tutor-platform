@@ -42,7 +42,7 @@ export default function SimulationsClient() {
       fetch("/api/exam-mode")
         .then((res) => res.ok ? res.json() : null)
         .then((data) => { if (data) setExamModeActive(data.isActive); })
-        .catch(() => {});
+        .catch((err) => console.error("[exam-mode] Failed to check exam mode:", err));
     }
   }, [session?.role]);
 

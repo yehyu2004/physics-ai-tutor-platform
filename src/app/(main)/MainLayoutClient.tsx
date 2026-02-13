@@ -59,6 +59,12 @@ export default function MainLayoutClient({
 
   return (
     <div className="h-screen bg-white dark:bg-gray-950 overflow-hidden">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-[60] focus:p-4 focus:bg-white focus:text-blue-600 dark:focus:bg-gray-950 dark:focus:text-blue-400 focus:underline focus:outline-none"
+      >
+        Skip to main content
+      </a>
       {isImpersonating && (
         <div className="bg-amber-500 text-white px-4 py-2 text-center text-sm font-medium flex items-center justify-center gap-3 z-50">
           <EyeOff className="h-4 w-4" />
@@ -96,7 +102,7 @@ export default function MainLayoutClient({
           userRole={userRole}
           onMobileMenuToggle={() => setMobileSidebarOpen((prev) => !prev)}
         />
-        <main className="flex-1 p-3 sm:p-6 bg-gray-50/50 dark:bg-gray-950 overflow-auto">
+        <main id="main-content" className="flex-1 p-3 sm:p-6 bg-gray-50/50 dark:bg-gray-950 overflow-auto">
           <EffectiveSessionProvider
             session={{
               id: userId,

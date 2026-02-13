@@ -1,25 +1,19 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireApiRole, isErrorResponse } from "@/lib/api-auth";
 
 export async function POST(
   req: Request,
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userRole = (session.user as { role?: string }).role;
-    if (userRole !== "ADMIN" && userRole !== "PROFESSOR" && userRole !== "TA") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const auth = await requireApiRole(["TA", "PROFESSOR", "ADMIN"]);
+    if (isErrorResponse(auth)) return auth;
+    const userRole = auth.user.role;
+    const adminId = auth.user.id;
 
     const { action } = await req.json();
     const targetUserId = (await params).id;
-    const adminId = (session.user as { id: string }).id;
 
     if (!["ban", "unban", "restrict", "unrestrict"].includes(action)) {
       return NextResponse.json({ error: "Invalid action" }, { status: 400 });

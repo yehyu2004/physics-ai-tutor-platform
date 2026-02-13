@@ -144,6 +144,8 @@ model Assignment {
   totalPoints Float          @default(100)
   published        Boolean        @default(false)
   lockAfterSubmit  Boolean        @default(false)
+  isDeleted        Boolean        @default(false)
+  deletedAt        DateTime?
   createdAt        DateTime       @default(now())
   pdfUrl           String?
   createdById      String
@@ -183,6 +185,8 @@ model Submission {
   gradedAt     DateTime?
   gradedById   String?
   isDraft          Boolean   @default(false)
+  isDeleted        Boolean   @default(false)
+  deletedAt        DateTime?
   overallFeedback  String?   @db.Text
 
   assignment Assignment         @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
@@ -313,6 +317,8 @@ model GradeAppeal {
   reason           String       @db.Text
   imageUrls        Json?        // String[] - up to 3 image URLs
   status           AppealStatus @default(OPEN)
+  isDeleted        Boolean      @default(false)
+  deletedAt        DateTime?
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
 

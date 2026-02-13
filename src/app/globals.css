@@ -144,6 +144,15 @@ body {
   overflow-y: hidden;
 }
 
+.katex {
+  overflow-wrap: break-word;
+}
+
+.math-wrapper {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
 .dark .katex {
   color: var(--foreground);
 }
