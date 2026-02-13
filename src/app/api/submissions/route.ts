@@ -173,7 +173,7 @@ export async function POST(req: Request) {
       include: { answers: true },
     });
 
-    if (assignment.type === "QUIZ") {
+    if (assignment.type === "QUIZ" && submission.answers.length > 0) {
       const totalScore = submission.answers.reduce(
         (sum, ans) => sum + (ans.score || 0),
         0

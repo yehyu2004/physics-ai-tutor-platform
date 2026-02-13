@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     if (ungrade && submissionId) {
       await prisma.submission.update({
         where: { id: submissionId },
-        data: { gradedAt: null, gradedById: null },
+        data: { totalScore: null, gradedAt: null, gradedById: null },
       });
       return NextResponse.json({ success: true, ungraded: true });
     }
