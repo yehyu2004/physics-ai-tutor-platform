@@ -1,10 +1,17 @@
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
 
-const resend = process.env.RESEND_API_KEY
-  ? new Resend(process.env.RESEND_API_KEY)
-  : null;
+const transporter =
+  process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD
+    ? nodemailer.createTransport({
+        service: "gmail",
+        auth: {
+          user: process.env.GMAIL_USER,
+          pass: process.env.GMAIL_APP_PASSWORD,
+        },
+      })
+    : null;
 
-const FROM_EMAIL = process.env.EMAIL_FROM || "PhysTutor <onboarding@resend.dev>";
+const FROM_EMAIL = process.env.EMAIL_FROM || `PhysTutor <${process.env.GMAIL_USER || "noreply@phystutor.app"}>`;
 
 interface SendEmailOptions {
   to: string | string[];
@@ -13,24 +20,20 @@ interface SendEmailOptions {
 }
 
 export async function sendEmail({ to, subject, html }: SendEmailOptions) {
-  if (!resend) {
+  if (!transporter) {
     console.warn(
-      `[email] RESEND_API_KEY not set. Would have sent "${subject}" to ${Array.isArray(to) ? to.join(", ") : to}`
+      `[email] GMAIL_USER/GMAIL_APP_PASSWORD not set. Would have sent "${subject}" to ${Array.isArray(to) ? to.join(", ") : to}`
     );
     return;
   }
 
   try {
-    const result = await resend.emails.send({
+    await transporter.sendMail({
       from: FROM_EMAIL,
-      to: Array.isArray(to) ? to : [to],
+      to: Array.isArray(to) ? to.join(", ") : to,
       subject,
       html,
     });
-    if (result.error) {
-      console.error("[email] Resend error:", result.error);
-      throw new Error(result.error.message || "Email send failed");
-    }
   } catch (error) {
     console.error("[email] Failed to send:", error);
     throw error;
