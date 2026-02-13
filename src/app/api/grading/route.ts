@@ -16,7 +16,16 @@ export async function POST(req: Request) {
     }
 
     const graderId = (session.user as { id: string }).id;
-    const { submissionId, grades, overallScore, overallFeedback, feedbackFileUrl, feedbackImages, isDraft } = await req.json();
+    const { submissionId, grades, overallScore, overallFeedback, feedbackFileUrl, feedbackImages, isDraft, ungrade } = await req.json();
+
+    // Ungrade: clear gradedAt and gradedById
+    if (ungrade && submissionId) {
+      await prisma.submission.update({
+        where: { id: submissionId },
+        data: { gradedAt: null, gradedById: null },
+      });
+      return NextResponse.json({ success: true, ungraded: true });
+    }
 
     const submission = await prisma.submission.findUnique({
       where: { id: submissionId },
@@ -161,7 +170,8 @@ export async function PUT(req: Request) {
       .map((r) => `${r.description} (${r.points} pts)`)
       .join("\n");
 
-    const imageUrls = (answer.answerImageUrls as string[] | null) || [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const imageUrls = ((answer as any).answerImageUrls as string[] | null) || [];
     const result = await aiAssistedGrading(
       answer.question.questionText,
       answer.question.correctAnswer || "",

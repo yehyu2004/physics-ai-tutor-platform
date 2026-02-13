@@ -875,16 +875,44 @@ export default function GradingPage() {
                       </Select>
                     )}
                     <SaveStatusIndicator status={gradingAutoSaveStatus} />
-                    <Button
-                      onClick={handleSaveGrades}
-                      disabled={saving || allAutoGraded}
-                      size="sm"
-                      className="gap-1.5 bg-gray-900 dark:bg-gray-100 hover:bg-gray-800 dark:hover:bg-gray-200 text-white dark:text-gray-900 rounded-lg"
-                    >
-                      {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                      <span className="hidden sm:inline">Finalize Grading</span>
-                      <span className="sm:hidden">Finalize</span>
-                    </Button>
+                    {selectedSubmission.gradedAt ? (
+                      <Button
+                        onClick={async () => {
+                          if (!window.confirm("This will mark this submission as ungraded. Continue?")) return;
+                          setSaving(true);
+                          try {
+                            const res = await fetch("/api/grading", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ submissionId: selectedSubmission.id, ungrade: true }),
+                            });
+                            if (res.ok) {
+                              setSubmissions((prev) => prev.map((s) => s.id !== selectedSubmission.id ? s : { ...s, gradedAt: null, gradedByName: null }));
+                              setSelectedSubmission((prev) => prev ? { ...prev, gradedAt: null, gradedByName: null } : prev);
+                            }
+                          } finally { setSaving(false); }
+                        }}
+                        disabled={saving}
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 text-amber-600 border-amber-200 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-800 dark:hover:bg-amber-950 rounded-lg"
+                      >
+                        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
+                        <span className="hidden sm:inline">Unfinalize</span>
+                        <span className="sm:hidden">Undo</span>
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={handleSaveGrades}
+                        disabled={saving || allAutoGraded}
+                        size="sm"
+                        className="gap-1.5 bg-gray-900 dark:bg-gray-100 hover:bg-gray-800 dark:hover:bg-gray-200 text-white dark:text-gray-900 rounded-lg"
+                      >
+                        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                        <span className="hidden sm:inline">Finalize Grading</span>
+                        <span className="sm:hidden">Finalize</span>
+                      </Button>
+                    )}
                   </div>
                 </div>
 
