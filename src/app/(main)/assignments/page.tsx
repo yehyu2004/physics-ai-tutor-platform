@@ -34,8 +34,10 @@ interface Assignment {
   createdAt: string;
   createdBy: { name: string | null };
   _count: { submissions: number; questions: number };
+  lockAfterSubmit: boolean;
   myScore: number | null;
   mySubmitted: boolean;
+  myGraded: boolean;
   myProgress?: { answeredCount: number; totalQuestions: number; status: string };
   ungradedCount?: number;
   openAppealCount?: number;
@@ -261,6 +263,18 @@ export default function AssignmentsPage() {
                             Due {formatShortDate(assignment.dueDate)}
                           </span>
                         )}
+                        {userRole === "STUDENT" && assignment.mySubmitted && (() => {
+                          const canResubmit = !assignment.lockAfterSubmit && !assignment.myGraded;
+                          return canResubmit ? (
+                            <span className="inline-flex items-center gap-1 text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950 px-2 py-0.5 rounded-full border border-blue-200 dark:border-blue-800">
+                              Can resubmit
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 px-2 py-0.5 rounded-full border border-gray-200 dark:border-gray-700">
+                              {assignment.lockAfterSubmit ? "Locked" : "Graded"}
+                            </span>
+                          );
+                        })()}
                       </div>
                     </div>
                     <div className="flex items-center gap-2 ml-4 shrink-0">

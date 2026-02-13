@@ -132,6 +132,7 @@ export async function GET(req: Request) {
         submissions: undefined,
         myScore: mySubmission?.totalScore ?? null,
         mySubmitted: !!mySubmission,
+        myGraded: mySubmission?.gradedAt !== null && mySubmission?.gradedAt !== undefined,
         myProgress,
         ungradedCount,
         gradedCount,
