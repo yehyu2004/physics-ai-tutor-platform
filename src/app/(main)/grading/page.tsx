@@ -112,6 +112,7 @@ export default function GradingPage() {
   const [assignmentPageSize, setAssignmentPageSize] = useState(10);
   const [assignmentTotalCount, setAssignmentTotalCount] = useState(0);
   const assignmentTotalPages = Math.max(1, Math.ceil(assignmentTotalCount / assignmentPageSize));
+  const [assignmentFilter, setAssignmentFilter] = useState<"all" | "ungraded" | "pending">("all");
   const [assignmentSearch, setAssignmentSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -543,6 +544,27 @@ export default function GradingPage() {
         </div>
       </div>
 
+      {/* Assignment Filter Tabs */}
+      <div className="flex items-center gap-1.5">
+        {([
+          { key: "all", label: "All" },
+          { key: "ungraded", label: "Ungraded" },
+          { key: "pending", label: "Pending Appeals" },
+        ] as const).map((f) => (
+          <button
+            key={f.key}
+            onClick={() => { setAssignmentFilter(f.key); setAssignmentPage(1); }}
+            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+              assignmentFilter === f.key
+                ? "bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900 shadow-sm"
+                : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
       {/* Assignment Selector */}
       <div className="flex flex-wrap items-center gap-2 sm:gap-3">
         <Select value={selectedAssignmentId} onValueChange={setSelectedAssignmentId}>
@@ -550,7 +572,13 @@ export default function GradingPage() {
             <SelectValue placeholder="Select an assignment to grade" />
           </SelectTrigger>
           <SelectContent>
-            {assignments.map((a) => (
+            {assignments
+              .filter((a) =>
+                assignmentFilter === "ungraded" ? a.ungradedCount > 0
+                : assignmentFilter === "pending" ? a.openAppealCount > 0
+                : true
+              )
+              .map((a) => (
               <SelectItem key={a.id} value={a.id}>
                 <div>
                   <div className="truncate">{a.title}</div>
