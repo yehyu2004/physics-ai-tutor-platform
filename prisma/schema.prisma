@@ -200,6 +200,7 @@ model Submission {
 
   @@index([userId, submittedAt])
   @@index([assignmentId])
+  @@index([assignmentId, userId])
 }
 
 model SubmissionAnswer {
@@ -216,6 +217,9 @@ model SubmissionAnswer {
   submission Submission         @relation(fields: [submissionId], references: [id], onDelete: Cascade)
   question   AssignmentQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
   appeals    GradeAppeal[]
+
+  @@index([submissionId])
+  @@index([questionId])
 }
 
 model Rubric {

@@ -1,6 +1,29 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
+    serverComponentsExternalPackages: [
+      "bcryptjs",
+      "@prisma/client",
+      "@prisma/adapter-pg",
+      "pg",
+      "@anthropic-ai/sdk",
+      "jszip",
+      "nodemailer",
+      "resend",
+      "openai",
+    ],
+    optimizePackageImports: [
+      "lucide-react",
+      "@radix-ui/react-icons",
+      "react-syntax-highlighter",
+      "recharts",
+      "@dnd-kit/core",
+      "@dnd-kit/sortable",
+      "@dnd-kit/utilities",
+      "react-markdown",
+      "katex",
+      "dompurify",
+    ],
     serverActions: {
       bodySizeLimit: "20mb",
     },

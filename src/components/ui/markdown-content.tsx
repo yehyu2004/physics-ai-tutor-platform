@@ -6,11 +6,14 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import rehypeRaw from "rehype-raw";
 import { Check, Copy, Play, Edit3, Save } from "lucide-react";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
+import dynamic from "next/dynamic";
+
+const SyntaxHighlighter = dynamic(
+  () => import("react-syntax-highlighter").then((mod) => mod.Prism),
+  { ssr: false, loading: () => <pre className="p-4 bg-gray-950 text-gray-100 text-sm font-mono rounded-xl overflow-auto"><code>Loading...</code></pre> }
+);
 import "katex/dist/katex.min.css";
 import DOMPurify from "dompurify";
-import dynamic from "next/dynamic";
 
 const MermaidDiagram = dynamic(() => import("@/components/chat/MermaidDiagram"), { ssr: false });
 const DesmosGraph = dynamic(() => import("@/components/chat/DesmosGraph"), { ssr: false });
@@ -45,6 +48,11 @@ function CodeBlock({
   const [output, setOutput] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [code, setCode] = useState(initialCode);
+  const [style, setStyle] = useState<Record<string, React.CSSProperties> | undefined>(undefined);
+
+  useEffect(() => {
+    import("react-syntax-highlighter/dist/esm/styles/prism").then((mod) => setStyle(mod.vscDarkPlus));
+  }, []);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(code);
@@ -158,7 +166,7 @@ function CodeBlock({
       ) : (
         <SyntaxHighlighter
           language={language}
-          style={vscDarkPlus}
+          style={style ?? {}}
           customStyle={{
             margin: 0,
             padding: '1rem',

@@ -15,95 +15,98 @@ export async function GET(
     const userRole = auth.user.role;
     const isStaff = isStaffRole(userRole);
 
-    // Fetch assignment, user's submission, and appeals in parallel
-    const [assignment, submission, appeals] = await Promise.all([
-      prisma.assignment.findUnique({
+    // Step 1: assignment + user's submission in parallel (fast indexed lookups)
+    const [assignment, submission] = await Promise.all([
+      prisma.assignment.findFirst({
         where: { id: params.id, isDeleted: false },
         include: {
           questions: { orderBy: { order: "asc" } },
           createdBy: { select: { name: true } },
           publishedBy: { select: { name: true } },
-          _count: { select: { submissions: { where: { isDraft: false } } } },
+          ...(isStaff && { _count: { select: { submissions: { where: { isDraft: false } } } } }),
         },
       }),
       prisma.submission.findFirst({
         where: { assignmentId: params.id, userId },
         include: { answers: true },
       }),
-      isStaff
-        ? prisma.gradeAppeal.findMany({
-            where: {
-              submissionAnswer: {
-                submission: { assignmentId: params.id },
-              },
-            },
-            include: {
-              student: { select: { id: true, name: true } },
-              submissionAnswer: {
-                select: {
-                  id: true,
-                  questionId: true,
-                  score: true,
-                  feedback: true,
-                  question: { select: { questionText: true, points: true, order: true } },
-                  submission: { select: { user: { select: { name: true } } } },
-                },
-              },
-              messages: {
-                include: {
-                  user: { select: { id: true, name: true, role: true } },
-                },
-                orderBy: { createdAt: "asc" as const },
-              },
-            },
-            orderBy: { createdAt: "desc" as const },
-          })
-        : null,
     ]);
 
     if (!assignment) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    // Students can only access published assignments
     if (userRole === "STUDENT" && !assignment.published) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    // For students, fetch appeals by submissionId (only if they have a submission)
-    let studentAppeals = null;
-    if (!isStaff && submission) {
-      studentAppeals = await prisma.gradeAppeal.findMany({
-        where: {
-          submissionAnswer: { submissionId: submission.id },
-          studentId: userId,
+    // Step 2: fetch appeals using direct indexed lookups (avoids slow nested relation filter)
+    const appealsInclude = {
+      student: { select: { id: true, name: true } },
+      submissionAnswer: {
+        select: {
+          id: true,
+          questionId: true,
+          score: true,
+          feedback: true,
+          question: { select: { questionText: true, points: true, order: true } },
+          submission: { select: { user: { select: { name: true } } } },
         },
+      },
+      messages: {
         include: {
-          student: { select: { id: true, name: true } },
-          submissionAnswer: {
-            select: {
-              id: true,
-              questionId: true,
-              score: true,
-              feedback: true,
-              question: { select: { questionText: true, points: true, order: true } },
-            },
-          },
-          messages: {
-            include: {
-              user: { select: { id: true, name: true, role: true } },
-            },
-            orderBy: { createdAt: "asc" as const },
-          },
+          user: { select: { id: true, name: true, role: true } },
         },
-        orderBy: { createdAt: "desc" as const },
+        orderBy: { createdAt: "asc" as const },
+      },
+    } as const;
+
+    let appeals: Awaited<ReturnType<typeof prisma.gradeAppeal.findMany>> = [];
+
+    if (!isStaff) {
+      // Student: use answer IDs from their submission (no extra query needed)
+      if (submission) {
+        const answerIds = submission.answers.map((a) => a.id);
+        if (answerIds.length > 0) {
+          appeals = await prisma.gradeAppeal.findMany({
+            where: { submissionAnswerId: { in: answerIds }, studentId: userId },
+            include: appealsInclude,
+            orderBy: { createdAt: "desc" },
+          });
+        }
+      }
+    } else {
+      // Staff: direct indexed lookups instead of nested relation filter
+      // Step 2a: submission IDs (uses @@index([assignmentId]) on Submission)
+      const submissionRows = await prisma.submission.findMany({
+        where: { assignmentId: params.id },
+        select: { id: true },
       });
+      if (submissionRows.length > 0) {
+        // Step 2b: answer IDs (uses @@index([submissionId]) on SubmissionAnswer)
+        const answerRows = await prisma.submissionAnswer.findMany({
+          where: { submissionId: { in: submissionRows.map((s) => s.id) } },
+          select: { id: true },
+        });
+        if (answerRows.length > 0) {
+          appeals = await prisma.gradeAppeal.findMany({
+            where: { submissionAnswerId: { in: answerRows.map((a) => a.id) } },
+            include: appealsInclude,
+            orderBy: { createdAt: "desc" },
+          });
+        }
+      }
     }
 
+    // Ensure _count exists for frontend even for students
+    const assignmentData = isStaff
+      ? assignment
+      : { ...assignment, _count: { submissions: 0 } };
+
     return NextResponse.json({
-      assignment,
+      assignment: assignmentData,
       submission: submission || null,
-      appeals: appeals || studentAppeals || [],
+      appeals,
     });
   } catch (error) {
     console.error("Assignment error:", error);
