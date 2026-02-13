@@ -1,7 +1,15 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
-import { Loader2, Users, Clock, Activity, TrendingUp, Download } from "lucide-react";
+import {
+  Loader2,
+  Users,
+  Clock,
+  Activity,
+  TrendingUp,
+  Download,
+  Crown,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,14 +20,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  AreaChart,
-  Area,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { useTheme } from "next-themes";
 
 const CATEGORY_COLORS: Record<string, string> = {
   AI_CHAT: "#6366f1",
@@ -43,6 +52,38 @@ const CATEGORY_LABELS: Record<string, string> = {
   ADMIN_ACTION: "Admin",
 };
 
+const ROLE_BADGE_COLORS: Record<string, string> = {
+  ADMIN: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+  PROFESSOR: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
+  TA: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+  STUDENT: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400",
+};
+
+interface RecentActivityItem {
+  id: string;
+  category: string;
+  categoryLabel: string;
+  categoryColor: string;
+  detail: string | null;
+  durationMs: number | null;
+  createdAt: string;
+  user: {
+    name: string;
+    email: string;
+    role: string;
+    image: string | null;
+  };
+}
+
+interface TopUser {
+  name: string;
+  email: string;
+  role: string;
+  image: string | null;
+  activityCount: number;
+  totalTimeMs: number;
+}
+
 interface ActivityData {
   summary: {
     totalActivities: number;
@@ -52,12 +93,79 @@ interface ActivityData {
   };
   dailyTrend: Record<string, string | number>[];
   trendCategories: string[];
-  timeByCategory: { category: string; label: string; totalMs: number; count: number; color: string }[];
+  timeByCategory: {
+    category: string;
+    label: string;
+    totalMs: number;
+    count: number;
+    color: string;
+  }[];
   timeByRole: { label: string; count: number; totalMs: number }[];
-  csvData: { id: string; userName: string; userEmail: string; category: string; detail: string | null; durationMs: number | null; createdAt: string }[];
+  recentActivity: RecentActivityItem[];
+  topUsers: TopUser[];
 }
 
+function timeAgo(dateStr: string): string {
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  const diffSec = Math.floor((now - then) / 1000);
+  if (diffSec < 60) return "just now";
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  const diffDay = Math.floor(diffHr / 24);
+  if (diffDay < 7) return `${diffDay}d ago`;
+  return new Date(dateStr).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+}
 
+function formatDuration(ms: number): string {
+  if (ms < 1000) return "<1s";
+  const sec = Math.floor(ms / 1000);
+  if (sec < 60) return `${sec}s`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}m`;
+  const hr = (min / 60).toFixed(1);
+  return `${hr}h`;
+}
+
+function UserAvatar({
+  name,
+  image,
+  size = "sm",
+}: {
+  name: string;
+  image: string | null;
+  size?: "sm" | "md";
+}) {
+  const dim = size === "sm" ? "h-7 w-7" : "h-9 w-9";
+  const textSize = size === "sm" ? "text-[10px]" : "text-xs";
+  if (image) {
+    return (
+      <img
+        src={image}
+        alt={name}
+        className={`${dim} rounded-full object-cover`}
+      />
+    );
+  }
+  const initials = name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+  return (
+    <div
+      className={`${dim} rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center ${textSize} font-semibold text-gray-600 dark:text-gray-300`}
+    >
+      {initials}
+    </div>
+  );
+}
 
 export default function AdminUserActivityPage() {
   const [data, setData] = useState<ActivityData | null>(null);
@@ -65,9 +173,13 @@ export default function AdminUserActivityPage() {
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [activityFilter, setActivityFilter] = useState<string>("all");
   const [dateRange, setDateRange] = useState<string>("30");
-  const [breakdownView, setBreakdownView] = useState<"activity" | "identity">("activity");
+  const [breakdownView, setBreakdownView] = useState<"activity" | "identity">(
+    "activity"
+  );
+  const [csvLoading, setCsvLoading] = useState(false);
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
 
-  // Fetch activity data
   const fetchData = useCallback(() => {
     setLoading(true);
     const params = new URLSearchParams();
@@ -80,7 +192,7 @@ export default function AdminUserActivityPage() {
         if (!r.ok) throw new Error("API error");
         return r.json();
       })
-      .then((json) => {
+      .then((json: ActivityData) => {
         setData(json);
         setLoading(false);
       })
@@ -94,34 +206,69 @@ export default function AdminUserActivityPage() {
     fetchData();
   }, [fetchData]);
 
-  const handleDownloadCSV = () => {
-    if (!data?.csvData?.length) return;
+  const handleDownloadCSV = async () => {
+    setCsvLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (roleFilter !== "all") params.set("role", roleFilter);
+      if (activityFilter !== "all") params.set("filter", activityFilter);
+      params.set("range", dateRange);
+      params.set("export", "csv");
 
-    const headers = ["Date", "Time", "User", "Email", "Category", "Detail", "Duration (sec)"];
-    const rows = data.csvData.map((row) => {
-      const d = new Date(row.createdAt);
-      return [
-        d.toLocaleDateString(),
-        d.toLocaleTimeString(),
-        row.userName,
-        row.userEmail,
-        CATEGORY_LABELS[row.category] || row.category,
-        row.detail || "",
-        row.durationMs ? Math.round(row.durationMs / 1000) : "",
+      const res = await fetch(
+        `/api/admin/user-activity?${params.toString()}`
+      );
+      if (!res.ok) throw new Error("Export failed");
+      const json = await res.json();
+      const csvData = json.csvData as {
+        createdAt: string;
+        userName: string;
+        userEmail: string;
+        category: string;
+        detail: string | null;
+        durationMs: number | null;
+      }[];
+
+      if (!csvData?.length) return;
+
+      const headers = [
+        "Date",
+        "Time",
+        "User",
+        "Email",
+        "Category",
+        "Detail",
+        "Duration (sec)",
       ];
-    });
+      const rows = csvData.map((row) => {
+        const d = new Date(row.createdAt);
+        return [
+          d.toLocaleDateString(),
+          d.toLocaleTimeString(),
+          row.userName,
+          row.userEmail,
+          CATEGORY_LABELS[row.category] || row.category,
+          row.detail || "",
+          row.durationMs ? Math.round(row.durationMs / 1000) : "",
+        ];
+      });
 
-    const csvContent = [headers, ...rows]
-      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
-      .join("\n");
+      const csvContent = [headers, ...rows]
+        .map((row) =>
+          row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")
+        )
+        .join("\n");
 
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `user-activity-${new Date().toISOString().split("T")[0]}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `user-activity-${new Date().toISOString().split("T")[0]}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setCsvLoading(false);
+    }
   };
 
   const activityFilters = [
@@ -139,10 +286,18 @@ export default function AdminUserActivityPage() {
     { key: "all", label: "All Time" },
   ];
 
+  // Chart theme colors
+  const gridColor = isDark ? "#374151" : "#e5e7eb";
+  const tickColor = isDark ? "#9ca3af" : "#6b7280";
+  const tooltipBg = isDark ? "#1f2937" : "#ffffff";
+  const tooltipBorder = isDark ? "#374151" : "#e5e7eb";
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight dark:text-gray-100">User Activity</h1>
+        <h1 className="text-2xl font-bold tracking-tight dark:text-gray-100">
+          User Activity
+        </h1>
         <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
           Monitor how users engage with platform features
         </p>
@@ -150,7 +305,6 @@ export default function AdminUserActivityPage() {
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-4">
-        {/* Identity type filter */}
         <Select value={roleFilter} onValueChange={setRoleFilter}>
           <SelectTrigger className="w-[150px]">
             <SelectValue placeholder="All Roles" />
@@ -164,39 +318,44 @@ export default function AdminUserActivityPage() {
           </SelectContent>
         </Select>
 
-        {/* Activity type filter */}
         <Select value={activityFilter} onValueChange={setActivityFilter}>
           <SelectTrigger className="w-[150px]">
             <SelectValue placeholder="All Activities" />
           </SelectTrigger>
           <SelectContent>
             {activityFilters.map((f) => (
-              <SelectItem key={f.key} value={f.key}>{f.label}</SelectItem>
+              <SelectItem key={f.key} value={f.key}>
+                {f.label}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
 
-        {/* Date range filter */}
         <Select value={dateRange} onValueChange={setDateRange}>
           <SelectTrigger className="w-[130px]">
             <SelectValue placeholder="30 Days" />
           </SelectTrigger>
           <SelectContent>
             {rangeFilters.map((f) => (
-              <SelectItem key={f.key} value={f.key}>{f.label}</SelectItem>
+              <SelectItem key={f.key} value={f.key}>
+                {f.label}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
 
-        {/* CSV download */}
         <div className="ml-auto">
           <Button
             variant="outline"
             size="sm"
             onClick={handleDownloadCSV}
-            disabled={!data?.csvData?.length}
+            disabled={csvLoading}
           >
-            <Download className="h-4 w-4 mr-1.5" />
+            {csvLoading ? (
+              <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4 mr-1.5" />
+            )}
             Export CSV
           </Button>
         </div>
@@ -208,7 +367,9 @@ export default function AdminUserActivityPage() {
         </div>
       ) : !data ? (
         <div className="flex items-center justify-center py-20">
-          <p className="text-neutral-500 dark:text-neutral-400">Failed to load activity data.</p>
+          <p className="text-neutral-500 dark:text-neutral-400">
+            Failed to load activity data.
+          </p>
         </div>
       ) : (
         <>
@@ -221,7 +382,9 @@ export default function AdminUserActivityPage() {
                     <Activity className="h-5 w-5 text-neutral-700 dark:text-neutral-300" />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold">{data.summary.totalActivities.toLocaleString()}</div>
+                    <div className="text-2xl font-bold">
+                      {data.summary.totalActivities.toLocaleString()}
+                    </div>
                     <p className="text-sm font-medium">Total Activities</p>
                   </div>
                 </div>
@@ -235,7 +398,9 @@ export default function AdminUserActivityPage() {
                     <Users className="h-5 w-5 text-neutral-700 dark:text-neutral-300" />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold">{data.summary.uniqueUsers}</div>
+                    <div className="text-2xl font-bold">
+                      {data.summary.uniqueUsers}
+                    </div>
                     <p className="text-sm font-medium">Unique Users</p>
                   </div>
                 </div>
@@ -249,8 +414,16 @@ export default function AdminUserActivityPage() {
                     <Clock className="h-5 w-5 text-neutral-700 dark:text-neutral-300" />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold">{(data.summary.totalTimeMs / 3600000).toFixed(1)}h</div>
-                    <p className="text-sm font-medium">Total Time Spent</p>
+                    <div className="text-2xl font-bold">
+                      {data.summary.totalTimeMs > 0
+                        ? formatDuration(data.summary.totalTimeMs)
+                        : "--"}
+                    </div>
+                    <p className="text-sm font-medium">
+                      {data.summary.totalTimeMs > 0
+                        ? "Total Time Spent"
+                        : "Time Not Tracked"}
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -263,7 +436,9 @@ export default function AdminUserActivityPage() {
                     <TrendingUp className="h-5 w-5 text-neutral-700 dark:text-neutral-300" />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold">{data.summary.avgDailyActivities}</div>
+                    <div className="text-2xl font-bold">
+                      {data.summary.avgDailyActivities}
+                    </div>
                     <p className="text-sm font-medium">Avg Daily Activities</p>
                   </div>
                 </div>
@@ -271,51 +446,71 @@ export default function AdminUserActivityPage() {
             </Card>
           </div>
 
-          {/* Daily Activity Trend - Stacked Area Chart */}
+          {/* Daily Activity Trend - Bar Chart */}
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Daily Activity Trend</CardTitle>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">Activity count by category over time</p>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                Activity count by category over time
+              </p>
             </CardHeader>
             <CardContent>
               {data.dailyTrend.every((d) => d.total === 0) ? (
-                <div className="flex items-center justify-center h-[350px]">
-                  <p className="text-sm text-neutral-400 dark:text-neutral-500">No activity in this period</p>
+                <div className="flex items-center justify-center h-[300px]">
+                  <p className="text-sm text-neutral-400 dark:text-neutral-500">
+                    No activity in this period
+                  </p>
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height={350}>
-                  <AreaChart data={data.dailyTrend}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" />
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={data.dailyTrend}>
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke={gridColor}
+                      vertical={false}
+                    />
                     <XAxis
                       dataKey="label"
                       fontSize={11}
                       tickLine={false}
+                      axisLine={false}
                       interval="preserveStartEnd"
+                      tick={{ fill: tickColor }}
                     />
-                    <YAxis fontSize={12} tickLine={false} allowDecimals={false} />
+                    <YAxis
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                      allowDecimals={false}
+                      tick={{ fill: tickColor }}
+                    />
                     <Tooltip
                       contentStyle={{
                         borderRadius: "8px",
-                        border: "1px solid #e5e5e5",
+                        border: `1px solid ${tooltipBorder}`,
                         fontSize: "13px",
+                        backgroundColor: tooltipBg,
+                        color: isDark ? "#e5e7eb" : "#1f2937",
                       }}
-                      formatter={(value: number | undefined, name: string | undefined) => [
+                      formatter={(
+                        value: number | undefined,
+                        name: string | undefined
+                      ) => [
                         value ?? 0,
                         CATEGORY_LABELS[name || ""] || name || "",
                       ]}
+                      cursor={{ fill: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" }}
                     />
                     {data.trendCategories.map((cat) => (
-                      <Area
+                      <Bar
                         key={cat}
-                        type="monotone"
                         dataKey={cat}
                         stackId="1"
                         fill={CATEGORY_COLORS[cat] || "#94a3b8"}
-                        stroke={CATEGORY_COLORS[cat] || "#94a3b8"}
-                        fillOpacity={0.6}
+                        radius={[0, 0, 0, 0]}
                       />
                     ))}
-                  </AreaChart>
+                  </BarChart>
                 </ResponsiveContainer>
               )}
 
@@ -326,7 +521,9 @@ export default function AdminUserActivityPage() {
                     <div key={cat} className="flex items-center gap-1.5">
                       <div
                         className="w-3 h-3 rounded-sm"
-                        style={{ backgroundColor: CATEGORY_COLORS[cat] || "#94a3b8" }}
+                        style={{
+                          backgroundColor: CATEGORY_COLORS[cat] || "#94a3b8",
+                        }}
                       />
                       <span className="text-xs text-gray-500 dark:text-gray-400">
                         {CATEGORY_LABELS[cat] || cat}
@@ -338,19 +535,139 @@ export default function AdminUserActivityPage() {
             </CardContent>
           </Card>
 
+          {/* Two-column: Top Users + Recent Activity */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Top Users */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Crown className="h-4 w-4 text-amber-500" />
+                  <CardTitle className="text-base">Most Active Users</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {data.topUsers.length === 0 ? (
+                  <p className="text-sm text-neutral-400 dark:text-neutral-500 text-center py-8">
+                    No user data available
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {data.topUsers.slice(0, 8).map((user, i) => (
+                      <div
+                        key={user.email}
+                        className="flex items-center gap-3"
+                      >
+                        <span className="text-xs font-bold text-gray-400 dark:text-gray-500 w-4 text-right tabular-nums">
+                          {i + 1}
+                        </span>
+                        <UserAvatar
+                          name={user.name}
+                          image={user.image}
+                          size="sm"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                              {user.name}
+                            </span>
+                            <span
+                              className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${ROLE_BADGE_COLORS[user.role] || ROLE_BADGE_COLORS.STUDENT}`}
+                            >
+                              {user.role}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-400 dark:text-gray-500 truncate">
+                            {user.email}
+                          </p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <div className="text-sm font-bold tabular-nums text-gray-900 dark:text-gray-100">
+                            {user.activityCount}
+                          </div>
+                          <div className="text-[10px] text-gray-400 dark:text-gray-500">
+                            actions
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Recent Activity Feed */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Recent Activity</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {data.recentActivity.length === 0 ? (
+                  <p className="text-sm text-neutral-400 dark:text-neutral-500 text-center py-8">
+                    No recent activity
+                  </p>
+                ) : (
+                  <div className="space-y-1">
+                    {data.recentActivity.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex items-center gap-3 py-2 px-2 -mx-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                      >
+                        <UserAvatar
+                          name={item.user.name}
+                          image={item.user.image}
+                          size="sm"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                              {item.user.name}
+                            </span>
+                            <span
+                              className="inline-block w-1.5 h-1.5 rounded-full shrink-0"
+                              style={{
+                                backgroundColor: item.categoryColor,
+                              }}
+                            />
+                            <span className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                              {item.categoryLabel}
+                            </span>
+                          </div>
+                          {item.detail && (
+                            <p className="text-xs text-gray-400 dark:text-gray-500 truncate">
+                              {item.detail}
+                            </p>
+                          )}
+                        </div>
+                        <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0 tabular-nums">
+                          {timeAgo(item.createdAt)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
           {/* Time Usage Breakdown */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-base">Time Usage Breakdown</CardTitle>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">Numeric time usage grouped by different dimensions</p>
+                  <CardTitle className="text-base">
+                    Usage Breakdown
+                  </CardTitle>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                    Activity count and time grouped by different dimensions
+                  </p>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  {([
-                    { key: "activity" as const, label: "Activity" },
-                    { key: "identity" as const, label: "Identity" },
-                  ]).map((f) => (
+                  {(
+                    [
+                      { key: "activity" as const, label: "Activity" },
+                      { key: "identity" as const, label: "Identity" },
+                    ] as const
+                  ).map((f) => (
                     <button
                       key={f.key}
                       onClick={() => setBreakdownView(f.key)}
@@ -368,45 +685,63 @@ export default function AdminUserActivityPage() {
             </CardHeader>
             <CardContent>
               {(() => {
-                const items = breakdownView === "activity"
-                  ? data.timeByCategory.map((d) => ({ label: d.label, count: d.count, totalMs: d.totalMs, color: d.color }))
-                  : data.timeByRole;
+                const items =
+                  breakdownView === "activity"
+                    ? data.timeByCategory.map((d) => ({
+                        label: d.label,
+                        count: d.count,
+                        totalMs: d.totalMs,
+                        color: d.color,
+                      }))
+                    : data.timeByRole.map((d) => ({
+                        ...d,
+                        color: "#6366f1",
+                      }));
 
                 if (items.length === 0) {
                   return (
                     <div className="flex items-center justify-center py-12">
-                      <p className="text-sm text-neutral-400 dark:text-neutral-500">No data available</p>
+                      <p className="text-sm text-neutral-400 dark:text-neutral-500">
+                        No data available
+                      </p>
                     </div>
                   );
                 }
 
-                const maxMs = Math.max(...items.map((d) => d.totalMs), 1);
+                const maxCount = Math.max(
+                  ...items.map((d) => d.count),
+                  1
+                );
 
                 return (
                   <div className="space-y-3">
                     {items.map((item, i) => (
                       <div key={i} className="flex items-center gap-4">
                         <div className="w-[140px] shrink-0">
-                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{item.label}</span>
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            {item.label}
+                          </span>
                         </div>
                         <div className="flex-1 flex items-center gap-3">
                           <div className="flex-1 h-6 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
                             <div
                               className="h-full rounded-full transition-all"
                               style={{
-                                width: `${Math.max((item.totalMs / maxMs) * 100, item.totalMs > 0 ? 2 : 0)}%`,
-                                backgroundColor: "color" in item ? (item as { color: string }).color : "#6366f1",
+                                width: `${Math.max((item.count / maxCount) * 100, item.count > 0 ? 2 : 0)}%`,
+                                backgroundColor: item.color,
                               }}
                             />
                           </div>
-                          <div className="w-[80px] text-right shrink-0">
-                            <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                              {(item.totalMs / 3600000).toFixed(1)}h
+                          <div className="w-[60px] text-right shrink-0">
+                            <span className="text-sm font-bold text-gray-900 dark:text-gray-100 tabular-nums">
+                              {item.count}
                             </span>
                           </div>
-                          <div className="w-[60px] text-right shrink-0">
+                          <div className="w-[50px] text-right shrink-0">
                             <span className="text-xs text-gray-400 dark:text-gray-500">
-                              {item.count} {item.count === 1 ? "use" : "uses"}
+                              {item.totalMs > 0
+                                ? formatDuration(item.totalMs)
+                                : "--"}
                             </span>
                           </div>
                         </div>

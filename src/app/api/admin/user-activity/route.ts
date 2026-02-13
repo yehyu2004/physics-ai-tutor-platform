@@ -57,6 +57,7 @@ export async function GET(req: Request) {
     const role = searchParams.get("role") || undefined;
     const filter = searchParams.get("filter") || "all";
     const range = searchParams.get("range") || "30";
+    const exportCsv = searchParams.get("export") === "csv";
 
     // Build where clause
     const where: Record<string, unknown> = {};
@@ -81,21 +82,45 @@ export async function GET(req: Request) {
       }
     }
 
-    const days = range === "all" ? 365 : parseInt(range, 10);
-
-    // Run queries in parallel — use DB aggregations for summary, raw fetch only for trend/CSV
-    const [activities, categoryGroups, totalCount, totalDuration, uniqueUsers] = await Promise.all([
-      // Raw activities for daily trend + CSV + role aggregation
-      prisma.userActivity.findMany({
+    // CSV export — separate path, only fetched on demand
+    if (exportCsv) {
+      const activities = await prisma.userActivity.findMany({
         where,
         select: {
           id: true,
-          userId: true,
           category: true,
           detail: true,
           durationMs: true,
           createdAt: true,
-          user: { select: { name: true, email: true, role: true } },
+          user: { select: { name: true, email: true } },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 5000,
+      });
+      const csvData = activities.map((a) => ({
+        id: a.id,
+        userName: a.user.name || "Unknown",
+        userEmail: a.user.email || "",
+        category: a.category,
+        detail: a.detail,
+        durationMs: a.durationMs,
+        createdAt: a.createdAt.toISOString(),
+      }));
+      return NextResponse.json({ csvData });
+    }
+
+    const days = range === "all" ? 365 : parseInt(range, 10);
+
+    // Run queries in parallel
+    const [trendActivities, categoryGroups, totalCount, totalDuration, uniqueUsers, recentActivities, topUsersRaw] = await Promise.all([
+      // Activities for daily trend (only need category + date)
+      prisma.userActivity.findMany({
+        where,
+        select: {
+          category: true,
+          createdAt: true,
+          user: { select: { role: true } },
+          durationMs: true,
         },
         orderBy: { createdAt: "desc" },
         take: 5000,
@@ -113,9 +138,30 @@ export async function GET(req: Request) {
       prisma.userActivity.aggregate({ where, _sum: { durationMs: true } }),
       // Efficient distinct user count via DB
       prisma.userActivity.groupBy({ by: ["userId"], where }).then((g) => g.length),
+      // Recent activities (last 20) with user info for activity feed
+      prisma.userActivity.findMany({
+        where,
+        select: {
+          id: true,
+          category: true,
+          detail: true,
+          durationMs: true,
+          createdAt: true,
+          user: { select: { name: true, email: true, role: true, image: true } },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 20,
+      }),
+      // Top users by activity count
+      prisma.userActivity.groupBy({
+        by: ["userId"],
+        where,
+        _count: { id: true },
+        _sum: { durationMs: true },
+      }),
     ]);
 
-    // Summary from DB aggregations (accurate even if raw fetch is capped at 5000)
+    // Summary from DB aggregations
     const summary = {
       totalActivities: totalCount,
       uniqueUsers,
@@ -135,11 +181,17 @@ export async function GET(req: Request) {
       for (const cat of ALL_CATEGORIES) trendMap[key][cat] = 0;
     }
 
-    for (const a of activities) {
+    // Also gather role data for the breakdown
+    const roleMap: Record<string, { count: number; totalMs: number }> = {};
+    for (const a of trendActivities) {
       const key = a.createdAt.toISOString().split("T")[0];
       if (trendMap[key] && trendMap[key][a.category] !== undefined) {
         trendMap[key][a.category]++;
       }
+      const r = (a.user as { role?: string }).role || "STUDENT";
+      if (!roleMap[r]) roleMap[r] = { count: 0, totalMs: 0 };
+      roleMap[r].count++;
+      roleMap[r].totalMs += a.durationMs || 0;
     }
 
     // Determine which categories to include in the trend based on filter
@@ -183,29 +235,54 @@ export async function GET(req: Request) {
       PROFESSOR: "Professor",
       ADMIN: "Admin",
     };
-    const roleMap: Record<string, { count: number; totalMs: number }> = {};
-    for (const a of activities) {
-      const role = (a.user as { role?: string }).role || "STUDENT";
-      if (!roleMap[role]) roleMap[role] = { count: 0, totalMs: 0 };
-      roleMap[role].count++;
-      roleMap[role].totalMs += a.durationMs || 0;
-    }
-    const timeByRole = Object.entries(roleMap).map(([role, data]) => ({
-      label: ROLE_LABELS[role] || role,
+    const timeByRole = Object.entries(roleMap).map(([r, data]) => ({
+      label: ROLE_LABELS[r] || r,
       count: data.count,
       totalMs: data.totalMs,
     })).sort((a, b) => b.totalMs - a.totalMs);
 
-    // CSV data
-    const csvData = activities.map((a) => ({
+    // Recent activity feed
+    const recentActivity = recentActivities.map((a) => ({
       id: a.id,
-      userName: a.user.name || "Unknown",
-      userEmail: a.user.email || "",
       category: a.category,
+      categoryLabel: CATEGORY_LABELS[a.category] || a.category,
+      categoryColor: CATEGORY_COLORS[a.category] || "#94a3b8",
       detail: a.detail,
       durationMs: a.durationMs,
       createdAt: a.createdAt.toISOString(),
+      user: {
+        name: a.user.name || "Unknown",
+        email: a.user.email || "",
+        role: (a.user as { role?: string }).role || "STUDENT",
+        image: (a.user as { image?: string | null }).image || null,
+      },
     }));
+
+    // Top users — resolve user info
+    const topUsersSorted = topUsersRaw
+      .sort((a, b) => b._count.id - a._count.id)
+      .slice(0, 10);
+
+    const topUserIds = topUsersSorted.map((u) => u.userId);
+    const topUserInfos = topUserIds.length > 0
+      ? await prisma.user.findMany({
+          where: { id: { in: topUserIds } },
+          select: { id: true, name: true, email: true, role: true, image: true },
+        })
+      : [];
+    const userInfoMap = new Map(topUserInfos.map((u) => [u.id, u]));
+
+    const topUsers = topUsersSorted.map((u) => {
+      const info = userInfoMap.get(u.userId);
+      return {
+        name: info?.name || "Unknown",
+        email: info?.email || "",
+        role: info?.role || "STUDENT",
+        image: info?.image || null,
+        activityCount: u._count.id,
+        totalTimeMs: u._sum.durationMs || 0,
+      };
+    });
 
     return NextResponse.json({
       summary,
@@ -213,7 +290,8 @@ export async function GET(req: Request) {
       trendCategories,
       timeByCategory,
       timeByRole,
-      csvData,
+      recentActivity,
+      topUsers,
     });
   } catch (error) {
     console.error("Admin user-activity error:", error);
