@@ -54,7 +54,7 @@ export default async function DashboardPage() {
   if (role === "TA" || role === "PROFESSOR" || role === "ADMIN") {
     const [pendingGrading, createdAssignments, openAppealCount, recentAppeals] = await Promise.all([
       prisma.submission.count({
-        where: { totalScore: null },
+        where: { totalScore: null, isDraft: false },
       }),
       prisma.assignment.count({
         where: { createdById: userId },
