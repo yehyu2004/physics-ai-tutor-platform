@@ -16,8 +16,8 @@ export default function CreateAssignmentPage() {
   const [loading, setLoading] = useState(false);
   const [exportingLatex, setExportingLatex] = useState(false);
   const [scheduledPublishAt, setScheduledPublishAt] = useState("");
-  const [notifyOnPublish, setNotifyOnPublish] = useState(false);
   const [showScheduleOptions, setShowScheduleOptions] = useState(false);
+  const [createdAssignmentId, setCreatedAssignmentId] = useState<string | null>(null);
 
   // Reminder dialog state
   const [reminderOpen, setReminderOpen] = useState(false);
@@ -71,7 +71,6 @@ export default function CreateAssignmentPage() {
           questions: formData.type === "QUIZ" ? questionsWithUrls : [],
           ...(schedule && scheduledPublishAt && {
             scheduledPublishAt,
-            notifyOnPublish,
           }),
         }),
       });
@@ -92,11 +91,21 @@ export default function CreateAssignmentPage() {
         });
       }
 
-      // For scheduled assignments, redirect directly
+      // For scheduled assignments, show notify dialog
       if (schedule) {
         toast.success(`Assignment scheduled for ${new Date(scheduledPublishAt).toLocaleString()}`);
-        router.push(`/assignments/${data.assignment.id}`);
-        router.refresh();
+        setCreatedAssignmentId(data.assignment.id);
+        const dueDateStr = formData.dueDate
+          ? new Date(formData.dueDate).toLocaleString("en-US", {
+              weekday: "long", year: "numeric", month: "long", day: "numeric",
+              hour: "numeric", minute: "2-digit",
+            })
+          : "No due date set";
+        setReminderSubject(`New Assignment: ${formData.title}`);
+        setReminderMessage(
+          `A new assignment has been posted on PhysTutor.\n\nTitle: ${formData.title}${formData.description ? `\nDescription: ${formData.description}` : ""}\nDue: ${dueDateStr}\nPoints: ${formData.totalPoints}\n\nPlease log in to PhysTutor to view the full assignment details.`
+        );
+        setReminderOpen(true);
         return;
       }
 
@@ -228,18 +237,9 @@ export default function CreateAssignmentPage() {
                     </p>
                   )}
                 </div>
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={notifyOnPublish}
-                    onChange={(e) => setNotifyOnPublish(e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800"
-                  />
-                  <div>
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Notify students via email when published</span>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Automatically send an email blast to all students when the assignment goes live.</p>
-                  </div>
-                </label>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  After scheduling, you can customize the notification email with templates and select recipients.
+                </p>
               </CardContent>
             </Card>
           ) : null
@@ -301,11 +301,13 @@ export default function CreateAssignmentPage() {
         defaultSubject={reminderSubject}
         defaultMessage={reminderMessage}
         onSkip={() => {
-          router.push("/assignments");
+          const target = createdAssignmentId ? `/assignments/${createdAssignmentId}` : "/assignments";
+          router.push(target);
           router.refresh();
         }}
         onSent={() => {
-          router.push("/assignments");
+          const target = createdAssignmentId ? `/assignments/${createdAssignmentId}` : "/assignments";
+          router.push(target);
           router.refresh();
         }}
       />
