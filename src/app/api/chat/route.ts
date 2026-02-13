@@ -63,6 +63,14 @@ export async function POST(req: Request) {
 
     const { conversationId, message, imageUrls, model, mode } = await req.json();
 
+    // Validate message size to prevent abuse
+    if (typeof message !== "string" || message.length > 50000) {
+      return Response.json(
+        { error: "Message is too long. Maximum 50,000 characters." },
+        { status: 413 }
+      );
+    }
+
     // Fire-and-forget: check content for jailbreak/prompt injection patterns
     const contentFlags = checkContentFlags(message);
     if (contentFlags.length > 0) {

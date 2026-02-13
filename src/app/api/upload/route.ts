@@ -21,6 +21,32 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "File exceeds the 20 MB size limit" }, { status: 413 });
     }
 
+    // Validate file type
+    const ALLOWED_MIME_TYPES = [
+      "application/pdf",
+      "image/png",
+      "image/jpeg",
+      "image/jpg",
+      "image/gif",
+      "image/webp",
+    ];
+    if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+      return NextResponse.json(
+        { error: "Invalid file type. Allowed: PDF, PNG, JPEG, GIF, WebP" },
+        { status: 400 }
+      );
+    }
+
+    // Validate file extension
+    const ext = file.name.split(".").pop()?.toLowerCase();
+    const ALLOWED_EXTENSIONS = ["pdf", "png", "jpg", "jpeg", "gif", "webp"];
+    if (!ext || !ALLOWED_EXTENSIONS.includes(ext)) {
+      return NextResponse.json(
+        { error: "Invalid file extension" },
+        { status: 400 }
+      );
+    }
+
     const uniqueName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
 
     const blob = await put(uniqueName, file, { access: "public" });

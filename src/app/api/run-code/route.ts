@@ -3,8 +3,8 @@ import { auth } from "@/lib/auth";
 
 // Rate limiting: Track execution count per user
 const executionCount = new Map<string, { count: number; resetTime: number }>();
-const MAX_EXECUTIONS_PER_HOUR = 20; // Limit to 20 executions per hour per user
-const RATE_LIMIT_WINDOW = 60 * 60 * 1000; // 1 hour in milliseconds
+const MAX_EXECUTIONS_PER_HOUR = parseInt(process.env.CODE_EXEC_RATE_LIMIT || "20", 10);
+const RATE_LIMIT_WINDOW = parseInt(process.env.CODE_EXEC_RATE_WINDOW_MS || "3600000", 10);
 
 // Map language names to Piston API language identifiers
 const LANGUAGE_MAP: Record<string, { language: string; version: string }> = {

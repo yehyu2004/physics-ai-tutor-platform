@@ -36,8 +36,13 @@ export default function RegisterPage() {
       return;
     }
 
-    if (password.length < 6) {
-      triggerError("Password must be at least 6 characters");
+    if (password.length < 8) {
+      triggerError("Password must be at least 8 characters");
+      return;
+    }
+
+    if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
+      triggerError("Password must contain uppercase, lowercase, and a number");
       return;
     }
 
@@ -204,7 +209,7 @@ export default function RegisterPage() {
                 <Input
                   id="password"
                   type="password"
-                  placeholder="At least 6 characters"
+                  placeholder="At least 8 characters (A-z, 0-9)"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className={`pl-10 h-11 rounded-lg border-gray-200 focus-visible:ring-1 focus-visible:ring-gray-300 focus-visible:border-gray-300 text-sm ${error && error.toLowerCase().includes("password") ? "border-red-300" : ""}`}

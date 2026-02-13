@@ -123,7 +123,7 @@ export async function checkAndBanSpammer({
       if (taEmails.length > 0) {
         await sendEmail({
           to: taEmails,
-          subject: `[PhysTutor] User auto-banned: ${name} (${email})`,
+          subject: `[PhysTutor] User auto-banned: ${(name || "").replace(/[\r\n]/g, "")} (${(email || "").replace(/[\r\n]/g, "")})`,
           html: `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
               <div style="background: #dc2626; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
@@ -132,7 +132,7 @@ export async function checkAndBanSpammer({
               <div style="padding: 24px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
                 <p><strong>${name}</strong> (${email}) has been automatically banned.</p>
                 <p><strong>Reason:</strong> ${reason}</p>
-                <p>Visit <a href="https://physics-ai-tutor-platform.vercel.app/admin/users">User Management</a> to review and unban if needed.</p>
+                <p>Visit <a href="${process.env.NEXTAUTH_URL || ""}/admin/users">User Management</a> to review and unban if needed.</p>
               </div>
             </div>
           `,

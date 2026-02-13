@@ -13,31 +13,54 @@ export async function POST(req: Request) {
       );
     }
 
-    if (password.length < 6) {
+    if (password.length < 8) {
       return NextResponse.json(
-        { error: "Password must be at least 6 characters" },
+        { error: "Password must be at least 8 characters" },
         { status: 400 }
       );
     }
 
+    if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
+      return NextResponse.json(
+        { error: "Password must contain uppercase, lowercase, and a number" },
+        { status: 400 }
+      );
+    }
+
+    if (name.length > 200) {
+      return NextResponse.json(
+        { error: "Name is too long" },
+        { status: 400 }
+      );
+    }
+
+    const trimmedStudentId = studentId.trim();
+    if (trimmedStudentId.length > 50) {
+      return NextResponse.json(
+        { error: "Student ID is too long" },
+        { status: 400 }
+      );
+    }
+
+    // Use generic error to prevent user/student ID enumeration
     const existingUser = await prisma.user.findUnique({
       where: { email },
     });
 
     if (existingUser) {
       return NextResponse.json(
-        { error: "Email already registered" },
+        { error: "Registration failed. Please check your details or contact support." },
         { status: 400 }
       );
     }
 
     const existingStudentId = await prisma.user.findUnique({
-      where: { studentId: studentId.trim() },
+      where: { studentId: trimmedStudentId },
     });
 
     if (existingStudentId) {
       return NextResponse.json(
-        { error: "Student ID already in use" },
+        { error: "Registration failed. Please check your details or contact support." },
         { status: 400 }
       );
     }
@@ -49,7 +72,7 @@ export async function POST(req: Request) {
         name,
         email,
         passwordHash,
-        studentId: studentId.trim(),
+        studentId: trimmedStudentId,
       },
     });
 

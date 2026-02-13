@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
+import DOMPurify from "dompurify";
 
 let mermaidCounter = 0;
 
@@ -48,7 +49,7 @@ export default function MermaidDiagram({ chart, content }: { chart?: string; con
     <div
       ref={containerRef}
       className="my-2 p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg overflow-x-auto flex justify-center"
-      dangerouslySetInnerHTML={{ __html: svg }}
+      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(svg, { USE_PROFILES: { svg: true, svgFilters: true }, ADD_TAGS: ["foreignObject"] }) }}
     />
   );
 }

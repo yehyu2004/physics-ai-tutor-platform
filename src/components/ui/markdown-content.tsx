@@ -9,6 +9,7 @@ import { Check, Copy, Play, Edit3, Save } from "lucide-react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import "katex/dist/katex.min.css";
+import DOMPurify from "dompurify";
 import dynamic from "next/dynamic";
 
 const MermaidDiagram = dynamic(() => import("@/components/chat/MermaidDiagram"), { ssr: false });
@@ -272,10 +273,14 @@ export function MarkdownContent({ content, className }: MarkdownContentProps) {
             if (className?.includes("language-svg")) {
               const trimmed = code.trim();
               if (trimmed.startsWith("<svg")) {
+                const sanitized = DOMPurify.sanitize(trimmed, {
+                  USE_PROFILES: { svg: true, svgFilters: true },
+                  ADD_TAGS: ["use"],
+                });
                 return (
                   <div
                     className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 overflow-auto max-w-full my-3 flex justify-center"
-                    dangerouslySetInnerHTML={{ __html: trimmed }}
+                    dangerouslySetInnerHTML={{ __html: sanitized }}
                   />
                 );
               }

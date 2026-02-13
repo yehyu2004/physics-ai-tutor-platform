@@ -1,9 +1,9 @@
 // Simple in-memory rate limiter
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
-const WINDOW_MS = 60 * 60 * 1000; // 1 hour
-const MAX_REQUESTS_NORMAL = 30;
-const MAX_REQUESTS_RESTRICTED = 10;
+const WINDOW_MS = parseInt(process.env.RATE_LIMIT_WINDOW_MS || "3600000", 10); // default 1 hour
+const MAX_REQUESTS_NORMAL = parseInt(process.env.RATE_LIMIT_MAX_NORMAL || "30", 10);
+const MAX_REQUESTS_RESTRICTED = parseInt(process.env.RATE_LIMIT_MAX_RESTRICTED || "10", 10);
 
 export function checkRateLimit(userId: string, isRestricted: boolean): { allowed: boolean; remaining: number; resetAt: number } {
   const now = Date.now();

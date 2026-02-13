@@ -85,6 +85,15 @@ export async function POST(req: Request) {
       );
     }
 
+    // Limit bulk email recipients to prevent spam
+    const MAX_RECIPIENTS = 200;
+    if (userIds.length > MAX_RECIPIENTS) {
+      return NextResponse.json(
+        { error: `Too many recipients. Maximum is ${MAX_RECIPIENTS}.` },
+        { status: 400 }
+      );
+    }
+
     const targetUsers = await prisma.user.findMany({
       where: { id: { in: userIds }, isDeleted: false },
       select: { id: true, name: true, email: true },

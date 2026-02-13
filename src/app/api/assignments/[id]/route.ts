@@ -13,6 +13,8 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const userRole = (session.user as { role?: string }).role;
+
     const assignment = await prisma.assignment.findUnique({
       where: { id: params.id },
       include: {
@@ -23,6 +25,11 @@ export async function GET(
     });
 
     if (!assignment) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    // Students can only access published assignments
+    if (userRole === "STUDENT" && !assignment.published) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
@@ -44,8 +51,20 @@ export async function PATCH(
     }
 
     const userRole = (session.user as { role?: string }).role;
+    const userId = (session.user as { id: string }).id;
     if (userRole !== "TA" && userRole !== "PROFESSOR" && userRole !== "ADMIN") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // TAs can only edit their own assignments
+    if (userRole === "TA") {
+      const existing = await prisma.assignment.findUnique({
+        where: { id: params.id },
+        select: { createdById: true },
+      });
+      if (!existing || existing.createdById !== userId) {
+        return NextResponse.json({ error: "Forbidden: you can only edit your own assignments" }, { status: 403 });
+      }
     }
 
     const data = await req.json();
@@ -104,12 +123,33 @@ export async function DELETE(
     }
 
     const userRole = (session.user as { role?: string }).role;
+    const deleteUserId = (session.user as { id: string }).id;
     if (userRole !== "TA" && userRole !== "PROFESSOR" && userRole !== "ADMIN") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    // TAs can only delete their own assignments
+    if (userRole === "TA") {
+      const existing = await prisma.assignment.findUnique({
+        where: { id: params.id },
+        select: { createdById: true },
+      });
+      if (!existing || existing.createdById !== deleteUserId) {
+        return NextResponse.json({ error: "Forbidden: you can only delete your own assignments" }, { status: 403 });
+      }
+    }
+
     await prisma.assignment.delete({
       where: { id: params.id },
+    });
+
+    // Audit log
+    await prisma.auditLog.create({
+      data: {
+        userId: deleteUserId,
+        action: "assignment_deleted",
+        details: { assignmentId: params.id },
+      },
     });
 
     return NextResponse.json({ success: true });

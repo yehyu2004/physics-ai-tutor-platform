@@ -11,7 +11,11 @@ export const IMPERSONATE_COOKIE = "impersonate-user-id";
  */
 export async function getEffectiveSession() {
   // E2E test mode: build a fake session from the test user cookie
-  if (process.env.E2E_TEST_MODE === "true") {
+  // SECURITY: Only allow in development/test, never in production
+  if (
+    process.env.E2E_TEST_MODE === "true" &&
+    process.env.NODE_ENV !== "production"
+  ) {
     const cookieStore = await cookies();
     const testEmail = cookieStore.get("e2e-test-user-email")?.value;
     if (testEmail) {

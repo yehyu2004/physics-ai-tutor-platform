@@ -144,10 +144,17 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ success: true });
     }
 
-    // Role change (existing functionality)
+    // Role change — requires PROFESSOR or ADMIN
     if (role) {
+      if (userRole !== "PROFESSOR" && userRole !== "ADMIN") {
+        return NextResponse.json({ error: "Forbidden: only professors and admins can change roles" }, { status: 403 });
+      }
       if (!["STUDENT", "TA", "PROFESSOR", "ADMIN"].includes(role)) {
         return NextResponse.json({ error: "Invalid role" }, { status: 400 });
+      }
+      // Professors cannot promote to ADMIN
+      if (userRole === "PROFESSOR" && role === "ADMIN") {
+        return NextResponse.json({ error: "Forbidden: professors cannot promote to admin" }, { status: 403 });
       }
       const data: { role: "STUDENT" | "TA" | "PROFESSOR" | "ADMIN"; isVerified?: boolean } = { role };
       // Auto-verify when promoting to TA, PROFESSOR or ADMIN

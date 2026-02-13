@@ -34,18 +34,31 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Professors cannot impersonate admins
-    if (userRole === "PROFESSOR" && targetUser.role === "ADMIN") {
-      return NextResponse.json({ error: "Professors cannot impersonate admins" }, { status: 403 });
+    // Professors cannot impersonate admins or other professors
+    if (userRole === "PROFESSOR" && (targetUser.role === "ADMIN" || targetUser.role === "PROFESSOR")) {
+      return NextResponse.json({ error: "Professors cannot impersonate admins or other professors" }, { status: 403 });
     }
 
     const cookieStore = await cookies();
     cookieStore.set(IMPERSONATE_COOKIE, userId, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      sameSite: "strict",
       path: "/",
-      maxAge: 60 * 60, // 1 hour
+      maxAge: 30 * 60, // 30 minutes (reduced from 1 hour)
+    });
+
+    // Audit log the impersonation
+    await prisma.auditLog.create({
+      data: {
+        userId: (session.user as { id: string }).id,
+        action: "impersonate_start",
+        details: {
+          targetUserId: userId,
+          targetUserName: targetUser.name,
+          targetUserRole: targetUser.role,
+        },
+      },
     });
 
     return NextResponse.json({ success: true, user: targetUser });

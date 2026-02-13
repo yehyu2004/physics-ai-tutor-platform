@@ -4,8 +4,24 @@ import { getToken } from "next-auth/jwt";
 
 export async function middleware(request: NextRequest) {
   // Skip auth for E2E tests — test user identity is set via cookie
-  if (process.env.E2E_TEST_MODE === "true") {
+  // SECURITY: Only allow in development/test, never in production
+  if (
+    process.env.E2E_TEST_MODE === "true" &&
+    process.env.NODE_ENV !== "production"
+  ) {
     return NextResponse.next();
+  }
+
+  // CSRF: Reject state-changing requests from foreign origins
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) {
+    const origin = request.headers.get("origin");
+    const host = request.headers.get("host");
+    if (origin && host) {
+      const originHost = new URL(origin).host;
+      if (originHost !== host) {
+        return new NextResponse("Forbidden", { status: 403 });
+      }
+    }
   }
 
   const token = await getToken({

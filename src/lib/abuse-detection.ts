@@ -86,13 +86,13 @@ export async function handleContentFlag(
     if (staffEmails.length > 0) {
       sendEmail({
         to: staffEmails,
-        subject: `[PhysTutor] Content flag: ${userName}`,
+        subject: `[PhysTutor] Content flag: ${userName.replace(/[\r\n]/g, "")}`,
         html: `
           <h3>Content Flag Detected</h3>
-          <p><strong>User:</strong> ${userName} (${userId})</p>
+          <p><strong>User:</strong> ${userName.replace(/[<>&]/g, "")} (${userId})</p>
           <p><strong>Matched patterns:</strong> ${flags.join(", ")}</p>
           <p><strong>Message preview:</strong></p>
-          <blockquote>${message.slice(0, 500)}</blockquote>
+          <blockquote>${message.slice(0, 500).replace(/[<>&]/g, "")}</blockquote>
           <p>Review this user in the <a href="${process.env.NEXTAUTH_URL || ""}/admin/users">admin panel</a>.</p>
           <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 16px 0;" />
           <p style="color: #9ca3af; font-size: 12px;">This is an automated message from PhysTutor. Please do not reply to this email.</p>
@@ -134,10 +134,10 @@ export async function trackRateLimitAbuse(userId: string, userName: string) {
     if (staffEmails.length > 0) {
       sendEmail({
         to: staffEmails,
-        subject: `[PhysTutor] Rate limit abuse: ${userName}`,
+        subject: `[PhysTutor] Rate limit abuse: ${userName.replace(/[\r\n]/g, "")}`,
         html: `
           <h3>Rate Limit Abuse Detected</h3>
-          <p><strong>User:</strong> ${userName} (${userId})</p>
+          <p><strong>User:</strong> ${userName.replace(/[<>&]/g, "")} (${userId})</p>
           <p><strong>Rate limit hits:</strong> ${entry.count} times in the last hour</p>
           <p>This user has repeatedly exceeded the message rate limit. Consider restricting or contacting them.</p>
           <p>Review this user in the <a href="${process.env.NEXTAUTH_URL || ""}/admin/users">admin panel</a>.</p>

@@ -2,7 +2,8 @@
 
 import React, { useEffect, useRef, useState } from "react";
 
-const DESMOS_API_URL = "https://www.desmos.com/api/v1.11/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6";
+const DESMOS_API_KEY = process.env.NEXT_PUBLIC_DESMOS_API_KEY || "dcb31709b452b1cf9dc26972add0fda6";
+const DESMOS_API_URL = `https://www.desmos.com/api/v1.11/calculator.js?apiKey=${DESMOS_API_KEY}`;
 
 let desmosLoaded = false;
 let desmosLoadPromise: Promise<void> | null = null;
