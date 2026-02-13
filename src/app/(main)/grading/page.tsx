@@ -91,6 +91,7 @@ interface SubmissionForGrading {
     questionText: string;
     questionType: string;
     answer: string | null;
+    answerImageUrls?: string[];
     score: number | null;
     feedback: string | null;
     autoGraded: boolean;
