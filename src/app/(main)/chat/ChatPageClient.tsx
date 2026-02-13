@@ -406,10 +406,10 @@ export default function ChatPageClient({
       {/* Conversation Sidebar */}
       <div
         className={cn(
-          "bg-white dark:bg-gray-950 border-r border-gray-100 dark:border-gray-800 flex flex-col transition-all duration-300",
+          "bg-white dark:bg-gray-950 border-r border-gray-100 dark:border-gray-800 flex flex-col transition-all duration-300 overflow-x-hidden",
           isMobile
             ? cn("fixed inset-y-0 left-0 z-50 w-72 shadow-xl", sidebarOpen ? "translate-x-0" : "-translate-x-full")
-            : cn("relative", sidebarOpen ? "w-72" : "w-0 border-r-0 overflow-hidden")
+            : cn("relative shrink-0", sidebarOpen ? "w-72" : "w-0 border-r-0 overflow-hidden")
         )}
       >
         {/* Sidebar Header */}
@@ -482,9 +482,9 @@ export default function ChatPageClient({
                   </div>
                   <button
                     onClick={(e) => deleteConversation(conv.id, e)}
-                    className="sm:opacity-0 sm:group-hover:opacity-100 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-all shrink-0"
+                    className="sm:opacity-0 sm:group-hover:opacity-100 p-1.5 rounded-md hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-all shrink-0"
                   >
-                    <Trash2 className="h-3 w-3" />
+                    <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>
               </div>
