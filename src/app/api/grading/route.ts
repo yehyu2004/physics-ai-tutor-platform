@@ -86,14 +86,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No grades provided" }, { status: 400 });
     }
 
-    // Store overall feedback
-    if (overallFeedback !== undefined) {
-      await prisma.submission.update({
-        where: { id: submissionId },
-        data: { overallFeedback },
-      });
-    }
-
     if (isDraft) {
       // Draft grading: save scores but don't mark as graded
       await prisma.submission.update({
@@ -101,6 +93,7 @@ export async function POST(req: Request) {
         data: {
           totalScore: finalTotalScore,
           ...(feedbackFileUrl !== undefined && { fileUrl: feedbackFileUrl }),
+          ...(overallFeedback !== undefined && { overallFeedback }),
         },
       });
       return NextResponse.json({ success: true, totalScore: finalTotalScore, isDraft: true });
@@ -113,6 +106,7 @@ export async function POST(req: Request) {
         gradedAt: new Date(),
         gradedById: graderId,
         ...(feedbackFileUrl !== undefined && { fileUrl: feedbackFileUrl }),
+        ...(overallFeedback !== undefined && { overallFeedback }),
       },
     });
 
