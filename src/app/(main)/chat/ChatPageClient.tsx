@@ -26,7 +26,7 @@ import {
   Copy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { Input } from "@/components/ui/input";
 
 import { cn } from "@/lib/utils";
@@ -116,6 +116,7 @@ export default function ChatPageClient({
   const [examModeActive, setExamModeActive] = useState(false);
   const [examBannerDismissed, setExamBannerDismissed] = useState(false);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -371,6 +372,12 @@ export default function ChatPageClient({
 
   const deleteConversation = async (convId: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    if (confirmDeleteId !== convId) {
+      setConfirmDeleteId(convId);
+      setTimeout(() => setConfirmDeleteId((prev) => prev === convId ? null : prev), 3000);
+      return;
+    }
+    setConfirmDeleteId(null);
     try {
       await fetch(`/api/conversations/${convId}`, { method: "DELETE" });
       setConversations((prev) => prev.filter((c) => c.id !== convId));
@@ -406,10 +413,10 @@ export default function ChatPageClient({
       {/* Conversation Sidebar */}
       <div
         className={cn(
-          "bg-white dark:bg-gray-950 border-r border-gray-100 dark:border-gray-800 flex flex-col transition-all duration-300",
+          "bg-white dark:bg-gray-950 border-r border-gray-100 dark:border-gray-800 flex flex-col transition-all duration-300 overflow-hidden",
           isMobile
             ? cn("fixed inset-y-0 left-0 z-50 w-72 shadow-xl", sidebarOpen ? "translate-x-0" : "-translate-x-full")
-            : cn("relative shrink-0", sidebarOpen ? "w-72" : "w-0 border-r-0 overflow-hidden")
+            : cn("relative shrink-0", sidebarOpen ? "w-72" : "w-0 border-r-0")
         )}
       >
         {/* Sidebar Header */}
@@ -447,8 +454,8 @@ export default function ChatPageClient({
         )}
 
         {/* Conversation List */}
-        <ScrollArea className="flex-1">
-          <div className="px-2 pb-2 space-y-0.5">
+        <div className="flex-1 overflow-y-auto">
+          <div className="px-4 pb-2 space-y-0.5">
             {filteredConversations.map((conv) => (
               <div
                 key={conv.id}
@@ -457,17 +464,17 @@ export default function ChatPageClient({
                 tabIndex={0}
                 onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") loadConversation(conv.id); }}
                 className={cn(
-                  "w-full text-left rounded-lg px-3 py-2 transition-all group cursor-pointer relative",
+                  "w-full text-left rounded-lg px-2 py-2 transition-all group cursor-pointer overflow-hidden",
                   activeConversationId === conv.id
                     ? "bg-gray-50 dark:bg-gray-800 font-semibold"
                     : "hover:bg-gray-50/50 dark:hover:bg-gray-800/50"
                 )}
               >
-                <div className="pr-7">
+                <div className="flex items-center gap-1">
                     <p
                       title={conv.title}
                       className={cn(
-                        "text-sm truncate leading-tight",
+                        "text-sm truncate leading-tight min-w-0 flex-1",
                         activeConversationId === conv.id
                           ? "font-semibold text-gray-900 dark:text-gray-100"
                           : "font-normal text-gray-600 dark:text-gray-400"
@@ -475,16 +482,26 @@ export default function ChatPageClient({
                     >
                       {conv.title}
                     </p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                      {formatRelativeDate(conv.updatedAt)}
-                    </p>
+                    <button
+                      onClick={(e) => deleteConversation(conv.id, e)}
+                      className={cn(
+                        "shrink-0 p-1 rounded-md transition-all",
+                        confirmDeleteId === conv.id
+                          ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400"
+                          : "text-gray-400 dark:text-gray-500 hover:bg-red-100 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400"
+                      )}
+                      title={confirmDeleteId === conv.id ? "Click again to confirm" : "Delete conversation"}
+                    >
+                      {confirmDeleteId === conv.id ? (
+                        <Check className="h-3.5 w-3.5" />
+                      ) : (
+                        <Trash2 className="h-3.5 w-3.5" />
+                      )}
+                    </button>
                 </div>
-                  <button
-                    onClick={(e) => deleteConversation(conv.id, e)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-all"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                  {formatRelativeDate(conv.updatedAt)}
+                </p>
               </div>
             ))}
             {filteredConversations.length === 0 && (
@@ -504,7 +521,7 @@ export default function ChatPageClient({
               </div>
             )}
           </div>
-        </ScrollArea>
+        </div>
       </div>
 
       {/* Main Chat Area */}
