@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useEffectiveSession } from "@/lib/effective-session-context";
 import { useTrackTime } from "@/lib/use-track-time";
@@ -15,9 +15,11 @@ import {
   Upload,
   ShieldAlert,
   Trash2,
+  Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatShortDate } from "@/lib/utils";
 
@@ -49,10 +51,20 @@ export default function AssignmentsPage() {
   const [pageSize, setPageSize] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const userRole = effectiveSession.role;
 
-  const fetchAssignments = useCallback((f?: string, p?: number, ps?: number) => {
+  // Debounce search
+  useEffect(() => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => { setDebouncedSearch(searchInput); setPage(1); }, 300);
+    return () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current); };
+  }, [searchInput]);
+
+  const fetchAssignments = useCallback((f?: string, p?: number, ps?: number, q?: string) => {
     setLoading(true);
     const params = new URLSearchParams();
     params.set("page", String(p ?? 1));
@@ -60,6 +72,7 @@ export default function AssignmentsPage() {
     const filterVal = f ?? "ALL";
     if (filterVal === "PUBLISHED") params.set("filter", "published");
     else if (filterVal === "DRAFTS") params.set("filter", "drafts");
+    if (q) params.set("search", q);
     fetch(`/api/assignments?${params}`)
       .then((res) => res.json())
       .then((data) => {
@@ -71,8 +84,8 @@ export default function AssignmentsPage() {
   }, []);
 
   useEffect(() => {
-    fetchAssignments(filter, page, pageSize);
-  }, [fetchAssignments, filter, page, pageSize]);
+    fetchAssignments(filter, page, pageSize, debouncedSearch);
+  }, [fetchAssignments, filter, page, pageSize, debouncedSearch]);
 
   const handleFilterChange = (f: "ALL" | "PUBLISHED" | "DRAFTS") => {
     setFilter(f);
@@ -136,7 +149,17 @@ export default function AssignmentsPage() {
         )}
       </div>
 
-      {/* Filter Tabs */}
+      {/* Search + Filter */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+        <div className="relative w-full sm:w-64">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Search assignments..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className="pl-9 h-9"
+          />
+        </div>
       {canManage && (
         <div className="flex items-center gap-2">
           {(["ALL", "PUBLISHED", "DRAFTS"] as const).map((type) => (
@@ -154,6 +177,7 @@ export default function AssignmentsPage() {
           ))}
         </div>
       )}
+      </div>
 
       {/* Loading */}
       {loading ? (
