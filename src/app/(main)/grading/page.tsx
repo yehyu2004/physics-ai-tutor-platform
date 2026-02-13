@@ -970,7 +970,7 @@ export default function GradingPage() {
                     ) : (
                       <Button
                         onClick={handleSaveGrades}
-                        disabled={saving || allAutoGraded || !overallGradeConfirmed}
+                        disabled={saving || allAutoGraded || (selectedSubmission.answers.filter(a => !a.autoGraded).length === 0 && !overallGradeConfirmed)}
                         size="sm"
                         className="gap-1.5 bg-gray-900 dark:bg-gray-100 hover:bg-gray-800 dark:hover:bg-gray-200 text-white dark:text-gray-900 rounded-lg"
                       >
@@ -1041,52 +1041,6 @@ export default function GradingPage() {
                       <p className="text-xs text-blue-600 dark:text-blue-500 mt-1">
                         Score: {selectedSubmission.totalScore}/{assignmentInfo?.totalPoints} &mdash; No manual grading needed.
                       </p>
-                    </div>
-                  )}
-
-                  {/* Overall score & feedback — always visible */}
-                  {!allAutoGraded && (
-                    <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-5 space-y-4">
-                      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Overall Grade</h4>
-                      <div className="flex items-end gap-4">
-                        <div className="space-y-1.5 w-48">
-                          <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
-                            Score (max {assignmentInfo?.totalPoints})
-                          </label>
-                          <div className="flex items-center gap-2">
-                            <Input
-                              type="number"
-                              min={0}
-                              max={assignmentInfo?.totalPoints || 100}
-                              value={overallScore}
-                              onChange={(e) => setOverallScore(Number(e.target.value))}
-                              className="font-semibold text-center"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setOverallGradeConfirmed((prev) => !prev)}
-                              className={`shrink-0 h-8 w-8 rounded-md border-2 flex items-center justify-center transition-colors ${
-                                overallGradeConfirmed
-                                  ? "bg-emerald-500 border-emerald-500 text-white"
-                                  : "border-gray-300 dark:border-gray-600 hover:border-emerald-400"
-                              }`}
-                              title={overallGradeConfirmed ? "Unconfirm grade" : "Confirm grade"}
-                            >
-                              {overallGradeConfirmed && <CheckCircle2 className="h-4 w-4" />}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">Feedback</label>
-                        <Textarea
-                          value={overallFeedback}
-                          onChange={(e) => setOverallFeedback(e.target.value)}
-                          placeholder="Overall feedback for the student..."
-                          rows={4}
-                          className="resize-none"
-                        />
-                      </div>
                     </div>
                   )}
 
@@ -1427,6 +1381,55 @@ export default function GradingPage() {
                       </div>
                     </div>
                   ))}
+
+                  {/* Overall score & feedback — near feedback file */}
+                  {!allAutoGraded && (
+                    <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-5 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Overall Grade</h4>
+                        <span className="text-[10px] text-gray-400 dark:text-gray-500">When confirmed, overrides per-question total</span>
+                      </div>
+                      <div className="flex items-end gap-4">
+                        <div className="space-y-1.5 w-48">
+                          <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+                            Score (max {assignmentInfo?.totalPoints})
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="number"
+                              min={0}
+                              max={assignmentInfo?.totalPoints || 100}
+                              value={overallScore}
+                              onChange={(e) => setOverallScore(Number(e.target.value))}
+                              className="font-semibold text-center"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setOverallGradeConfirmed((prev) => !prev)}
+                              className={`shrink-0 h-8 w-8 rounded-md border-2 flex items-center justify-center transition-colors ${
+                                overallGradeConfirmed
+                                  ? "bg-emerald-500 border-emerald-500 text-white"
+                                  : "border-gray-300 dark:border-gray-600 hover:border-emerald-400"
+                              }`}
+                              title={overallGradeConfirmed ? "Unconfirm grade" : "Confirm grade"}
+                            >
+                              {overallGradeConfirmed && <CheckCircle2 className="h-4 w-4" />}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">Feedback</label>
+                        <Textarea
+                          value={overallFeedback}
+                          onChange={(e) => setOverallFeedback(e.target.value)}
+                          placeholder="Overall feedback for the student..."
+                          rows={4}
+                          className="resize-none"
+                        />
+                      </div>
+                    </div>
+                  )}
 
                   {/* Attach feedback file (for TA) */}
                   {!allAutoGraded && (
