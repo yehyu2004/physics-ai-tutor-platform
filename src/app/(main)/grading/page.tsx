@@ -558,32 +558,60 @@ export default function GradingPage() {
 
       {/* Assignment Selector */}
       <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-        <div className="w-full sm:w-96">
-          <div className="relative mb-2">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Filter assignments..."
-              value={assignmentSearch}
-              onChange={(e) => setAssignmentSearch(e.target.value)}
-              className="pl-9 h-9"
-            />
-          </div>
-          <Select value={selectedAssignmentId} onValueChange={setSelectedAssignmentId}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select an assignment to grade" />
-            </SelectTrigger>
-            <SelectContent>
+        <Select value={selectedAssignmentId} onValueChange={setSelectedAssignmentId}>
+          <SelectTrigger className="w-full sm:w-80">
+            <SelectValue placeholder="Select an assignment to grade" />
+          </SelectTrigger>
+          <SelectContent>
+            {assignments
+              .filter((a) => {
+                if (assignmentFilter === "ungraded" && a.ungradedCount <= 0) return false;
+                if (assignmentFilter === "pending" && a.openAppealCount <= 0) return false;
+                return true;
+              })
+              .map((a) => (
+              <SelectItem key={a.id} value={a.id}>
+                <div>
+                  <div className="truncate">{a.title}</div>
+                  <div className="flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500">
+                    <span>{a.submissionCount} submissions</span>
+                    {a.ungradedCount > 0 && (
+                      <span className="px-1.5 py-0.5 rounded font-semibold text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400">
+                        {a.ungradedCount} ungraded
+                      </span>
+                    )}
+                    {a.openAppealCount > 0 && (
+                      <span className="px-1.5 py-0.5 rounded font-semibold text-[10px] bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-400">
+                        {a.openAppealCount} pending
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Search picker — type to find and select an assignment */}
+        <div className="relative w-full sm:w-56">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Search assignment..."
+            value={assignmentSearch}
+            onChange={(e) => setAssignmentSearch(e.target.value)}
+            className="pl-9 h-9"
+          />
+          {assignmentSearch.length > 0 && (
+            <div className="absolute z-20 top-full mt-1 w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
               {assignments
-                .filter((a) => {
-                  if (assignmentFilter === "ungraded" && a.ungradedCount <= 0) return false;
-                  if (assignmentFilter === "pending" && a.openAppealCount <= 0) return false;
-                  if (assignmentSearch && !a.title.toLowerCase().includes(assignmentSearch.toLowerCase())) return false;
-                  return true;
-                })
+                .filter((a) => a.title.toLowerCase().includes(assignmentSearch.toLowerCase()))
                 .map((a) => (
-                <SelectItem key={a.id} value={a.id}>
-                  <div>
-                    <div className="truncate">{a.title}</div>
+                  <button
+                    key={a.id}
+                    onClick={() => { setSelectedAssignmentId(a.id); setAssignmentSearch(""); }}
+                    className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-b border-gray-100 dark:border-gray-800 last:border-0"
+                  >
+                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{a.title}</div>
                     <div className="flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500">
                       <span>{a.submissionCount} submissions</span>
                       {a.ungradedCount > 0 && (
@@ -597,11 +625,13 @@ export default function GradingPage() {
                         </span>
                       )}
                     </div>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+                  </button>
+                ))}
+              {assignments.filter((a) => a.title.toLowerCase().includes(assignmentSearch.toLowerCase())).length === 0 && (
+                <div className="px-3 py-4 text-sm text-gray-400 text-center">No matching assignments</div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Assignment list pagination */}
