@@ -595,6 +595,21 @@ export default function AssignmentDetailPage({
               <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               {assignment.published ? "Unpublish" : "Publish"}
             </Button>
+            {!assignment.published && !assignment.scheduledPublishAt && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full sm:w-auto text-xs sm:text-sm gap-1.5 text-blue-600 border-blue-200 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-950"
+                onClick={() => {
+                  setPublishDialogAction("publish");
+                  setScheduleActive(true);
+                  setPublishDialogOpen(true);
+                }}
+              >
+                <CalendarClock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                Schedule
+              </Button>
+            )}
             {!assignment.published && assignment.scheduledPublishAt && (
               <Button
                 variant="outline"
