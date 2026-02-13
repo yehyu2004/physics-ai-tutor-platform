@@ -56,17 +56,6 @@ export async function PATCH(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // TAs can only edit their own assignments
-    if (userRole === "TA") {
-      const existing = await prisma.assignment.findUnique({
-        where: { id: params.id },
-        select: { createdById: true },
-      });
-      if (!existing || existing.createdById !== userId) {
-        return NextResponse.json({ error: "Forbidden: you can only edit your own assignments" }, { status: 403 });
-      }
-    }
-
     const data = await req.json();
 
     // If questions are provided, delete existing and re-create
