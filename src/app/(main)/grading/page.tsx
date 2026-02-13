@@ -138,6 +138,7 @@ export default function GradingPage() {
   const [expandedAppeals, setExpandedAppeals] = useState<Record<string, boolean>>({});
   const [appealImages, setAppealImages] = useState<Record<string, string[]>>({});
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [confirmedAnswers, setConfirmedAnswers] = useState<Set<string>>(new Set());
   const [gradingDraftRestored, setGradingDraftRestored] = useState(false);
   const prevSubmissionIdRef = useRef<string | null>(null);
 
@@ -275,6 +276,10 @@ export default function GradingPage() {
     setFeedbackFile(null);
     setFeedbackFileUrl(null);
     setGradingDraftRestored(false);
+    // Pre-confirm answers that already have scores
+    const preConfirmed = new Set<string>();
+    sub.answers.forEach((a) => { if (a.score !== null && a.score !== undefined) preConfirmed.add(a.id); });
+    setConfirmedAnswers(preConfirmed);
 
     // Try to restore from localStorage
     const savedDraft = loadFromLocalStorage(sub.id);
@@ -862,6 +867,12 @@ export default function GradingPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 ml-auto">
+                    {/* Grading progress */}
+                    {selectedSubmission.answers.length > 0 && !allAutoGraded && (
+                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400 hidden sm:inline">
+                        Confirmed {confirmedAnswers.size}/{selectedSubmission.answers.filter(a => !a.autoGraded).length}
+                      </span>
+                    )}
                     {/* Grading mode toggle - only for QUIZ with questions */}
                     {selectedSubmission.answers.length > 0 && !allAutoGraded && (
                       <Select value={gradingMode} onValueChange={(v) => setGradingMode(v as GradingMode)}>
@@ -904,7 +915,7 @@ export default function GradingPage() {
                     ) : (
                       <Button
                         onClick={handleSaveGrades}
-                        disabled={saving || allAutoGraded}
+                        disabled={saving || allAutoGraded || (!allAutoGraded && confirmedAnswers.size < selectedSubmission.answers.filter(a => !a.autoGraded).length)}
                         size="sm"
                         className="gap-1.5 bg-gray-900 dark:bg-gray-100 hover:bg-gray-800 dark:hover:bg-gray-200 text-white dark:text-gray-900 rounded-lg"
                       >
@@ -1037,29 +1048,50 @@ export default function GradingPage() {
                           )}
                         </div>
 
-                        {/* Score + AI Assist */}
+                        {/* Score + Confirm + AI Assist */}
                         <div className="flex items-end gap-4">
                           <div className="space-y-1.5 flex-1 max-w-[200px]">
                             <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
                               Score (max {answer.maxPoints})
                             </label>
-                            <Input
-                              type="number"
-                              min={0}
-                              max={answer.maxPoints}
-                              value={grades[answer.id]?.score || 0}
-                              onChange={(e) =>
-                                setGrades((prev) => ({
-                                  ...prev,
-                                  [answer.id]: {
-                                    ...prev[answer.id],
-                                    score: Number(e.target.value),
-                                  },
-                                }))
-                              }
-                              disabled={answer.autoGraded}
-                              className="font-semibold text-center"
-                            />
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="number"
+                                min={0}
+                                max={answer.maxPoints}
+                                value={grades[answer.id]?.score || 0}
+                                onChange={(e) =>
+                                  setGrades((prev) => ({
+                                    ...prev,
+                                    [answer.id]: {
+                                      ...prev[answer.id],
+                                      score: Number(e.target.value),
+                                    },
+                                  }))
+                                }
+                                disabled={answer.autoGraded}
+                                className="font-semibold text-center"
+                              />
+                              {!answer.autoGraded && (
+                                <button
+                                  type="button"
+                                  onClick={() => setConfirmedAnswers((prev) => {
+                                    const next = new Set(prev);
+                                    if (next.has(answer.id)) next.delete(answer.id);
+                                    else next.add(answer.id);
+                                    return next;
+                                  })}
+                                  className={`shrink-0 h-8 w-8 rounded-md border-2 flex items-center justify-center transition-colors ${
+                                    confirmedAnswers.has(answer.id)
+                                      ? "bg-emerald-500 border-emerald-500 text-white"
+                                      : "border-gray-300 dark:border-gray-600 hover:border-emerald-400"
+                                  }`}
+                                  title={confirmedAnswers.has(answer.id) ? "Unconfirm score" : "Confirm score"}
+                                >
+                                  {confirmedAnswers.has(answer.id) && <CheckCircle2 className="h-4 w-4" />}
+                                </button>
+                              )}
+                            </div>
                           </div>
                           {!answer.autoGraded && (
                             <Button
