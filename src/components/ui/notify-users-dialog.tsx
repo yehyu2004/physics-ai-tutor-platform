@@ -61,6 +61,8 @@ interface NotifyUsersDialogProps {
   enableScheduling?: boolean;
   /** Pre-fill the scheduled time and auto-enable schedule mode */
   defaultScheduledAt?: string;
+  /** Link the scheduled email to an assignment (publishes after email sends) */
+  assignmentId?: string;
   /** Called when a scheduled email is created successfully */
   onScheduled?: () => void;
 }
@@ -93,6 +95,7 @@ export function NotifyUsersDialog({
   successMessage = "Reminder sent successfully",
   enableScheduling = true,
   defaultScheduledAt,
+  assignmentId,
   onScheduled,
 }: NotifyUsersDialogProps) {
   const [users, setUsers] = useState<NotifyUser[]>([]);
@@ -177,6 +180,7 @@ export function NotifyUsersDialog({
             scheduledAt: scheduledDate.toISOString(),
             recipientIds: Array.from(selected),
             createNotification: !onBeforeSend, // create notification on send if no onBeforeSend handler
+            ...(assignmentId ? { assignmentId } : {}),
           }),
         });
         if (res.ok) {

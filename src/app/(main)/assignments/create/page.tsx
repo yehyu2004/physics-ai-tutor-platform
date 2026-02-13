@@ -305,6 +305,7 @@ export default function CreateAssignmentPage() {
         defaultMessage={reminderMessage}
         enableScheduling={isScheduleMode}
         defaultScheduledAt={isScheduleMode ? scheduledPublishAt : undefined}
+        assignmentId={isScheduleMode && createdAssignmentId ? createdAssignmentId : undefined}
         onSkip={() => {
           const target = createdAssignmentId ? `/assignments/${createdAssignmentId}` : "/assignments";
           router.push(target);

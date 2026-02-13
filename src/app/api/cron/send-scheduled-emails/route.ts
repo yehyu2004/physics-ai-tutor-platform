@@ -27,6 +27,7 @@ export async function GET(req: Request) {
       },
       include: {
         createdBy: { select: { id: true, name: true } },
+        assignment: { select: { id: true, published: true, title: true, createdById: true } },
       },
     });
 
@@ -113,6 +114,38 @@ export async function GET(req: Request) {
             },
           },
         });
+
+        // Publish linked assignment after email is sent
+        if (scheduled.assignment && !scheduled.assignment.published) {
+          try {
+            await prisma.assignment.updateMany({
+              where: { id: scheduled.assignment.id, published: false },
+              data: {
+                published: true,
+                publishedById: scheduled.assignment.createdById,
+                scheduledPublishAt: null,
+              },
+            });
+
+            await prisma.auditLog.create({
+              data: {
+                userId: scheduled.assignment.createdById,
+                action: "scheduled_publish",
+                details: {
+                  assignmentId: scheduled.assignment.id,
+                  assignmentTitle: scheduled.assignment.title,
+                  triggeredBy: "scheduled_email",
+                  scheduledEmailId: scheduled.id,
+                  publishedAt: new Date().toISOString(),
+                },
+              },
+            });
+
+            console.log(`[cron] Published assignment "${scheduled.assignment.title}" after sending scheduled email`);
+          } catch (publishError) {
+            console.error(`[cron] Failed to publish assignment ${scheduled.assignment.id} after email:`, publishError);
+          }
+        }
 
         processedCount++;
       } catch (sendError) {

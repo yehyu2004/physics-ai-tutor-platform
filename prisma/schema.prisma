@@ -158,8 +158,9 @@ model Assignment {
   course      Course?        @relation(fields: [courseId], references: [id])
   createdBy   User           @relation("CreatedBy", fields: [createdById], references: [id])
   publishedBy User?          @relation("PublishedBy", fields: [publishedById], references: [id])
-  questions   AssignmentQuestion[]
-  submissions Submission[]
+  questions       AssignmentQuestion[]
+  submissions     Submission[]
+  scheduledEmails ScheduledEmail[]
 }
 
 model AssignmentQuestion {
@@ -399,12 +400,15 @@ model ScheduledEmail {
   cancelledAt        DateTime?
   error              String?              @db.Text
   createNotification Boolean              @default(false)
+  assignmentId       String?
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
   createdById        String
 
-  createdBy User @relation(fields: [createdById], references: [id])
+  createdBy  User        @relation(fields: [createdById], references: [id])
+  assignment Assignment? @relation(fields: [assignmentId], references: [id])
 
   @@index([status, scheduledAt])
   @@index([createdById])
+  @@index([assignmentId])
 }

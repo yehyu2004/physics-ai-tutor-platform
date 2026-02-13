@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     const auth = await requireApiRole(["TA", "PROFESSOR", "ADMIN"]);
     if (isErrorResponse(auth)) return auth;
 
-    const { subject, message, scheduledAt, recipientIds, createNotification } = await req.json();
+    const { subject, message, scheduledAt, recipientIds, createNotification, assignmentId } = await req.json();
 
     if (!subject?.trim() || !message?.trim() || !scheduledAt || !Array.isArray(recipientIds) || recipientIds.length === 0) {
       return NextResponse.json(
@@ -61,6 +61,7 @@ export async function POST(req: Request) {
         recipientIds,
         createdById: auth.user.id,
         createNotification: createNotification ?? false,
+        assignmentId: assignmentId || null,
       },
       include: {
         createdBy: { select: { id: true, name: true, email: true } },
@@ -77,6 +78,7 @@ export async function POST(req: Request) {
           scheduledAt: scheduledDate.toISOString(),
           recipientCount: recipientIds.length,
           createNotification: createNotification ?? false,
+          assignmentId: assignmentId || null,
         },
       },
     });

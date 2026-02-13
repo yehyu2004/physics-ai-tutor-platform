@@ -18,11 +18,16 @@ export async function GET(req: Request) {
     }
 
     // Find all assignments ready to publish
+    // Skip assignments that have a PENDING scheduled email — those will be
+    // published by the send-scheduled-emails cron after the email goes out.
     const now = new Date();
     const assignments = await prisma.assignment.findMany({
       where: {
         scheduledPublishAt: { lte: now },
         published: false,
+        scheduledEmails: {
+          none: { status: "PENDING" },
+        },
       },
       include: {
         createdBy: { select: { id: true, name: true } },
