@@ -328,9 +328,11 @@ export default function AssignmentDetailPage({
       ).length;
       const total = assignment.questions.length;
       if (answered < total) {
-        const confirmed = window.confirm(
-          `You have only answered ${answered} out of ${total} questions. Are you sure you want to submit?`
-        );
+        const hasAttachment = !!attachmentFile || !!file;
+        const message = hasAttachment
+          ? `You answered ${answered} out of ${total} questions online. Are all remaining answers in the attached document? Confirm to submit.`
+          : `You have only answered ${answered} out of ${total} questions. Are you sure you want to submit?`;
+        const confirmed = window.confirm(message);
         if (!confirmed) return;
       }
     }
