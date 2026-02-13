@@ -519,6 +519,16 @@ export default function AssignmentDetailPage({
     setAssignment({ ...assignment, published: !assignment.published });
   };
 
+  const handleToggleLock = async () => {
+    if (!assignment) return;
+    await fetch(`/api/assignments/${assignment.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lockAfterSubmit: !assignment.lockAfterSubmit }),
+    });
+    setAssignment({ ...assignment, lockAfterSubmit: !assignment.lockAfterSubmit });
+  };
+
   const handleDelete = async () => {
     if (!assignment) return;
     if (!window.confirm("Are you sure you want to delete this assignment? This will also delete all submissions and cannot be undone.")) return;
@@ -632,6 +642,14 @@ export default function AssignmentDetailPage({
             <Button variant="outline" size="sm" onClick={handlePublish}>
               <Eye className="h-4 w-4 mr-2" />
               {assignment.published ? "Unpublish" : "Publish"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleToggleLock}
+              className={assignment.lockAfterSubmit ? "text-amber-600 border-amber-200 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-800 dark:hover:bg-amber-950" : ""}
+            >
+              {assignment.lockAfterSubmit ? "🔒 Locked" : "🔓 Unlocked"}
             </Button>
             <Link href={`/grading?assignmentId=${assignment.id}`}>
               <Button variant="outline" size="sm">
