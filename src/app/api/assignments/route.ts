@@ -46,6 +46,7 @@ export async function GET(req: Request) {
       take: pageSize,
       include: {
         createdBy: { select: { name: true } },
+        publishedBy: { select: { name: true } },
         _count: {
           select: {
             submissions: { where: { isDraft: false } },

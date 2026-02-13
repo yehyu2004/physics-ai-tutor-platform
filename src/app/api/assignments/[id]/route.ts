@@ -20,6 +20,7 @@ export async function GET(
       include: {
         questions: { orderBy: { order: "asc" } },
         createdBy: { select: { name: true } },
+        publishedBy: { select: { name: true } },
         _count: { select: { submissions: { where: { isDraft: false } } } },
       },
     });
@@ -85,6 +86,7 @@ export async function PATCH(
         ...(data.description !== undefined && { description: data.description }),
         ...(data.dueDate !== undefined && { dueDate: data.dueDate ? new Date(data.dueDate) : null }),
         ...(data.published !== undefined && { published: data.published }),
+        ...(data.published === true && { publishedById: userId }),
         ...(data.totalPoints !== undefined && { totalPoints: data.totalPoints }),
         ...(data.pdfUrl !== undefined && { pdfUrl: data.pdfUrl || null }),
         ...(data.lockAfterSubmit !== undefined && { lockAfterSubmit: data.lockAfterSubmit }),

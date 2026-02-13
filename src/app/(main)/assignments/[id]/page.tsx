@@ -77,6 +77,7 @@ interface Assignment {
   lockAfterSubmit: boolean;
   pdfUrl: string | null;
   createdBy: { name: string | null };
+  publishedBy?: { name: string | null } | null;
   questions: Question[];
   _count: { submissions: number };
 }
@@ -579,6 +580,9 @@ export default function AssignmentDetailPage({
           </div>
           <div className="flex items-center gap-4 text-sm text-neutral-500 mt-1">
             <span>By {assignment.createdBy.name || "Unknown"}</span>
+            {assignment.publishedBy && assignment.publishedBy.name !== assignment.createdBy.name && (
+              <span>Published by {assignment.publishedBy.name}</span>
+            )}
             {assignment.dueDate && (
               <span className="flex items-center gap-1">
                 <Clock className="h-3.5 w-3.5" />
