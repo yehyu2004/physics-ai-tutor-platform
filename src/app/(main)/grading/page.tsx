@@ -395,6 +395,18 @@ export default function GradingPage() {
 
   const handleSaveGrades = async () => {
     if (!selectedSubmission) return;
+
+    // In per-question mode, warn if not all answers are confirmed
+    if (gradingMode === "per-question") {
+      const manualAnswers = selectedSubmission.answers.filter(a => !a.autoGraded);
+      if (confirmedAnswers.size < manualAnswers.length) {
+        const confirmed = window.confirm(
+          `You have only confirmed ${confirmedAnswers.size} out of ${manualAnswers.length} scores. Finalize anyway?`
+        );
+        if (!confirmed) return;
+      }
+    }
+
     setSaving(true);
     try {
       const body: Record<string, unknown> = {
@@ -946,7 +958,7 @@ export default function GradingPage() {
                     ) : (
                       <Button
                         onClick={handleSaveGrades}
-                        disabled={saving || allAutoGraded || (gradingMode === "per-question" && confirmedAnswers.size === 0) || (gradingMode === "overall" && !overallGradeConfirmed)}
+                        disabled={saving || allAutoGraded || (gradingMode === "overall" && !overallGradeConfirmed)}
                         size="sm"
                         className="gap-1.5 bg-gray-900 dark:bg-gray-100 hover:bg-gray-800 dark:hover:bg-gray-200 text-white dark:text-gray-900 rounded-lg"
                       >
