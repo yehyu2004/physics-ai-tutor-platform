@@ -457,14 +457,13 @@ export default function ChatPageClient({
                 tabIndex={0}
                 onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") loadConversation(conv.id); }}
                 className={cn(
-                  "w-full text-left rounded-lg px-3 py-2 transition-all group cursor-pointer",
+                  "w-full text-left rounded-lg px-3 py-2 transition-all group cursor-pointer relative",
                   activeConversationId === conv.id
                     ? "bg-gray-50 dark:bg-gray-800 font-semibold"
                     : "hover:bg-gray-50/50 dark:hover:bg-gray-800/50"
                 )}
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
+                <div className="pr-7">
                     <p
                       title={conv.title}
                       className={cn(
@@ -479,14 +478,13 @@ export default function ChatPageClient({
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
                       {formatRelativeDate(conv.updatedAt)}
                     </p>
-                  </div>
+                </div>
                   <button
                     onClick={(e) => deleteConversation(conv.id, e)}
-                    className="p-1.5 rounded-md hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-all shrink-0"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-all"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
-                </div>
               </div>
             ))}
             {filteredConversations.length === 0 && (
