@@ -83,43 +83,13 @@ export default function CreateAssignmentPage() {
       }
 
       const data = await res.json();
+      setCreatedAssignmentId(data.assignment.id);
 
-      if (publish && !schedule) {
-        await fetch(`/api/assignments/${data.assignment.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ published: true }),
-        });
-      }
-
-      // For scheduled assignments, show notify dialog
-      if (schedule) {
-        toast.success(`Assignment scheduled for ${new Date(scheduledPublishAt).toLocaleString()}`);
-        setIsScheduleMode(true);
-        setCreatedAssignmentId(data.assignment.id);
-        const dueDateStr = formData.dueDate
-          ? new Date(formData.dueDate).toLocaleString("en-US", {
-              weekday: "long", year: "numeric", month: "long", day: "numeric",
-              hour: "numeric", minute: "2-digit",
-            })
-          : "No due date set";
-        setReminderSubject(`New Assignment: ${formData.title}`);
-        setReminderMessage(
-          `A new assignment has been posted on PhysTutor.\n\nTitle: ${formData.title}${formData.description ? `\nDescription: ${formData.description}` : ""}\nDue: ${dueDateStr}\nPoints: ${formData.totalPoints}\n\nPlease log in to PhysTutor to view the full assignment details.`
-        );
-        setReminderOpen(true);
-        return;
-      }
-
-      // Show reminder dialog instead of immediate redirect
+      // Build email defaults
       const dueDateStr = formData.dueDate
         ? new Date(formData.dueDate).toLocaleString("en-US", {
-            weekday: "long",
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-            hour: "numeric",
-            minute: "2-digit",
+            weekday: "long", year: "numeric", month: "long", day: "numeric",
+            hour: "numeric", minute: "2-digit",
           })
         : "No due date set";
       setReminderSubject(`New Assignment: ${formData.title}`);
@@ -127,7 +97,13 @@ export default function CreateAssignmentPage() {
         `A new assignment has been posted on PhysTutor.\n\nTitle: ${formData.title}${formData.description ? `\nDescription: ${formData.description}` : ""}\nDue: ${dueDateStr}\nPoints: ${formData.totalPoints}\n\nPlease log in to PhysTutor to view the full assignment details.`
       );
 
-      setIsScheduleMode(false);
+      if (schedule) {
+        toast.success(`Assignment scheduled for ${new Date(scheduledPublishAt).toLocaleString()}`);
+        setIsScheduleMode(true);
+      } else {
+        setIsScheduleMode(false);
+      }
+
       setReminderOpen(true);
     } catch (err) {
       console.error("Create assignment error:", err);
@@ -291,7 +267,7 @@ export default function CreateAssignmentPage() {
               disabled={loading || exportingLatex || !titleValid}
             >
               {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              Publish Now
+              Publish
             </Button>
           </div>
         )}
@@ -306,11 +282,35 @@ export default function CreateAssignmentPage() {
         enableScheduling={isScheduleMode}
         defaultScheduledAt={isScheduleMode ? scheduledPublishAt : undefined}
         assignmentId={isScheduleMode && createdAssignmentId ? createdAssignmentId : undefined}
-        onSkip={() => {
+        dialogTitle={isScheduleMode ? "Notify Users" : "Publish & Notify"}
+        dialogDescription={isScheduleMode
+          ? "Send an email notification to selected users. Filter by role or select individually."
+          : "The assignment will be published when you confirm. Optionally send an email notification."
+        }
+        sendButtonLabel={isScheduleMode ? "Schedule Email" : "Confirm Publish"}
+        onSkip={async () => {
+          // For publish mode, publish the assignment on skip (without email)
+          if (!isScheduleMode && createdAssignmentId) {
+            await fetch(`/api/assignments/${createdAssignmentId}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ published: true }),
+            });
+          }
           const target = createdAssignmentId ? `/assignments/${createdAssignmentId}` : "/assignments";
           router.push(target);
           router.refresh();
         }}
+        onBeforeSend={!isScheduleMode ? async () => {
+          // For publish mode, publish the assignment before sending email
+          if (createdAssignmentId) {
+            await fetch(`/api/assignments/${createdAssignmentId}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ published: true }),
+            });
+          }
+        } : undefined}
         onSent={() => {
           const target = createdAssignmentId ? `/assignments/${createdAssignmentId}` : "/assignments";
           router.push(target);
