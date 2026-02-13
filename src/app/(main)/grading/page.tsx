@@ -521,7 +521,7 @@ export default function GradingPage() {
             <SelectValue placeholder="Select an assignment to grade" />
           </SelectTrigger>
           <SelectContent>
-            {assignments.map((a) => (
+            {assignments.filter((a) => a.submissionCount > 0).map((a) => (
               <SelectItem key={a.id} value={a.id}>
                 {a.title} ({a.submissionCount} submissions)
               </SelectItem>
