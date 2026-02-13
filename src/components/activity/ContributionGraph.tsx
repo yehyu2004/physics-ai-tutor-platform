@@ -44,13 +44,14 @@ export default function ContributionGraph({ data, selectedDate, onSelectDate }: 
     }
 
     // Build weeks grid (columns = weeks, rows = days 0-6 Sun-Sat)
+    // Use UTC methods to match server's toISOString()-based date keys
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const dayOfWeek = today.getDay(); // 0=Sun
+    today.setUTCHours(0, 0, 0, 0);
+    const dayOfWeek = today.getUTCDay(); // 0=Sun
 
     // Start from the Sunday of 52 weeks ago
     const startDate = new Date(today);
-    startDate.setDate(startDate.getDate() - (52 * 7 + dayOfWeek));
+    startDate.setUTCDate(startDate.getUTCDate() - (52 * 7 + dayOfWeek));
 
     const weeksArr: DayData[][] = [];
     const labels: { month: string; weekIndex: number }[] = [];
@@ -66,13 +67,13 @@ export default function ContributionGraph({ data, selectedDate, onSelectDate }: 
           break;
         }
         const key = currentDate.toISOString().split("T")[0];
-        const month = currentDate.getMonth();
+        const month = currentDate.getUTCMonth();
         if (month !== lastMonth) {
           labels.push({ month: MONTHS[month], weekIndex });
           lastMonth = month;
         }
         week.push({ date: key, count: map.get(key) || 0 });
-        currentDate.setDate(currentDate.getDate() + 1);
+        currentDate.setUTCDate(currentDate.getUTCDate() + 1);
       }
       weeksArr.push(week);
       weekIndex++;
@@ -95,7 +96,7 @@ export default function ContributionGraph({ data, selectedDate, onSelectDate }: 
         longest = Math.max(longest, streak);
         streak = 0;
       }
-      tempDate.setDate(tempDate.getDate() - 1);
+      tempDate.setUTCDate(tempDate.getUTCDate() - 1);
     }
     longest = Math.max(longest, streak);
 

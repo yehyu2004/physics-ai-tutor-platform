@@ -19,10 +19,10 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const filter = searchParams.get("filter"); // "all" | "chat" | "simulation" | "submission" | "other"
 
-    // Get activities from the past 365 days
+    // Get activities from the past 365 days (use UTC to match toISOString keys)
     const yearAgo = new Date();
-    yearAgo.setFullYear(yearAgo.getFullYear() - 1);
-    yearAgo.setHours(0, 0, 0, 0);
+    yearAgo.setUTCFullYear(yearAgo.getUTCFullYear() - 1);
+    yearAgo.setUTCHours(0, 0, 0, 0);
 
     // Build category filter
     const whereCategory: Record<string, unknown> = {};
@@ -51,9 +51,9 @@ export async function GET(req: Request) {
       countsByDate[key] = (countsByDate[key] || 0) + 1;
     }
 
-    // Build full 365-day array
+    // Build full 365-day array (use UTC to match toISOString keys)
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    today.setUTCHours(0, 0, 0, 0);
     const data: { date: string; count: number }[] = [];
 
     for (let i = 364; i >= 0; i--) {
