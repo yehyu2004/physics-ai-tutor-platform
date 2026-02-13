@@ -165,7 +165,7 @@ export default function AssignmentDetailPage({
   const userRole = effectiveSession.role;
 
   // Auto-save for quiz drafts
-  const isQuizInProgress = assignment?.type === "QUIZ" && (!existingSubmission || existingSubmission.isDraft === true) && !submitted;
+  const isQuizInProgress = assignment?.type === "QUIZ" && (!existingSubmission || existingSubmission.isDraft === true) && !submitted && userRole === "STUDENT";
 
   const saveDraft = useCallback(async (data: Record<string, string>) => {
     if (!assignment) return;
@@ -658,7 +658,7 @@ export default function AssignmentDetailPage({
         </Card>
       )}
 
-      {assignment.type === "QUIZ" && (!existingSubmission || existingSubmission.isDraft) && (
+      {assignment.type === "QUIZ" && (!existingSubmission || existingSubmission.isDraft) && userRole === "STUDENT" && (
         <div className="space-y-4">
           {assignment.questions.map((q, index) => (
             <Card key={q.id}>
@@ -772,7 +772,7 @@ export default function AssignmentDetailPage({
         </div>
       )}
 
-      {assignment.type === "QUIZ" && (!existingSubmission || existingSubmission.isDraft) && (
+      {assignment.type === "QUIZ" && (!existingSubmission || existingSubmission.isDraft) && userRole === "STUDENT" && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Attach Your Work (Optional)</CardTitle>
@@ -1198,7 +1198,7 @@ export default function AssignmentDetailPage({
         </Card>
       )}
 
-      {assignment.type === "FILE_UPLOAD" && (!existingSubmission || existingSubmission.isDraft) && (
+      {assignment.type === "FILE_UPLOAD" && (!existingSubmission || existingSubmission.isDraft) && userRole === "STUDENT" && (
         <Card>
           <CardHeader>
             <CardTitle>Upload Your Submission</CardTitle>
@@ -1233,7 +1233,7 @@ export default function AssignmentDetailPage({
         </Card>
       )}
 
-      {(!existingSubmission || existingSubmission.isDraft) && (
+      {(!existingSubmission || existingSubmission.isDraft) && userRole === "STUDENT" && (
         <div className="space-y-3 pb-8">
           {assignment.lockAfterSubmit && (
             <div className="flex items-center gap-2 px-4 py-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg">
