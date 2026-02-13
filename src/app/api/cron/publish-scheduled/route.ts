@@ -1,23 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { sendEmail } from "@/lib/email";
+import { verifyCronAuth, sendBulkEmails, publishAssignment } from "@/lib/services/email-service";
 import { assignmentPublishedEmail } from "@/lib/email-templates";
 
 export async function GET(req: Request) {
   try {
-    // Verify cron secret (Vercel sends this as Authorization: Bearer <secret>)
-    const authHeader = req.headers.get("authorization");
-    const cronSecret = process.env.CRON_SECRET;
+    const authError = verifyCronAuth(req);
+    if (authError) return authError;
 
-    if (!cronSecret) {
-      console.error("CRON_SECRET environment variable is not configured");
-      return NextResponse.json({ error: "CRON_SECRET not configured" }, { status: 500 });
-    }
-    if (authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Find all assignments ready to publish
+    // Find all assignments ready to publish.
     // Skip assignments that have a PENDING scheduled email — those will be
     // published by the send-scheduled-emails cron after the email goes out.
     const now = new Date();
@@ -43,17 +34,8 @@ export async function GET(req: Request) {
 
     for (const assignment of assignments) {
       try {
-        // Publish the assignment (use WHERE published=false to prevent double-publish)
-        const updated = await prisma.assignment.updateMany({
-          where: { id: assignment.id, published: false },
-          data: {
-            published: true,
-            publishedById: assignment.createdById,
-            scheduledPublishAt: null,
-          },
-        });
-
-        if (updated.count === 0) continue; // Already published by another process
+        const pubResult = await publishAssignment(assignment.id, assignment.createdById);
+        if (!pubResult.published) continue; // Already published by another process
         publishedCount++;
 
         // Audit log
@@ -74,42 +56,36 @@ export async function GET(req: Request) {
         if (assignment.notifyOnPublish) {
           try {
             const students = await prisma.user.findMany({
-              where: { role: "STUDENT", isBanned: false, isDeleted: false },
-              select: { id: true, name: true, email: true },
+              where: { role: "STUDENT", isBanned: false },
+              select: { id: true },
             });
 
             if (students.length > 0) {
               const dueDateStr = assignment.dueDate
                 ? new Date(assignment.dueDate).toLocaleString("en-US", {
-                    weekday: "long",
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                    hour: "numeric",
-                    minute: "2-digit",
+                    weekday: "long", year: "numeric", month: "long",
+                    day: "numeric", hour: "numeric", minute: "2-digit",
                   })
                 : "No due date set";
 
               const senderName = assignment.createdBy.name || "Staff";
 
-              await Promise.allSettled(
-                students.map((student) => {
-                  const html = assignmentPublishedEmail({
-                    studentName: student.name || "Student",
+              // Use shared sendBulkEmails with custom htmlBuilder for assignment template
+              await sendBulkEmails({
+                recipientIds: students.map((s) => s.id),
+                subject: `New Assignment: ${assignment.title}`,
+                message: "", // not used — htmlBuilder overrides
+                senderName,
+                htmlBuilder: (user) =>
+                  assignmentPublishedEmail({
+                    studentName: user.name || "Student",
                     assignmentTitle: assignment.title,
                     assignmentDescription: assignment.description,
                     dueDateStr,
                     totalPoints: assignment.totalPoints,
                     senderName,
-                  });
-
-                  return sendEmail({
-                    to: student.email,
-                    subject: `New Assignment: ${assignment.title}`,
-                    html,
-                  });
-                })
-              );
+                  }),
+              });
 
               // Create in-app notification
               await prisma.notification.create({
@@ -124,7 +100,6 @@ export async function GET(req: Request) {
           } catch (notifyError) {
             console.error(`Failed to send notifications for assignment ${assignment.id}:`, notifyError);
             errors.push(`Notification failed for "${assignment.title}": ${String(notifyError)}`);
-            // Don't block — assignment is already published
           }
         }
       } catch (publishError) {

@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { sendEmail } from "@/lib/email";
 import { requireApiRole, isErrorResponse } from "@/lib/api-auth";
-import { notificationEmail } from "@/lib/email-templates";
+import { sendBulkEmails } from "@/lib/services/email-service";
 
 export async function POST(req: Request) {
   try {
@@ -38,7 +37,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // Limit bulk email recipients to prevent spam
     const MAX_RECIPIENTS = 200;
     if (userIds.length > MAX_RECIPIENTS) {
       return NextResponse.json(
@@ -47,38 +45,16 @@ export async function POST(req: Request) {
       );
     }
 
-    const targetUsers = await prisma.user.findMany({
-      where: { id: { in: userIds }, isDeleted: false },
-      select: { id: true, name: true, email: true },
+    const result = await sendBulkEmails({
+      recipientIds: userIds,
+      subject: subject.trim(),
+      message: message.trim(),
+      senderName,
     });
 
-    if (targetUsers.length === 0) {
-      return NextResponse.json(
-        { error: "No valid recipients found" },
-        { status: 404 }
-      );
+    if (result.recipients.length === 0) {
+      return NextResponse.json({ error: "No valid recipients found" }, { status: 404 });
     }
-
-    const results = await Promise.allSettled(
-      targetUsers.map((user) => {
-        const html = notificationEmail({
-          userName: user.name || "Student",
-          message: message.trim(),
-          senderName,
-        });
-        return sendEmail({
-          to: user.email,
-          subject: subject.trim(),
-          html,
-        });
-      })
-    );
-
-    const sentCount = results.filter((r) => r.status === "fulfilled").length;
-    const failedCount = results.filter((r) => r.status === "rejected").length;
-    const errors = results
-      .filter((r): r is PromiseRejectedResult => r.status === "rejected")
-      .map((r) => String(r.reason?.message || r.reason));
 
     await prisma.auditLog.create({
       data: {
@@ -87,22 +63,24 @@ export async function POST(req: Request) {
         details: {
           performedBy: senderId,
           performedByName: senderName,
-          recipientIds: targetUsers.map((u) => u.id),
-          recipientCount: targetUsers.length,
+          recipientIds: result.recipients.map((u) => u.id),
+          recipientCount: result.recipients.length,
           subject: subject.trim(),
           message: message.trim(),
-          sentCount,
-          failedCount,
+          sentCount: result.sentCount,
+          failedCount: result.failedCount,
         },
       },
     });
 
-    return NextResponse.json({ success: true, sentCount, failedCount, ...(errors.length > 0 && { errors }) });
+    return NextResponse.json({
+      success: true,
+      sentCount: result.sentCount,
+      failedCount: result.failedCount,
+      ...(result.errors.length > 0 && { errors: result.errors }),
+    });
   } catch (error) {
     console.error("Bulk email error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

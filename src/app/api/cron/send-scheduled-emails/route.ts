@@ -1,21 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { sendEmail } from "@/lib/email";
-import { notificationEmail } from "@/lib/email-templates";
+import { verifyCronAuth, sendBulkEmails, publishAssignment } from "@/lib/services/email-service";
 
 export async function GET(req: Request) {
   try {
-    // Verify cron secret
-    const authHeader = req.headers.get("authorization");
-    const cronSecret = process.env.CRON_SECRET;
-
-    if (!cronSecret) {
-      console.error("CRON_SECRET environment variable is not configured");
-      return NextResponse.json({ error: "CRON_SECRET not configured" }, { status: 500 });
-    }
-    if (authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authError = verifyCronAuth(req);
+    if (authError) return authError;
 
     const now = new Date();
 
@@ -43,13 +33,15 @@ export async function GET(req: Request) {
         const recipientIds = scheduled.recipientIds as string[];
         const senderName = scheduled.createdBy.name || "Staff";
 
-        // Fetch recipient users
-        const recipients = await prisma.user.findMany({
-          where: { id: { in: recipientIds }, isDeleted: false },
-          select: { id: true, name: true, email: true },
+        // Send emails via shared service
+        const result = await sendBulkEmails({
+          recipientIds,
+          subject: scheduled.subject,
+          message: scheduled.message,
+          senderName,
         });
 
-        if (recipients.length === 0) {
+        if (result.recipients.length === 0) {
           await prisma.scheduledEmail.update({
             where: { id: scheduled.id },
             data: { status: "FAILED", error: "No valid recipients found" },
@@ -57,25 +49,6 @@ export async function GET(req: Request) {
           errors.push(`No recipients for "${scheduled.subject}"`);
           continue;
         }
-
-        // Send emails
-        const results = await Promise.allSettled(
-          recipients.map((user) => {
-            const html = notificationEmail({
-              userName: user.name || "Student",
-              message: scheduled.message,
-              senderName,
-            });
-            return sendEmail({
-              to: user.email,
-              subject: scheduled.subject,
-              html,
-            });
-          })
-        );
-
-        const sentCount = results.filter((r) => r.status === "fulfilled").length;
-        const failedCount = results.filter((r) => r.status === "rejected").length;
 
         // Create in-app notification if flagged
         if (scheduled.createNotification) {
@@ -95,7 +68,9 @@ export async function GET(req: Request) {
           data: {
             status: "SENT",
             sentAt: new Date(),
-            error: failedCount > 0 ? `${failedCount} of ${recipients.length} emails failed` : null,
+            error: result.failedCount > 0
+              ? `${result.failedCount} of ${result.recipients.length} emails failed`
+              : null,
           },
         });
 
@@ -107,9 +82,9 @@ export async function GET(req: Request) {
             details: {
               scheduledEmailId: scheduled.id,
               subject: scheduled.subject,
-              recipientCount: recipients.length,
-              sentCount,
-              failedCount,
+              recipientCount: result.recipients.length,
+              sentCount: result.sentCount,
+              failedCount: result.failedCount,
               createNotification: scheduled.createNotification,
             },
           },
@@ -118,30 +93,28 @@ export async function GET(req: Request) {
         // Publish linked assignment after email is sent
         if (scheduled.assignment && !scheduled.assignment.published) {
           try {
-            await prisma.assignment.updateMany({
-              where: { id: scheduled.assignment.id, published: false },
-              data: {
-                published: true,
-                publishedById: scheduled.assignment.createdById,
-                scheduledPublishAt: null,
-              },
-            });
+            const pubResult = await publishAssignment(
+              scheduled.assignment.id,
+              scheduled.assignment.createdById
+            );
 
-            await prisma.auditLog.create({
-              data: {
-                userId: scheduled.assignment.createdById,
-                action: "scheduled_publish",
-                details: {
-                  assignmentId: scheduled.assignment.id,
-                  assignmentTitle: scheduled.assignment.title,
-                  triggeredBy: "scheduled_email",
-                  scheduledEmailId: scheduled.id,
-                  publishedAt: new Date().toISOString(),
+            if (pubResult.published) {
+              await prisma.auditLog.create({
+                data: {
+                  userId: scheduled.assignment.createdById,
+                  action: "scheduled_publish",
+                  details: {
+                    assignmentId: scheduled.assignment.id,
+                    assignmentTitle: scheduled.assignment.title,
+                    triggeredBy: "scheduled_email",
+                    scheduledEmailId: scheduled.id,
+                    publishedAt: new Date().toISOString(),
+                  },
                 },
-              },
-            });
+              });
 
-            console.log(`[cron] Published assignment "${scheduled.assignment.title}" after sending scheduled email`);
+              console.log(`[cron] Published assignment "${scheduled.assignment.title}" after sending scheduled email`);
+            }
           } catch (publishError) {
             console.error(`[cron] Failed to publish assignment ${scheduled.assignment.id} after email:`, publishError);
           }
