@@ -32,6 +32,11 @@ export async function GET(req: Request) {
       whereClause.submissions = { some: { isDraft: false } };
     }
 
+    const search = searchParams.get("search")?.trim();
+    if (search) {
+      whereClause.title = { contains: search, mode: "insensitive" };
+    }
+
     const totalCount = await prisma.assignment.count({ where: whereClause });
 
     const assignments = await prisma.assignment.findMany({

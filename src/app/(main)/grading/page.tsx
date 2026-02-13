@@ -20,6 +20,7 @@ import {
   ShieldAlert,
   Send,
   XCircle,
+  Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -111,6 +112,9 @@ export default function GradingPage() {
   const [assignmentPageSize, setAssignmentPageSize] = useState(10);
   const [assignmentTotalCount, setAssignmentTotalCount] = useState(0);
   const assignmentTotalPages = Math.max(1, Math.ceil(assignmentTotalCount / assignmentPageSize));
+  const [assignmentSearch, setAssignmentSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<string>(initialAssignmentId || "");
   const [assignmentInfo, setAssignmentInfo] = useState<AssignmentInfo | null>(null);
   const [submissions, setSubmissions] = useState<SubmissionForGrading[]>([]);
@@ -211,10 +215,11 @@ export default function GradingPage() {
     }
   }, []);
 
-  // Fetch assignment list with pagination
-  const fetchAssignmentList = useCallback((p?: number, ps?: number) => {
+  // Fetch assignment list with pagination and search
+  const fetchAssignmentList = useCallback((p?: number, ps?: number, q?: string) => {
     setLoading(true);
     const params = new URLSearchParams({ filter: "published", page: String(p ?? 1), pageSize: String(ps ?? 10) });
+    if (q) params.set("search", q);
     fetch(`/api/assignments?${params}`)
       .then((res) => res.json())
       .then((data) => {
@@ -235,9 +240,16 @@ export default function GradingPage() {
       .catch(() => setLoading(false));
   }, []);
 
+  // Debounce search input
   useEffect(() => {
-    fetchAssignmentList(assignmentPage, assignmentPageSize);
-  }, [fetchAssignmentList, assignmentPage, assignmentPageSize]);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => setDebouncedSearch(assignmentSearch), 300);
+    return () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current); };
+  }, [assignmentSearch]);
+
+  useEffect(() => {
+    fetchAssignmentList(assignmentPage, assignmentPageSize, debouncedSearch);
+  }, [fetchAssignmentList, assignmentPage, assignmentPageSize, debouncedSearch]);
 
   const fetchSubmissions = useCallback((assignmentId: string) => {
     if (!assignmentId) return;
@@ -533,6 +545,15 @@ export default function GradingPage() {
 
       {/* Assignment Selector */}
       <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        <div className="relative w-full sm:w-64">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Search assignments..."
+            value={assignmentSearch}
+            onChange={(e) => { setAssignmentSearch(e.target.value); setAssignmentPage(1); }}
+            className="pl-9 h-9"
+          />
+        </div>
         <Select value={selectedAssignmentId} onValueChange={setSelectedAssignmentId}>
           <SelectTrigger className="w-full sm:w-80">
             <SelectValue placeholder="Select an assignment to grade" />
