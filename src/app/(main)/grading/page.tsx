@@ -145,16 +145,26 @@ export default function GradingPage() {
   const prevSubmissionIdRef = useRef<string | null>(null);
 
   // localStorage helpers for grading drafts
-  const getLocalStorageKey = (submissionId: string) => `grading-draft-${submissionId}`;
-  const getConfirmedKey = (submissionId: string) => `grading-confirmed-${submissionId}`;
+  const getLocalStorageKey = (submissionId: string) => `grading-state-${submissionId}`;
 
-  const saveToLocalStorage = useCallback((submissionId: string, g: Record<string, { score: number; feedback: string }>) => {
+  const saveAllToLocalStorage = useCallback(() => {
+    if (!selectedSubmission) return;
     try {
-      localStorage.setItem(getLocalStorageKey(submissionId), JSON.stringify(g));
+      localStorage.setItem(getLocalStorageKey(selectedSubmission.id), JSON.stringify({
+        grades,
+        confirmedAnswers: Array.from(confirmedAnswers),
+        overallGradeConfirmed,
+        overallScore,
+        overallFeedback,
+        feedbackImages,
+        feedbackFileUrl,
+        gradingMode,
+      }));
     } catch { /* quota exceeded or similar */ }
-  }, []);
+  }, [selectedSubmission, grades, confirmedAnswers, overallGradeConfirmed, overallScore, overallFeedback, feedbackImages, feedbackFileUrl, gradingMode]);
 
-  const loadFromLocalStorage = useCallback((submissionId: string): Record<string, { score: number; feedback: string }> | null => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const loadAllFromLocalStorage = useCallback((submissionId: string): any | null => {
     try {
       const data = localStorage.getItem(getLocalStorageKey(submissionId));
       if (data) return JSON.parse(data);
@@ -168,22 +178,11 @@ export default function GradingPage() {
     } catch { /* ignore */ }
   }, []);
 
-  // Save grades to localStorage on every change
-  useEffect(() => {
-    if (!selectedSubmission || Object.keys(grades).length === 0) return;
-    saveToLocalStorage(selectedSubmission.id, grades);
-  }, [grades, selectedSubmission, saveToLocalStorage]);
-
-  // Save confirmed state to localStorage on every change
+  // Save all grading state to localStorage on every change
   useEffect(() => {
     if (!selectedSubmission) return;
-    try {
-      localStorage.setItem(getConfirmedKey(selectedSubmission.id), JSON.stringify({
-        confirmedAnswers: Array.from(confirmedAnswers),
-        overallGradeConfirmed,
-      }));
-    } catch { /* ignore */ }
-  }, [confirmedAnswers, overallGradeConfirmed, selectedSubmission]);
+    saveAllToLocalStorage();
+  }, [selectedSubmission, saveAllToLocalStorage]);
 
   // Server auto-save for grading drafts (5-second debounce)
   const saveGradingDraft = useCallback(async (data: Record<string, { score: number; feedback: string }>) => {
@@ -209,7 +208,7 @@ export default function GradingPage() {
     data: grades,
     saveFn: saveGradingDraft,
     delayMs: 5000,
-    enabled: !!selectedSubmission && gradingMode === "per-question",
+    enabled: !!selectedSubmission,
   });
 
   const handleUploadImage = useCallback(async (file: File): Promise<string | null> => {
@@ -288,32 +287,18 @@ export default function GradingPage() {
 
     setSelectedSubmission(sub);
     setFeedbackFile(null);
-    setFeedbackFileUrl(null);
     setGradingDraftRestored(false);
-    // Restore confirmed state from localStorage, or start all unchecked
-    try {
-      const savedConfirmed = localStorage.getItem(getConfirmedKey(sub.id));
-      if (savedConfirmed) {
-        const parsed = JSON.parse(savedConfirmed);
-        setConfirmedAnswers(new Set(parsed.confirmedAnswers || []));
-        setOverallGradeConfirmed(parsed.overallGradeConfirmed || false);
-      } else {
-        setConfirmedAnswers(new Set());
-      }
-    } catch {
-      setConfirmedAnswers(new Set());
-    }
 
-    // Try to restore from localStorage
-    const savedDraft = loadFromLocalStorage(sub.id);
-    const initialGrades: Record<string, { score: number; feedback: string }> = {};
+    // Try to restore all state from localStorage
+    const saved = loadAllFromLocalStorage(sub.id);
     let restored = false;
 
+    // Grades
+    const initialGrades: Record<string, { score: number; feedback: string }> = {};
     sub.answers.forEach((a) => {
-      if (savedDraft?.[a.id]) {
-        initialGrades[a.id] = savedDraft[a.id];
-        // Check if localStorage draft differs from server state
-        if (savedDraft[a.id].score !== (a.score || 0) || savedDraft[a.id].feedback !== (a.feedback || "")) {
+      if (saved?.grades?.[a.id]) {
+        initialGrades[a.id] = saved.grades[a.id];
+        if (saved.grades[a.id].score !== (a.score || 0) || saved.grades[a.id].feedback !== (a.feedback || "")) {
           restored = true;
         }
       } else {
@@ -323,23 +308,37 @@ export default function GradingPage() {
         };
       }
     });
-
     setGrades(initialGrades);
     if (restored) setGradingDraftRestored(true);
 
-    // Pre-populate feedback images from loaded data
-    const loadedFeedbackImages: Record<string, string[]> = {};
-    sub.answers.forEach((a) => {
-      if (a.feedbackImageUrls && a.feedbackImageUrls.length > 0) {
-        loadedFeedbackImages[a.id] = a.feedbackImageUrls;
-      }
-    });
-    setFeedbackImages(loadedFeedbackImages);
+    // Confirmed answers
+    setConfirmedAnswers(new Set(saved?.confirmedAnswers || []));
+    setOverallGradeConfirmed(saved?.overallGradeConfirmed || false);
 
-    setOverallScore(sub.totalScore || 0);
-    setOverallFeedback("");
-    // Auto-select grading mode
-    if (sub.answers.length === 0 || assignmentInfo?.type === "FILE_UPLOAD") {
+    // Overall score & feedback
+    setOverallScore(saved?.overallScore ?? sub.totalScore ?? 0);
+    setOverallFeedback(saved?.overallFeedback ?? "");
+
+    // Feedback images: prefer localStorage, fall back to server data
+    if (saved?.feedbackImages && Object.keys(saved.feedbackImages).length > 0) {
+      setFeedbackImages(saved.feedbackImages);
+    } else {
+      const loadedFeedbackImages: Record<string, string[]> = {};
+      sub.answers.forEach((a) => {
+        if (a.feedbackImageUrls && a.feedbackImageUrls.length > 0) {
+          loadedFeedbackImages[a.id] = a.feedbackImageUrls;
+        }
+      });
+      setFeedbackImages(loadedFeedbackImages);
+    }
+
+    // Feedback file URL
+    setFeedbackFileUrl(saved?.feedbackFileUrl ?? null);
+
+    // Grading mode: prefer saved, fall back to auto-detect
+    if (saved?.gradingMode) {
+      setGradingMode(saved.gradingMode);
+    } else if (sub.answers.length === 0 || assignmentInfo?.type === "FILE_UPLOAD") {
       setGradingMode("overall");
     } else {
       const allAutoGraded = sub.answers.every((a) => a.autoGraded);
