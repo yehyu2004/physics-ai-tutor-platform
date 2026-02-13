@@ -57,6 +57,8 @@ model User {
   gradeAppeals    GradeAppeal[]    @relation("AppealStudent")
   appealMessages  AppealMessage[]  @relation("AppealMessageAuthor")
   activities      UserActivity[]
+  createdEmailTemplates  EmailTemplate[]
+  createdScheduledEmails ScheduledEmail[]
 }
 
 model Account {
@@ -150,6 +152,8 @@ model Assignment {
   pdfUrl           String?
   createdById      String
   publishedById    String?
+  scheduledPublishAt DateTime?
+  notifyOnPublish    Boolean   @default(false)
 
   course      Course?        @relation(fields: [courseId], references: [id])
   createdBy   User           @relation("CreatedBy", fields: [createdById], references: [id])
@@ -356,4 +360,47 @@ model UserActivity {
 
   @@index([userId, createdAt])
   @@index([userId, category, createdAt])
+}
+
+model EmailTemplate {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  subject     String
+  message     String   @db.Text
+  category    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String
+
+  createdBy User @relation(fields: [createdById], references: [id])
+
+  @@index([category])
+}
+
+enum ScheduledEmailStatus {
+  PENDING
+  SENT
+  CANCELLED
+  FAILED
+}
+
+model ScheduledEmail {
+  id                 String               @id @default(cuid())
+  subject            String
+  message            String               @db.Text
+  recipientIds       String[]
+  status             ScheduledEmailStatus @default(PENDING)
+  scheduledAt        DateTime
+  sentAt             DateTime?
+  cancelledAt        DateTime?
+  error              String?              @db.Text
+  createNotification Boolean              @default(false)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  createdById        String
+
+  createdBy User @relation(fields: [createdById], references: [id])
+
+  @@index([status, scheduledAt])
+  @@index([createdById])
 }
