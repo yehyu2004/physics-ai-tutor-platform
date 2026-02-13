@@ -1129,7 +1129,12 @@ export default function AssignmentDetailPage({
         <DialogContent className="sm:max-w-[440px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              {publishDialogAction === "publish" ? (
+              {scheduleActive ? (
+                <>
+                  <CalendarClock className="h-5 w-5 text-blue-500" />
+                  Schedule Publish
+                </>
+              ) : publishDialogAction === "publish" ? (
                 <>
                   <Eye className="h-5 w-5 text-indigo-500" />
                   Publish Assignment
@@ -1142,69 +1147,46 @@ export default function AssignmentDetailPage({
               )}
             </DialogTitle>
             <DialogDescription>
-              {publishDialogAction === "publish"
-                ? "Publish now or schedule for later. You can notify users after publishing."
-                : "Unpublishing will hide this assignment from students."}
+              {scheduleActive
+                ? "Set a date and time to auto-publish this assignment."
+                : publishDialogAction === "publish"
+                  ? "This will make the assignment visible to students immediately."
+                  : "Unpublishing will hide this assignment from students."}
             </DialogDescription>
           </DialogHeader>
 
-          {publishDialogAction === "publish" && (
+          {scheduleActive && (
             <div className="space-y-4 py-1">
-              {/* Schedule toggle */}
-              <label className="flex items-center gap-2 cursor-pointer">
+              <div className="space-y-2">
+                <Label>Publish Date & Time</Label>
+                <Input
+                  type="datetime-local"
+                  value={scheduleDate}
+                  onChange={(e) => setScheduleDate(e.target.value)}
+                  min={new Date(Date.now() + 60000).toISOString().slice(0, 16)}
+                  lang="en-US"
+                />
+                {scheduleDate && (
+                  <p className="text-xs text-blue-600 dark:text-blue-400">
+                    Will auto-publish on {new Date(scheduleDate).toLocaleString("en-US", {
+                      weekday: "long", year: "numeric", month: "long", day: "numeric",
+                      hour: "numeric", minute: "2-digit",
+                    })}
+                  </p>
+                )}
+              </div>
+              <label className="flex items-center gap-3 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={scheduleActive}
-                  onChange={(e) => {
-                    setScheduleActive(e.target.checked);
-                    if (!e.target.checked) {
-                      setScheduleDate("");
-                      setScheduleNotify(false);
-                    }
-                  }}
+                  checked={scheduleNotify}
+                  onChange={(e) => setScheduleNotify(e.target.checked)}
                   className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800"
                 />
-                <div className="flex items-center gap-1.5">
-                  <CalendarClock className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Schedule for later</span>
+                <div>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Notify students on publish</span>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Send email when the assignment goes live.</p>
                 </div>
               </label>
-
-              {/* Schedule fields */}
-              {scheduleActive && (
-                <>
-                  <div className="space-y-2">
-                    <Label>Publish Date & Time</Label>
-                    <Input
-                      type="datetime-local"
-                      value={scheduleDate}
-                      onChange={(e) => setScheduleDate(e.target.value)}
-                      min={new Date(Date.now() + 60000).toISOString().slice(0, 16)}
-                      lang="en-US"
-                    />
-                    {scheduleDate && (
-                      <p className="text-xs text-blue-600 dark:text-blue-400">
-                        Will auto-publish on {new Date(scheduleDate).toLocaleString("en-US", {
-                          weekday: "long", year: "numeric", month: "long", day: "numeric",
-                          hour: "numeric", minute: "2-digit",
-                        })}
-                      </p>
-                    )}
-                  </div>
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={scheduleNotify}
-                      onChange={(e) => setScheduleNotify(e.target.checked)}
-                      className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800"
-                    />
-                    <div>
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Notify students on publish</span>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Send email when the assignment goes live.</p>
-                    </div>
-                  </label>
-                </>
-              )}
             </div>
           )}
 
@@ -1212,7 +1194,7 @@ export default function AssignmentDetailPage({
             <Button variant="outline" onClick={() => { setPublishDialogOpen(false); setScheduleActive(false); setScheduleDate(""); setScheduleNotify(false); }} disabled={publishing || scheduling}>
               Cancel
             </Button>
-            {publishDialogAction === "publish" && scheduleActive ? (
+            {scheduleActive ? (
               <Button
                 disabled={scheduling || !scheduleDate}
                 onClick={async () => {
