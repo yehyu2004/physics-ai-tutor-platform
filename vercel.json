@@ -1,20 +1,10 @@
 {
-  "buildCommand": "prisma generate && prisma db push --accept-data-loss && next build",
+  "buildCommand": "prisma generate && prisma migrate deploy && next build",
   "framework": "nextjs",
   "build": {
     "env": {
       "NODE_OPTIONS": "--max-old-space-size=4096",
       "NEXT_TELEMETRY_DISABLED": "1"
     }
-  },
-  "crons": [
-    {
-      "path": "/api/cron/publish-scheduled",
-      "schedule": "*/5 * * * *"
-    },
-    {
-      "path": "/api/cron/send-scheduled-emails",
-      "schedule": "*/5 * * * *"
-    }
-  ]
+  }
 }

@@ -838,7 +838,21 @@ const prisma = new PrismaClient({
 
 Never run cleanup/maintenance on a random percentage of requests (e.g., `if (Math.random() > 0.01) return`). This causes unpredictable latency spikes for unlucky users and unreliable cleanup.
 
-**✅ Use cron jobs** (Vercel cron, `vercel.json`) for all scheduled maintenance: old record cleanup, stale session purging, etc.
+**✅ Use cron jobs** for all scheduled maintenance: old record cleanup, stale session purging, etc.
+
+**Cron provider:** We use [cron-job.org](https://cron-job.org) (free) instead of Vercel crons (Hobby plan only supports daily). Cron-job.org calls our `/api/cron/*` endpoints via HTTP GET with `Authorization: Bearer <CRON_SECRET>` header. Supports per-minute intervals.
+
+**Setup:** Create jobs at https://console.cron-job.org with:
+- **URL:** `https://<your-vercel-domain>/api/cron/<job-name>`
+- **Schedule:** Every 5 minutes (or as needed)
+- **Headers:** `Authorization: Bearer <CRON_SECRET>`
+- **Method:** GET
+
+Current cron jobs:
+| Endpoint | Recommended schedule |
+|---|---|
+| `/api/cron/publish-scheduled` | Every 5 minutes |
+| `/api/cron/send-scheduled-emails` | Every 5 minutes |
 
 #### 8.4 Stream-Friendly File Uploads
 
@@ -1080,7 +1094,7 @@ All email/notification sending through `NotifyUsersDialog` supports scheduling f
 - `createNotification` (`Boolean`, default `false`) — Also create in-app notification when email is sent
 - `sentAt`, `cancelledAt` (`DateTime?`), `error` (`@db.Text?`)
 
-**Cron job:** `GET /api/cron/send-scheduled-emails` runs every 5 minutes via Vercel cron (`vercel.json`). Queries `ScheduledEmail` where `status = PENDING AND scheduledAt <= now()`, sends emails, optionally creates in-app notifications, updates status, creates audit logs. Protected by `CRON_SECRET`.
+**Cron job:** `GET /api/cron/send-scheduled-emails` — called every 5 minutes via [cron-job.org](https://cron-job.org). Queries `ScheduledEmail` where `status = PENDING AND scheduledAt <= now()`, sends emails, optionally creates in-app notifications, updates status, creates audit logs. Protected by `CRON_SECRET`.
 
 **API routes:**
 - `GET /api/admin/scheduled-emails` — List all scheduled emails (staff only)
@@ -1146,7 +1160,7 @@ The Topbar notification bell (`src/components/layout/Topbar.tsx`) also uses `Not
 
 ### Scheduled Publishing
 
-Assignments can be scheduled to auto-publish at a future date/time via a Vercel cron job.
+Assignments can be scheduled to auto-publish at a future date/time via a cron job.
 
 **Schema fields** on `Assignment`:
 - `scheduledPublishAt` (`DateTime?`) — When to auto-publish (null = no schedule)
@@ -1159,7 +1173,7 @@ Assignments can be scheduled to auto-publish at a future date/time via a Vercel 
 | `false` | future date | Scheduled |
 | `true` | any / null | Published |
 
-**Cron job:** `GET /api/cron/publish-scheduled` runs every 5 minutes via Vercel cron (`vercel.json`). It queries for assignments where `scheduledPublishAt <= now() AND published = false`, publishes them, optionally sends email notifications, creates audit logs, and in-app notifications. Protected by `CRON_SECRET` env var.
+**Cron job:** `GET /api/cron/publish-scheduled` — called every 5 minutes via [cron-job.org](https://cron-job.org). It queries for assignments where `scheduledPublishAt <= now() AND published = false`, publishes them, optionally sends email notifications, creates audit logs, and in-app notifications. Protected by `CRON_SECRET` env var.
 
 **API changes:**
 - `PATCH /api/assignments/[id]` — Accepts `scheduledPublishAt` (ISO string or null) and `notifyOnPublish` (boolean). Validates future date. Clears schedule on immediate publish/unpublish.
