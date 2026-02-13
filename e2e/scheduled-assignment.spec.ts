@@ -35,6 +35,9 @@ test.describe("Scheduled Assignment", () => {
     // Should see success toast
     await expect(page.getByText("Assignment scheduled for")).toBeVisible({ timeout: 10000 });
 
+    // NotifyUsersDialog opens — skip it to proceed
+    await page.getByRole("button", { name: "Skip" }).click();
+
     // Should be redirected to the assignment detail page with scheduled badge
     await expect(page.getByText("Scheduled:")).toBeVisible({ timeout: 10000 });
 
