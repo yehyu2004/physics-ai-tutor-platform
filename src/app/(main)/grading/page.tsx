@@ -107,6 +107,10 @@ export default function GradingPage() {
   const initialAssignmentId = searchParams.get("assignmentId");
 
   const [assignments, setAssignments] = useState<AssignmentOption[]>([]);
+  const [assignmentPage, setAssignmentPage] = useState(1);
+  const [assignmentPageSize, setAssignmentPageSize] = useState(10);
+  const [assignmentTotalCount, setAssignmentTotalCount] = useState(0);
+  const assignmentTotalPages = Math.max(1, Math.ceil(assignmentTotalCount / assignmentPageSize));
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<string>(initialAssignmentId || "");
   const [assignmentInfo, setAssignmentInfo] = useState<AssignmentInfo | null>(null);
   const [submissions, setSubmissions] = useState<SubmissionForGrading[]>([]);
@@ -207,9 +211,11 @@ export default function GradingPage() {
     }
   }, []);
 
-  // Fetch assignment list
-  useEffect(() => {
-    fetch("/api/assignments?filter=published&pageSize=100")
+  // Fetch assignment list with pagination
+  const fetchAssignmentList = useCallback((p?: number, ps?: number) => {
+    setLoading(true);
+    const params = new URLSearchParams({ filter: "published", page: String(p ?? 1), pageSize: String(ps ?? 10) });
+    fetch(`/api/assignments?${params}`)
       .then((res) => res.json())
       .then((data) => {
         const list = (data.assignments || []).map((a: { id: string; title: string; type: string; totalPoints: number; ungradedCount?: number; gradedCount?: number; openAppealCount?: number; _count?: { submissions: number } }) => ({
@@ -223,10 +229,15 @@ export default function GradingPage() {
           openAppealCount: a.openAppealCount || 0,
         }));
         setAssignments(list);
+        setAssignmentTotalCount(data.totalCount ?? 0);
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    fetchAssignmentList(assignmentPage, assignmentPageSize);
+  }, [fetchAssignmentList, assignmentPage, assignmentPageSize]);
 
   const fetchSubmissions = useCallback((assignmentId: string) => {
     if (!assignmentId) return;
@@ -549,6 +560,46 @@ export default function GradingPage() {
             ))}
           </SelectContent>
         </Select>
+
+        {/* Assignment list pagination */}
+        {assignmentTotalCount > 0 && (
+          <div className="w-full flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm text-neutral-500 dark:text-neutral-400">
+              <span className="text-xs">Rows:</span>
+              <Select value={String(assignmentPageSize)} onValueChange={(v) => { setAssignmentPageSize(Number(v)); setAssignmentPage(1); }}>
+                <SelectTrigger className="w-16 h-7 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="30">30</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {assignmentTotalPages > 1 && (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setAssignmentPage((p) => Math.max(1, p - 1))}
+                  disabled={assignmentPage === 1}
+                  className="px-2.5 py-1 text-xs rounded-md border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  &lt;
+                </button>
+                <span className="text-xs text-neutral-500 dark:text-neutral-400 px-1">
+                  {assignmentPage} / {assignmentTotalPages}
+                </span>
+                <button
+                  onClick={() => setAssignmentPage((p) => Math.min(assignmentTotalPages, p + 1))}
+                  disabled={assignmentPage === assignmentTotalPages}
+                  className="px-2.5 py-1 text-xs rounded-md border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  &gt;
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {selectedAssignmentId && (
           <>
