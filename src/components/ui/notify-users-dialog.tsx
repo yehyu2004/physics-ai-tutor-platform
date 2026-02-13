@@ -11,6 +11,7 @@ import {
   CalendarClock,
   FileText,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,10 +46,10 @@ interface NotifyUsersDialogProps {
   onOpenChange: (open: boolean) => void;
   defaultSubject: string;
   defaultMessage: string;
-  onSkip?: () => void;
+  onSkip?: (scheduledAt?: string) => void | Promise<void>;
   onSent?: () => void;
-  /** Called before sending emails. Use to create a notification, etc. */
-  onBeforeSend?: (subject: string, message: string) => Promise<void>;
+  /** Called before sending emails. Use to create a notification, etc. Returns optional assignmentId. */
+  onBeforeSend?: (subject: string, message: string, scheduledAt?: string) => Promise<string | void>;
   /** Override dialog title (default: "Notify Users") */
   dialogTitle?: string;
   /** Override dialog description */
@@ -67,6 +68,8 @@ interface NotifyUsersDialogProps {
   assignmentId?: string;
   /** Called when a scheduled email is created successfully */
   onScheduled?: () => void;
+  /** Schedule publish mode: shows datetime picker, always schedules email+notification */
+  schedulePublishMode?: boolean;
 }
 
 const ROLES = ["STUDENT", "TA", "PROFESSOR", "ADMIN"] as const;
@@ -100,6 +103,7 @@ export function NotifyUsersDialog({
   defaultScheduledAt,
   assignmentId,
   onScheduled,
+  schedulePublishMode = false,
 }: NotifyUsersDialogProps) {
   const [users, setUsers] = useState<NotifyUser[]>([]);
   const [loading, setLoading] = useState(false);
@@ -109,7 +113,7 @@ export function NotifyUsersDialog({
   const [message, setMessage] = useState(defaultMessage);
   const [sending, setSending] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [alsoEmail, setAlsoEmail] = useState(false);
+  const [alsoEmail, setAlsoEmail] = useState(schedulePublishMode);
   const [scheduleMode, setScheduleMode] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
   const [successMsg, setSuccessMsg] = useState(successMessage);
@@ -160,7 +164,59 @@ export function NotifyUsersDialog({
 
   const handleSend = async () => {
     if (!subject.trim() || !message.trim()) return;
-    if (alsoEmail && selected.size === 0) return;
+    if (selected.size === 0) return;
+
+    // Schedule publish mode
+    if (schedulePublishMode) {
+      if (!scheduledAt) return;
+      const scheduledDate = new Date(scheduledAt);
+      if (scheduledDate <= new Date()) {
+        toast.error("Scheduled time must be in the future");
+        return;
+      }
+      setSending(true);
+      try {
+        let effectiveAssignmentId = assignmentId;
+        if (onBeforeSend) {
+          const returnedId = await onBeforeSend(subject.trim(), message.trim(), scheduledAt);
+          if (returnedId) effectiveAssignmentId = returnedId;
+        }
+
+        // Create a scheduled email+notification only if "Also send as email" is checked
+        if (alsoEmail) {
+          const res = await fetch("/api/admin/scheduled-emails", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              subject: subject.trim(),
+              message: message.trim(),
+              scheduledAt: scheduledDate.toISOString(),
+              recipientIds: Array.from(selected),
+              createNotification: true,
+              ...(effectiveAssignmentId ? { assignmentId: effectiveAssignmentId } : {}),
+            }),
+          });
+          if (!res.ok) {
+            toast.error("Failed to schedule");
+            return;
+          }
+        }
+
+        setSuccessMsg(`Scheduled for ${scheduledDate.toLocaleString()}`);
+        setSuccess(true);
+        setTimeout(() => {
+          onOpenChange(false);
+          onScheduled?.();
+          onSent?.();
+        }, 1500);
+      } catch {
+        toast.error("Failed to schedule");
+      } finally {
+        setSending(false);
+      }
+      return;
+    }
+
     setSending(true);
     try {
       // Schedule mode: create a scheduled email instead of sending now
@@ -238,9 +294,24 @@ export function NotifyUsersDialog({
     onSent?.();
   };
 
-  const handleSkip = () => {
+  const handleSkip = async () => {
+    if (schedulePublishMode) {
+      if (!scheduledAt) {
+        toast.error("Please select a scheduled time");
+        return;
+      }
+      const scheduledDate = new Date(scheduledAt);
+      if (scheduledDate <= new Date()) {
+        toast.error("Scheduled time must be in the future");
+        return;
+      }
+    }
+    if (schedulePublishMode && scheduledAt) {
+      await onSkip?.(scheduledAt);
+    } else {
+      await onSkip?.();
+    }
     onOpenChange(false);
-    onSkip?.();
   };
 
   return (
@@ -249,7 +320,6 @@ export function NotifyUsersDialog({
       onOpenChange={(o) => {
         if (!sending) {
           onOpenChange(o);
-          if (!o) onSkip?.();
         }
       }}
     >
@@ -274,64 +344,28 @@ export function NotifyUsersDialog({
         ) : (
           <>
             <div className="flex-1 overflow-y-auto space-y-4">
-              {/* Also send email toggle */}
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={alsoEmail}
-                  onChange={(e) => setAlsoEmail(e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800"
-                />
-                <div className="flex items-center gap-1.5">
-                  <Mail className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Also send as email</span>
-                </div>
-              </label>
-
-              {alsoEmail && (
-              <>
-              {/* Schedule toggle — hidden when defaultScheduledAt pre-sets the time */}
-              {enableScheduling && !defaultScheduledAt && (
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={scheduleMode}
-                    onChange={(e) => setScheduleMode(e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800"
-                  />
-                  <div className="flex items-center gap-1.5">
-                    <CalendarClock className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">Schedule for later</span>
-                  </div>
-                </label>
-              )}
-
-              {/* Pre-set schedule time (read-only) */}
-              {scheduleMode && defaultScheduledAt && (
-                <div className="flex items-center gap-2 rounded-lg bg-blue-50 dark:bg-blue-950 px-3 py-2 text-sm text-blue-700 dark:text-blue-300">
-                  <CalendarClock className="h-4 w-4 shrink-0" />
-                  <span>Email will be sent on {new Date(defaultScheduledAt).toLocaleString("en-US", {
-                    weekday: "long", year: "numeric", month: "long", day: "numeric",
-                    hour: "numeric", minute: "2-digit",
-                  })}</span>
-                </div>
-              )}
-
-              {/* Schedule datetime picker (manual) */}
-              {scheduleMode && enableScheduling && !defaultScheduledAt && (
-                <div className="space-y-1.5">
+              {/* Schedule publish datetime picker */}
+              {schedulePublishMode && (
+                <div className="space-y-2">
                   <Label className="text-sm font-medium flex items-center gap-1.5">
-                    <Clock className="h-3.5 w-3.5" />
-                    Send at
+                    <CalendarClock className="h-3.5 w-3.5 text-blue-500" />
+                    Publish Date & Time
                   </Label>
-                  <input
+                  <Input
                     type="datetime-local"
                     value={scheduledAt}
                     onChange={(e) => setScheduledAt(e.target.value)}
-                    min={new Date(Date.now() + 5 * 60 * 1000).toISOString().slice(0, 16)}
-                    className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    min={new Date(Date.now() + 60000).toISOString().slice(0, 16)}
+                    lang="en-US"
                   />
-                  <p className="text-xs text-gray-400 dark:text-gray-500">Emails will be sent within 5 minutes of the scheduled time.</p>
+                  {scheduledAt && (
+                    <p className="text-xs text-blue-600 dark:text-blue-400">
+                      Will publish on {new Date(scheduledAt).toLocaleString("en-US", {
+                        weekday: "long", year: "numeric", month: "long", day: "numeric",
+                        hour: "numeric", minute: "2-digit",
+                      })}
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -438,6 +472,50 @@ export function NotifyUsersDialog({
                 </div>
               )}
 
+              {/* Also send email toggle */}
+              <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={alsoEmail}
+                    onChange={(e) => setAlsoEmail(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800"
+                  />
+                  <div className="flex items-center gap-1.5">
+                    <Mail className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Also send as email</span>
+                  </div>
+                </label>
+
+              {!schedulePublishMode && alsoEmail && (
+              <>
+              {/* Pre-set schedule time (read-only) */}
+              {scheduleMode && defaultScheduledAt && (
+                <div className="flex items-center gap-2 rounded-lg bg-blue-50 dark:bg-blue-950 px-3 py-2 text-sm text-blue-700 dark:text-blue-300">
+                  <CalendarClock className="h-4 w-4 shrink-0" />
+                  <span>Email will be sent on {new Date(defaultScheduledAt).toLocaleString("en-US", {
+                    weekday: "long", year: "numeric", month: "long", day: "numeric",
+                    hour: "numeric", minute: "2-digit",
+                  })}</span>
+                </div>
+              )}
+
+              {/* Schedule datetime picker (manual) */}
+              {scheduleMode && enableScheduling && !defaultScheduledAt && (
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium flex items-center gap-1.5">
+                    <Clock className="h-3.5 w-3.5" />
+                    Send at
+                  </Label>
+                  <input
+                    type="datetime-local"
+                    value={scheduledAt}
+                    onChange={(e) => setScheduledAt(e.target.value)}
+                    min={new Date(Date.now() + 5 * 60 * 1000).toISOString().slice(0, 16)}
+                    className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <p className="text-xs text-gray-400 dark:text-gray-500">Emails will be sent within 5 minutes of the scheduled time.</p>
+                </div>
+              )}
               </>
               )}
 
@@ -503,31 +581,36 @@ export function NotifyUsersDialog({
             </div>
 
             <DialogFooter className="gap-2 sm:gap-0">
-              <Button
-                variant="outline"
-                onClick={handleSkip}
-                disabled={sending}
-              >
-                <SkipForward className="h-4 w-4 mr-2" />
-                {skipButtonLabel}
-              </Button>
+              {onSkip && (
+                <Button
+                  variant="outline"
+                  onClick={handleSkip}
+                  disabled={sending}
+                >
+                  <SkipForward className="h-4 w-4 mr-2" />
+                  {skipButtonLabel}
+                </Button>
+              )}
               <Button
                 onClick={handleSend}
                 disabled={
                   sending ||
-                  (alsoEmail && selected.size === 0) ||
-                  (scheduleMode && alsoEmail && !scheduledAt)
+                  selected.size === 0 ||
+                  !subject.trim() ||
+                  !message.trim() ||
+                  (scheduleMode && alsoEmail && !scheduledAt) ||
+                  (schedulePublishMode && !scheduledAt)
                 }
                 className="bg-indigo-600 hover:bg-indigo-700 text-white"
               >
                 {sending ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : scheduleMode && alsoEmail ? (
+                ) : schedulePublishMode || (scheduleMode && alsoEmail) ? (
                   <CalendarClock className="h-4 w-4 mr-2" />
                 ) : (
                   <Send className="h-4 w-4 mr-2" />
                 )}
-                {scheduleMode && alsoEmail ? "Schedule" : sendButtonLabel}
+                {schedulePublishMode ? "Schedule" : scheduleMode && alsoEmail ? "Schedule" : sendButtonLabel}
               </Button>
             </DialogFooter>
           </>

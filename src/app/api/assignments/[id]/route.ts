@@ -160,6 +160,19 @@ export async function PATCH(
     // If publishing immediately, ignore any schedule
     const isPublishingNow = data.published === true;
 
+    // Cancel linked PENDING scheduled emails when schedule is cleared
+    const isClearingSchedule =
+      isPublishingNow ||
+      data.published === false ||
+      (!isPublishingNow && data.scheduledPublishAt === null);
+
+    if (isClearingSchedule) {
+      await prisma.scheduledEmail.updateMany({
+        where: { assignmentId: params.id, status: "PENDING" },
+        data: { status: "CANCELLED", cancelledAt: new Date() },
+      });
+    }
+
     const assignment = await prisma.assignment.update({
       where: { id: params.id },
       data: {

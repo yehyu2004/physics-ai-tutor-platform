@@ -1160,11 +1160,11 @@ The Topbar notification bell (`src/components/layout/Topbar.tsx`) also uses `Not
 
 ### Scheduled Publishing
 
-Assignments can be scheduled to auto-publish at a future date/time via a cron job.
+Assignments can be scheduled to auto-publish at a future date/time. The schedule publish flow uses the same `NotifyUsersDialog` as regular publishing, with an added datetime picker (`schedulePublishMode` prop). Both email and in-app notification are scheduled via `ScheduledEmail` and sent at the scheduled time by the `send-scheduled-emails` cron.
 
 **Schema fields** on `Assignment`:
 - `scheduledPublishAt` (`DateTime?`) — When to auto-publish (null = no schedule)
-- `notifyOnPublish` (`Boolean`, default `false`) — Send email blast to students when published
+- `notifyOnPublish` (`Boolean`, default `false`) — Legacy field; new flow uses `ScheduledEmail` with `createNotification: true`
 
 **State logic:**
 | `published` | `scheduledPublishAt` | Meaning |
@@ -1173,17 +1173,24 @@ Assignments can be scheduled to auto-publish at a future date/time via a cron jo
 | `false` | future date | Scheduled |
 | `true` | any / null | Published |
 
-**Cron job:** `GET /api/cron/publish-scheduled` — called every 5 minutes via [cron-job.org](https://cron-job.org). It queries for assignments where `scheduledPublishAt <= now() AND published = false`, publishes them, optionally sends email notifications, creates audit logs, and in-app notifications. Protected by `CRON_SECRET` env var.
+**Cron jobs:**
+- `GET /api/cron/publish-scheduled` — Every 5 minutes. Publishes assignments where `scheduledPublishAt <= now() AND published = false`, skipping those with PENDING `ScheduledEmail` (handled by `send-scheduled-emails` cron instead). Protected by `CRON_SECRET`.
+- `GET /api/cron/send-scheduled-emails` — Every 5 minutes. Sends pending scheduled emails, creates in-app notifications if `createNotification=true`, and publishes linked assignments after sending.
 
 **API changes:**
-- `PATCH /api/assignments/[id]` — Accepts `scheduledPublishAt` (ISO string or null) and `notifyOnPublish` (boolean). Validates future date. Clears schedule on immediate publish/unpublish.
+- `PATCH /api/assignments/[id]` — Accepts `scheduledPublishAt` (ISO string or null) and `notifyOnPublish` (boolean). Validates future date. Clears schedule on immediate publish/unpublish. **Also cancels any PENDING `ScheduledEmail` records linked to the assignment** when the schedule is cleared (publish, unpublish, or explicit cancel).
 - `POST /api/assignments` — Accepts optional `scheduledPublishAt` and `notifyOnPublish` on creation.
 - `GET /api/assignments` — Supports `filter=scheduled` (unpublished with schedule set). `filter=drafts` now excludes scheduled assignments.
+- `GET /api/notifications` — For staff users (TA/PROFESSOR/ADMIN), also returns `scheduledItems[]` containing PENDING scheduled emails with `createNotification=true`. Each item has `isScheduled: true` and `scheduledAt` fields.
 
 **UI changes:**
-- **Create page** (`src/app/(main)/assignments/create/page.tsx`) — "Schedule Publish" button toggles a card with datetime picker + "Notify students" checkbox. "Confirm Schedule" saves as draft with schedule.
-- **Detail page** (`src/app/(main)/assignments/[id]/page.tsx`) — Blue "Scheduled: Mar 15, 2:00 PM" badge replaces "Draft" when scheduled. "Schedule..." button opens a dialog with datetime picker. "Cancel Schedule" button clears the schedule.
-- **List page** (`src/app/(main)/assignments/page.tsx`) — "Scheduled" filter tab. Scheduled assignments show publish date badge ("Scheduled: Mar 15, 2:00 PM").
+- **Create page** (`src/app/(main)/assignments/create/page.tsx`) — "Schedule Publish" button directly opens `NotifyUsersDialog` with `schedulePublishMode`. User picks datetime, recipients, subject/message in the same dialog. "Schedule" creates the assignment + `ScheduledEmail`. "Schedule without notification" creates the assignment with `scheduledPublishAt` only.
+- **Detail page** (`src/app/(main)/assignments/[id]/page.tsx`) — Blue "Scheduled: Mar 15, 2:00 PM" badge replaces "Draft" when scheduled. "Schedule" button opens `NotifyUsersDialog` with `schedulePublishMode` and `assignmentId`. "Cancel Schedule" button opens a confirmation dialog (not `window.confirm`) that cancels the schedule and any linked PENDING scheduled emails.
+- **List page** (`src/app/(main)/assignments/page.tsx`) — "Scheduled" filter tab. Scheduled assignments show publish date badge.
+- **Topbar** (`src/components/layout/Topbar.tsx`) — Staff users see a "Scheduled" section at the top of the notification dropdown showing PENDING scheduled notifications with a `CalendarClock` icon and scheduled time label.
+
+**NotifyUsersDialog `schedulePublishMode` prop:**
+When `schedulePublishMode=true`, the dialog shows a datetime picker at the top, hides the "Also send as email" toggle (always sends email), and creates a `ScheduledEmail` with `createNotification=true`. The `onBeforeSend` callback receives `scheduledAt` as a third parameter and can return an `assignmentId` string for linking. The `onSkip` callback receives `scheduledAt` as a parameter.
 
 **Env vars:**
 - `CRON_SECRET` — Required for production. Vercel sends this as `Authorization: Bearer <secret>` header.

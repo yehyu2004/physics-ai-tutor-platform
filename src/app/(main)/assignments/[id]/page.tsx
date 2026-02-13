@@ -94,10 +94,9 @@ export default function AssignmentDetailPage({
   const [notifyDialogOpen, setNotifyDialogOpen] = useState(false);
   const [notifySubject, setNotifySubject] = useState("");
   const [notifyMessage, setNotifyMessage] = useState("");
-  const [scheduleDate, setScheduleDate] = useState("");
-  const [scheduleNotify, setScheduleNotify] = useState(false);
-  const [scheduling, setScheduling] = useState(false);
-  const [scheduleActive, setScheduleActive] = useState(false);
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+  const [cancelScheduleDialogOpen, setCancelScheduleDialogOpen] = useState(false);
+  const [cancellingSchedule, setCancellingSchedule] = useState(false);
 
   const userRole = effectiveSession.role;
 
@@ -440,7 +439,7 @@ export default function AssignmentDetailPage({
           : "No due date set";
         setNotifySubject(`New Assignment: ${assignment.title}`);
         setNotifyMessage(
-          `A new assignment has been posted on PhysTutor.\n\nTitle: ${assignment.title}${assignment.description ? `\nDescription: ${assignment.description}` : ""}\nDue: ${dueDateStr}\nPoints: ${assignment.totalPoints}\n\nPlease log in to PhysTutor to view the full assignment details.`
+          `A new assignment has been posted on PhysTutor.\n\nTitle: ${assignment.title}${assignment.description ? `\nDescription: ${assignment.description}` : ""}\nDue: ${dueDateStr}\nPoints: ${assignment.totalPoints}`
         );
         setNotifyDialogOpen(true);
       }
@@ -601,9 +600,17 @@ export default function AssignmentDetailPage({
                 size="sm"
                 className="w-full sm:w-auto text-xs sm:text-sm gap-1.5 text-blue-600 border-blue-200 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-950"
                 onClick={() => {
-                  setPublishDialogAction("publish");
-                  setScheduleActive(true);
-                  setPublishDialogOpen(true);
+                  const dueDateStr = assignment.dueDate
+                    ? new Date(assignment.dueDate).toLocaleString("en-US", {
+                        weekday: "long", year: "numeric", month: "long", day: "numeric",
+                        hour: "numeric", minute: "2-digit",
+                      })
+                    : "No due date set";
+                  setNotifySubject(`New Assignment: ${assignment.title}`);
+                  setNotifyMessage(
+                    `A new assignment has been posted on PhysTutor.\n\nTitle: ${assignment.title}${assignment.description ? `\nDescription: ${assignment.description}` : ""}\nDue: ${dueDateStr}\nPoints: ${assignment.totalPoints}`
+                  );
+                  setScheduleDialogOpen(true);
                 }}
               >
                 <CalendarClock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -615,15 +622,7 @@ export default function AssignmentDetailPage({
                 variant="outline"
                 size="sm"
                 className="w-full sm:w-auto text-xs sm:text-sm text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-950"
-                onClick={async () => {
-                  if (!window.confirm("Cancel the scheduled publish?")) return;
-                  await fetch(`/api/assignments/${assignment.id}`, {
-                    method: "PATCH",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ scheduledPublishAt: null, notifyOnPublish: false }),
-                  });
-                  setAssignment({ ...assignment, scheduledPublishAt: null, notifyOnPublish: false });
-                }}
+                onClick={() => setCancelScheduleDialogOpen(true)}
               >
                 <XCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 Cancel Schedule
@@ -1125,16 +1124,11 @@ export default function AssignmentDetailPage({
       })()}
 
       {/* Publish / Unpublish Confirmation Dialog */}
-      <Dialog open={publishDialogOpen} onOpenChange={(open) => { if (!publishing && !scheduling) { setPublishDialogOpen(open); if (!open) { setScheduleActive(false); setScheduleDate(""); setScheduleNotify(false); } } }}>
+      <Dialog open={publishDialogOpen} onOpenChange={(open) => { if (!publishing) setPublishDialogOpen(open); }}>
         <DialogContent className="sm:max-w-[440px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              {scheduleActive ? (
-                <>
-                  <CalendarClock className="h-5 w-5 text-blue-500" />
-                  Schedule Publish
-                </>
-              ) : publishDialogAction === "publish" ? (
+              {publishDialogAction === "publish" ? (
                 <>
                   <Eye className="h-5 w-5 text-indigo-500" />
                   Publish Assignment
@@ -1147,111 +1141,138 @@ export default function AssignmentDetailPage({
               )}
             </DialogTitle>
             <DialogDescription>
-              {scheduleActive
-                ? "Set a date and time to auto-publish this assignment."
-                : publishDialogAction === "publish"
-                  ? "This will make the assignment visible to students immediately."
-                  : "Unpublishing will hide this assignment from students."}
+              {publishDialogAction === "publish"
+                ? "This will make the assignment visible to students immediately."
+                : "Unpublishing will hide this assignment from students."}
             </DialogDescription>
           </DialogHeader>
-
-          {scheduleActive && (
-            <div className="space-y-4 py-1">
-              <div className="space-y-2">
-                <Label>Publish Date & Time</Label>
-                <Input
-                  type="datetime-local"
-                  value={scheduleDate}
-                  onChange={(e) => setScheduleDate(e.target.value)}
-                  min={new Date(Date.now() + 60000).toISOString().slice(0, 16)}
-                  lang="en-US"
-                />
-                {scheduleDate && (
-                  <p className="text-xs text-blue-600 dark:text-blue-400">
-                    Will auto-publish on {new Date(scheduleDate).toLocaleString("en-US", {
-                      weekday: "long", year: "numeric", month: "long", day: "numeric",
-                      hour: "numeric", minute: "2-digit",
-                    })}
-                  </p>
-                )}
-              </div>
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={scheduleNotify}
-                  onChange={(e) => setScheduleNotify(e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800"
-                />
-                <div>
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Notify students on publish</span>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Send email when the assignment goes live.</p>
-                </div>
-              </label>
-            </div>
-          )}
-
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setPublishDialogOpen(false); setScheduleActive(false); setScheduleDate(""); setScheduleNotify(false); }} disabled={publishing || scheduling}>
+            <Button variant="outline" onClick={() => setPublishDialogOpen(false)} disabled={publishing}>
               Cancel
             </Button>
-            {scheduleActive ? (
-              <Button
-                disabled={scheduling || !scheduleDate}
-                onClick={async () => {
-                  if (!assignment || !scheduleDate) return;
-                  const scheduledDate = new Date(scheduleDate);
-                  if (scheduledDate <= new Date()) {
-                    toast.error("Scheduled time must be in the future");
-                    return;
-                  }
-                  setScheduling(true);
-                  try {
-                    const res = await fetch(`/api/assignments/${assignment.id}`, {
-                      method: "PATCH",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ scheduledPublishAt: scheduleDate, notifyOnPublish: scheduleNotify }),
-                    });
-                    if (res.ok) {
-                      setAssignment({ ...assignment, scheduledPublishAt: scheduleDate, notifyOnPublish: scheduleNotify });
-                      setPublishDialogOpen(false);
-                      setScheduleActive(false);
-                      setScheduleDate("");
-                      setScheduleNotify(false);
-                    } else {
-                      const data = await res.json();
-                      toast.error(data.error || "Failed to schedule");
-                    }
-                  } catch {
-                    toast.error("Failed to schedule");
-                  } finally {
-                    setScheduling(false);
-                  }
-                }}
-              >
-                {scheduling ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CalendarClock className="h-4 w-4 mr-2" />}
-                Schedule
-              </Button>
-            ) : (
-              <Button
-                onClick={confirmPublish}
-                disabled={publishing}
-                variant={publishDialogAction === "unpublish" ? "destructive" : "default"}
-              >
-                {publishing && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                {publishDialogAction === "publish" ? "Publish Now" : "Unpublish"}
-              </Button>
-            )}
+            <Button
+              onClick={confirmPublish}
+              disabled={publishing}
+              variant={publishDialogAction === "unpublish" ? "destructive" : "default"}
+            >
+              {publishing && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              {publishDialogAction === "publish" ? "Publish Now" : "Unpublish"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Notify Users Dialog */}
+      {/* Notify Users Dialog (after immediate publish) */}
       <NotifyUsersDialog
         open={notifyDialogOpen}
         onOpenChange={setNotifyDialogOpen}
         defaultSubject={notifySubject}
         defaultMessage={notifyMessage}
+        dialogTitle="Notify Users"
+        dialogDescription="Select who to notify about this assignment. Optionally also send an email."
+        sendButtonLabel="Notify"
+        skipButtonLabel="Skip Notification"
+        onBeforeSend={async (subj, msg) => {
+          await fetch("/api/notifications", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title: subj, message: msg }),
+          });
+        }}
       />
+
+      {/* Schedule Publish Dialog — same flow as publish but with datetime picker */}
+      <NotifyUsersDialog
+        open={scheduleDialogOpen}
+        onOpenChange={setScheduleDialogOpen}
+        defaultSubject={notifySubject}
+        defaultMessage={notifyMessage}
+        schedulePublishMode
+        assignmentId={assignment.id}
+        dialogTitle="Schedule Publish"
+        dialogDescription="Set a publish time and select who to notify when it goes live."
+        sendButtonLabel="Schedule"
+        skipButtonLabel="Schedule without notification"
+        onBeforeSend={async (_subj, _msg, scheduledAt) => {
+          if (!scheduledAt) return;
+          const res = await fetch(`/api/assignments/${assignment.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ scheduledPublishAt: scheduledAt }),
+          });
+          if (!res.ok) {
+            const data = await res.json().catch(() => null);
+            throw new Error(data?.error || "Failed to schedule");
+          }
+          setAssignment({ ...assignment, scheduledPublishAt: scheduledAt });
+          return assignment.id;
+        }}
+        onSkip={async (scheduledAt) => {
+          if (!scheduledAt) return;
+          const res = await fetch(`/api/assignments/${assignment.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ scheduledPublishAt: scheduledAt }),
+          });
+          if (res.ok) {
+            setAssignment({ ...assignment, scheduledPublishAt: scheduledAt });
+            toast.success(`Assignment scheduled for ${new Date(scheduledAt).toLocaleString()}`);
+          } else {
+            toast.error("Failed to schedule");
+          }
+        }}
+        onSent={() => {
+          toast.success("Assignment scheduled with notification");
+        }}
+      />
+
+      {/* Cancel Schedule Confirmation Dialog */}
+      <Dialog open={cancelScheduleDialogOpen} onOpenChange={(open) => { if (!cancellingSchedule) setCancelScheduleDialogOpen(open); }}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Cancel Scheduled Publish
+            </DialogTitle>
+            <DialogDescription>
+              This will cancel the scheduled publish and any pending notification/email associated with it.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCancelScheduleDialogOpen(false)} disabled={cancellingSchedule}>
+              Keep Schedule
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={cancellingSchedule}
+              onClick={async () => {
+                setCancellingSchedule(true);
+                try {
+                  const res = await fetch(`/api/assignments/${assignment.id}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ scheduledPublishAt: null, notifyOnPublish: false }),
+                  });
+                  if (res.ok) {
+                    setAssignment({ ...assignment, scheduledPublishAt: null, notifyOnPublish: false });
+                    setCancelScheduleDialogOpen(false);
+                    toast.success("Schedule cancelled");
+                  } else {
+                    toast.error("Failed to cancel schedule");
+                  }
+                } catch {
+                  toast.error("Failed to cancel schedule");
+                } finally {
+                  setCancellingSchedule(false);
+                }
+              }}
+            >
+              {cancellingSchedule && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Cancel Schedule
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

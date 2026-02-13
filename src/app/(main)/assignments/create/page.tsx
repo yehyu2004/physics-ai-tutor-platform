@@ -1,12 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Download, CalendarClock } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { NotifyUsersDialog } from "@/components/ui/notify-users-dialog";
 import { AssignmentForm, type AssignmentFormData } from "@/components/assignments/AssignmentForm";
 import { toast } from "sonner";
@@ -15,15 +12,59 @@ export default function CreateAssignmentPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [exportingLatex, setExportingLatex] = useState(false);
-  const [scheduledPublishAt, setScheduledPublishAt] = useState("");
-  const [showScheduleOptions, setShowScheduleOptions] = useState(false);
-  const [createdAssignmentId, setCreatedAssignmentId] = useState<string | null>(null);
+  const createdIdRef = useRef<string | null>(null);
   const [isScheduleMode, setIsScheduleMode] = useState(false);
 
   // Reminder dialog state
   const [reminderOpen, setReminderOpen] = useState(false);
   const [reminderSubject, setReminderSubject] = useState("");
   const [reminderMessage, setReminderMessage] = useState("");
+
+  // Stores pending publish data — assignment is created only when the user confirms in the dialog
+  const pendingPublishRef = useRef<{
+    formData: AssignmentFormData;
+    questions: Array<{
+      questionText: string;
+      questionType: string;
+      options: string[];
+      correctAnswer: string;
+      points: number;
+      diagram?: unknown;
+      imageUrl?: string;
+    }>;
+    schedule: boolean;
+  } | null>(null);
+
+  const createAssignment = async (scheduledPublishAt?: string) => {
+    const pending = pendingPublishRef.current;
+    if (!pending) return null;
+    const { formData, questions } = pending;
+
+    const res = await fetch("/api/assignments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: formData.title,
+        description: formData.description,
+        dueDate: formData.dueDate || null,
+        type: formData.type,
+        totalPoints: formData.totalPoints,
+        pdfUrl: formData.pdfUrl || null,
+        lockAfterSubmit: formData.lockAfterSubmit,
+        questions: formData.type === "QUIZ" ? questions : [],
+        ...(scheduledPublishAt && { scheduledPublishAt }),
+      }),
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => null);
+      throw new Error(errData?.error || "Failed to create assignment");
+    }
+
+    const data = await res.json();
+    pendingPublishRef.current = null;
+    return data.assignment.id as string;
+  };
 
   const handleSubmit = async (
     formData: AssignmentFormData,
@@ -44,67 +85,60 @@ export default function CreateAssignmentPage() {
       return;
     }
 
-    // Validate schedule date
-    if (schedule && scheduledPublishAt) {
-      const scheduledDate = new Date(scheduledPublishAt);
-      if (scheduledDate <= new Date()) {
-        toast.error("Scheduled time must be in the future");
-        return;
-      }
-    }
-
     setLoading(true);
 
     try {
       const questionsWithUrls = await getQuestionsWithUrls();
 
-      const res = await fetch("/api/assignments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: formData.title,
-          description: formData.description,
-          dueDate: formData.dueDate || null,
-          type: formData.type,
-          totalPoints: formData.totalPoints,
-          pdfUrl: formData.pdfUrl || null,
-          lockAfterSubmit: formData.lockAfterSubmit,
-          questions: formData.type === "QUIZ" ? questionsWithUrls : [],
-          ...(schedule && scheduledPublishAt && {
-            scheduledPublishAt,
-          }),
-        }),
-      });
+      if (publish || schedule) {
+        // Store pending data — assignment will be created when user confirms in the dialog
+        pendingPublishRef.current = { formData, questions: questionsWithUrls, schedule: !!schedule };
 
-      if (!res.ok) {
-        const errData = await res.json().catch(() => null);
-        toast.error(errData?.error || "Failed to create assignment");
-        return;
-      }
+        const dueDateStr = formData.dueDate
+          ? new Date(formData.dueDate).toLocaleString("en-US", {
+              weekday: "long", year: "numeric", month: "long", day: "numeric",
+              hour: "numeric", minute: "2-digit",
+            })
+          : "No due date set";
+        setReminderSubject(`New Assignment: ${formData.title}`);
+        setReminderMessage(
+          `A new assignment has been posted on PhysTutor.\n\nTitle: ${formData.title}${formData.description ? `\nDescription: ${formData.description}` : ""}\nDue: ${dueDateStr}\nPoints: ${formData.totalPoints}`
+        );
 
-      const data = await res.json();
-      setCreatedAssignmentId(data.assignment.id);
+        if (schedule) {
+          setIsScheduleMode(true);
+        } else {
+          setIsScheduleMode(false);
+        }
 
-      // Build email defaults
-      const dueDateStr = formData.dueDate
-        ? new Date(formData.dueDate).toLocaleString("en-US", {
-            weekday: "long", year: "numeric", month: "long", day: "numeric",
-            hour: "numeric", minute: "2-digit",
-          })
-        : "No due date set";
-      setReminderSubject(`New Assignment: ${formData.title}`);
-      setReminderMessage(
-        `A new assignment has been posted on PhysTutor.\n\nTitle: ${formData.title}${formData.description ? `\nDescription: ${formData.description}` : ""}\nDue: ${dueDateStr}\nPoints: ${formData.totalPoints}\n\nPlease log in to PhysTutor to view the full assignment details.`
-      );
-
-      if (schedule) {
-        toast.success(`Assignment scheduled for ${new Date(scheduledPublishAt).toLocaleString()}`);
-        setIsScheduleMode(true);
+        setReminderOpen(true);
       } else {
-        setIsScheduleMode(false);
-      }
+        // Save as Draft: create immediately and redirect
+        const res = await fetch("/api/assignments", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: formData.title,
+            description: formData.description,
+            dueDate: formData.dueDate || null,
+            type: formData.type,
+            totalPoints: formData.totalPoints,
+            pdfUrl: formData.pdfUrl || null,
+            lockAfterSubmit: formData.lockAfterSubmit,
+            questions: formData.type === "QUIZ" ? questionsWithUrls : [],
+          }),
+        });
 
-      setReminderOpen(true);
+        if (!res.ok) {
+          const errData = await res.json().catch(() => null);
+          toast.error(errData?.error || "Failed to create assignment");
+          return;
+        }
+
+        const data = await res.json();
+        router.push(`/assignments/${data.assignment.id}`);
+        router.refresh();
+      }
     } catch (err) {
       console.error("Create assignment error:", err);
       toast.error(err instanceof Error ? err.message : "Failed to create assignment");
@@ -188,41 +222,6 @@ export default function CreateAssignmentPage() {
         subtitle="Set up a new assignment or quiz for students"
         backHref="/assignments"
         submitting={loading || exportingLatex}
-        extraContent={
-          showScheduleOptions ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CalendarClock className="h-5 w-5" />
-                  Schedule Publish
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Publish Date & Time</Label>
-                  <Input
-                    type="datetime-local"
-                    value={scheduledPublishAt}
-                    onChange={(e) => setScheduledPublishAt(e.target.value)}
-                    min={new Date(Date.now() + 60000).toISOString().slice(0, 16)}
-                    lang="en-US"
-                  />
-                  {scheduledPublishAt && (
-                    <p className="text-xs text-blue-600 dark:text-blue-400">
-                      Will auto-publish on {new Date(scheduledPublishAt).toLocaleString("en-US", {
-                        weekday: "long", year: "numeric", month: "long", day: "numeric",
-                        hour: "numeric", minute: "2-digit",
-                      })}
-                    </p>
-                  )}
-                </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  After scheduling, you can customize the notification email with templates and select recipients.
-                </p>
-              </CardContent>
-            </Card>
-          ) : null
-        }
         renderActions={({ formData, getQuestionsWithUrls, titleValid }) => (
           <div className="flex flex-col sm:flex-row sm:flex-wrap sm:justify-end gap-3 pb-8">
             <Button
@@ -249,18 +248,12 @@ export default function CreateAssignmentPage() {
             )}
             <Button
               variant="outline"
-              onClick={() => {
-                if (showScheduleOptions && scheduledPublishAt) {
-                  handleSubmit(formData, getQuestionsWithUrls, false, true);
-                } else {
-                  setShowScheduleOptions(!showScheduleOptions);
-                }
-              }}
-              disabled={loading || exportingLatex || !titleValid || (showScheduleOptions && !scheduledPublishAt)}
+              onClick={() => handleSubmit(formData, getQuestionsWithUrls, false, true)}
+              disabled={loading || exportingLatex || !titleValid}
               className="gap-2 text-blue-600 border-blue-200 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-950"
             >
               <CalendarClock className="h-4 w-4" />
-              {showScheduleOptions ? "Confirm Schedule" : "Schedule Publish"}
+              Schedule Publish
             </Button>
             <Button
               onClick={() => handleSubmit(formData, getQuestionsWithUrls, true)}
@@ -273,51 +266,91 @@ export default function CreateAssignmentPage() {
         )}
       />
 
-      {/* Assignment Reminder Dialog */}
-      <NotifyUsersDialog
-        open={reminderOpen}
-        onOpenChange={setReminderOpen}
-        defaultSubject={reminderSubject}
-        defaultMessage={reminderMessage}
-        enableScheduling={isScheduleMode}
-        defaultScheduledAt={isScheduleMode ? scheduledPublishAt : undefined}
-        assignmentId={isScheduleMode && createdAssignmentId ? createdAssignmentId : undefined}
-        dialogTitle={isScheduleMode ? "Notify Users" : "Publish & Notify"}
-        dialogDescription={isScheduleMode
-          ? "Send an email notification to selected users. Filter by role or select individually."
-          : "The assignment will be published when you confirm. Optionally send an email notification."
-        }
-        sendButtonLabel={isScheduleMode ? "Schedule Email" : "Confirm Publish"}
-        skipButtonLabel={isScheduleMode ? "Skip" : "Publish"}
-        onSkip={async () => {
-          // For publish mode, publish the assignment on skip (without email)
-          if (!isScheduleMode && createdAssignmentId) {
-            await fetch(`/api/assignments/${createdAssignmentId}`, {
+      {/* Publish & Notify Dialog (immediate publish) */}
+      {!isScheduleMode && (
+        <NotifyUsersDialog
+          open={reminderOpen}
+          onOpenChange={setReminderOpen}
+          defaultSubject={reminderSubject}
+          defaultMessage={reminderMessage}
+          dialogTitle="Publish & Notify"
+          dialogDescription="Select who to notify about this assignment. Optionally also send an email."
+          sendButtonLabel="Notify & Publish"
+          skipButtonLabel="Skip Notification & Publish"
+          onSkip={async () => {
+            try {
+              const id = await createAssignment();
+              if (!id) return;
+              await fetch(`/api/assignments/${id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ published: true }),
+              });
+              router.push(`/assignments/${id}`);
+              router.refresh();
+            } catch (err) {
+              toast.error(err instanceof Error ? err.message : "Failed to create assignment");
+            }
+          }}
+          onBeforeSend={async (subj, msg) => {
+            const id = await createAssignment();
+            if (!id) return;
+            createdIdRef.current = id;
+            await fetch(`/api/assignments/${id}`, {
               method: "PATCH",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ published: true }),
             });
-          }
-          const target = createdAssignmentId ? `/assignments/${createdAssignmentId}` : "/assignments";
-          router.push(target);
-          router.refresh();
-        }}
-        onBeforeSend={!isScheduleMode ? async () => {
-          // For publish mode, publish the assignment before sending email
-          if (createdAssignmentId) {
-            await fetch(`/api/assignments/${createdAssignmentId}`, {
-              method: "PATCH",
+            await fetch("/api/notifications", {
+              method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ published: true }),
+              body: JSON.stringify({ title: subj, message: msg }),
             });
-          }
-        } : undefined}
-        onSent={() => {
-          const target = createdAssignmentId ? `/assignments/${createdAssignmentId}` : "/assignments";
-          router.push(target);
-          router.refresh();
-        }}
-      />
+          }}
+          onSent={() => {
+            const target = createdIdRef.current ? `/assignments/${createdIdRef.current}` : "/assignments";
+            router.push(target);
+            router.refresh();
+          }}
+        />
+      )}
+
+      {/* Schedule Publish Dialog — same flow as publish but with datetime picker */}
+      {isScheduleMode && (
+        <NotifyUsersDialog
+          open={reminderOpen}
+          onOpenChange={setReminderOpen}
+          defaultSubject={reminderSubject}
+          defaultMessage={reminderMessage}
+          schedulePublishMode
+          dialogTitle="Schedule Publish"
+          dialogDescription="Set a publish time and select who to notify when it goes live."
+          sendButtonLabel="Schedule"
+          skipButtonLabel="Schedule without notification"
+          onBeforeSend={async (_subj, _msg, scheduledAt) => {
+            const id = await createAssignment(scheduledAt);
+            if (!id) return;
+            createdIdRef.current = id;
+            return id;
+          }}
+          onSkip={async (scheduledAt) => {
+            try {
+              const id = await createAssignment(scheduledAt);
+              if (!id) return;
+              toast.success(`Assignment scheduled for ${new Date(scheduledAt!).toLocaleString()}`);
+              router.push(`/assignments/${id}`);
+              router.refresh();
+            } catch (err) {
+              toast.error(err instanceof Error ? err.message : "Failed to create assignment");
+            }
+          }}
+          onSent={() => {
+            const target = createdIdRef.current ? `/assignments/${createdIdRef.current}` : "/assignments";
+            router.push(target);
+            router.refresh();
+          }}
+        />
+      )}
     </>
   );
 }

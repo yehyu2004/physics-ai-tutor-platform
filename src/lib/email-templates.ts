@@ -235,7 +235,7 @@ export function assignmentPublishedEmail(params: AssignmentPublishedEmailParams)
     `Due: ${esc(params.dueDateStr)}`,
     `Points: ${params.totalPoints}`,
     "",
-    "Please log in to PhysTutor to view the full assignment details.",
+    "",
   ].join("\n");
 
   return brandedLayout(`
