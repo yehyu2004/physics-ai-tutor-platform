@@ -293,14 +293,23 @@ export default function AssignmentDetailPage({
     return new Date(submittedAt) > new Date(assignment.dueDate);
   };
 
-  const handleDeleteSubmission = async () => {
+  const handleEditSubmission = async () => {
     if (!existingSubmission) return;
-    if (!window.confirm("Are you sure you want to delete your submission? You can resubmit afterward.")) return;
+    if (!window.confirm("This will reopen your submission for editing. You'll need to resubmit when done. Continue?")) return;
     setDeletingSubmission(true);
     try {
-      const res = await fetch(`/api/submissions/${existingSubmission.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/submissions/${existingSubmission.id}`, { method: "PATCH" });
       if (res.ok) {
-        setExistingSubmission(null);
+        // Convert to draft — restore answers for editing
+        const restored: Record<string, string> = {};
+        const restoredImages: Record<string, string[]> = {};
+        for (const a of existingSubmission.answers) {
+          if (a.answer) restored[a.questionId] = a.answer;
+          if (a.answerImageUrls?.length) restoredImages[a.questionId] = a.answerImageUrls;
+        }
+        setAnswers(restored);
+        setAnswerImages(restoredImages);
+        setExistingSubmission({ ...existingSubmission, isDraft: true });
       }
     } catch (err) {
       console.error(err);
@@ -311,6 +320,20 @@ export default function AssignmentDetailPage({
 
   const handleSubmit = async () => {
     if (!assignment) return;
+
+    // Warn if not all questions answered
+    if (assignment.type === "QUIZ" && assignment.questions.length > 0) {
+      const answered = assignment.questions.filter(q =>
+        (answers[q.id]?.trim()) || (answerImages[q.id]?.length > 0)
+      ).length;
+      const total = assignment.questions.length;
+      if (answered < total) {
+        const confirmed = window.confirm(
+          `You have only answered ${answered} out of ${total} questions. Are you sure you want to submit?`
+        );
+        if (!confirmed) return;
+      }
+    }
 
     // Warn student if assignment is locked after submission
     if (assignment.lockAfterSubmit) {
@@ -896,8 +919,8 @@ export default function AssignmentDetailPage({
                 <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
                 <p className="text-xs text-amber-700 dark:text-amber-300">
                   {assignment.lockAfterSubmit
-                    ? "This assignment is locked. You cannot delete or resubmit."
-                    : "This submission has been graded. You cannot delete or resubmit."}
+                    ? "This assignment is locked. You cannot edit or resubmit."
+                    : "This submission has been graded. You cannot edit or resubmit."}
                 </p>
               </div>
             ) : (
@@ -905,16 +928,16 @@ export default function AssignmentDetailPage({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handleDeleteSubmission}
+                  onClick={handleEditSubmission}
                   disabled={deletingSubmission}
-                  className="gap-1.5 text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-950"
+                  className="gap-1.5 text-blue-600 border-blue-200 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-950"
                 >
                   {deletingSubmission ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   ) : (
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <Pencil className="h-3.5 w-3.5" />
                   )}
-                  Delete & Resubmit
+                  Edit & Resubmit
                 </Button>
               </div>
             )}
@@ -1275,6 +1298,17 @@ export default function AssignmentDetailPage({
             </div>
           )}
           <div className="flex items-center justify-end gap-3">
+            {assignment.type === "QUIZ" && (() => {
+              const total = assignment.questions.length;
+              const answered = assignment.questions.filter(q =>
+                (answers[q.id]?.trim()) || (answerImages[q.id]?.length > 0)
+              ).length;
+              return (
+                <span className={`text-xs font-medium ${answered === total ? "text-emerald-600 dark:text-emerald-400" : "text-gray-500 dark:text-gray-400"}`}>
+                  {answered}/{total} answered
+                </span>
+              );
+            })()}
             <SaveStatusIndicator status={autoSaveStatus} />
             <Button
               onClick={handleSubmit}

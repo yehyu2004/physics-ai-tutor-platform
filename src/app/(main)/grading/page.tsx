@@ -91,6 +91,7 @@ interface SubmissionForGrading {
     questionType: string;
     answer: string | null;
     answerImageUrls?: string[];
+    feedbackImageUrls?: string[];
     score: number | null;
     feedback: string | null;
     autoGraded: boolean;
@@ -303,6 +304,15 @@ export default function GradingPage() {
 
     setGrades(initialGrades);
     if (restored) setGradingDraftRestored(true);
+
+    // Pre-populate feedback images from loaded data
+    const loadedFeedbackImages: Record<string, string[]> = {};
+    sub.answers.forEach((a) => {
+      if (a.feedbackImageUrls && a.feedbackImageUrls.length > 0) {
+        loadedFeedbackImages[a.id] = a.feedbackImageUrls;
+      }
+    });
+    setFeedbackImages(loadedFeedbackImages);
 
     setOverallScore(sub.totalScore || 0);
     setOverallFeedback("");
@@ -915,7 +925,7 @@ export default function GradingPage() {
                     ) : (
                       <Button
                         onClick={handleSaveGrades}
-                        disabled={saving || allAutoGraded || (!allAutoGraded && confirmedAnswers.size < selectedSubmission.answers.filter(a => !a.autoGraded).length)}
+                        disabled={saving || allAutoGraded || (!allAutoGraded && confirmedAnswers.size === 0)}
                         size="sm"
                         className="gap-1.5 bg-gray-900 dark:bg-gray-100 hover:bg-gray-800 dark:hover:bg-gray-200 text-white dark:text-gray-900 rounded-lg"
                       >
@@ -943,9 +953,11 @@ export default function GradingPage() {
                           style={{ width: `${selectedSubmission.answers.filter(a => !a.autoGraded).length > 0 ? (confirmedAnswers.size / selectedSubmission.answers.filter(a => !a.autoGraded).length) * 100 : 0}%` }}
                         />
                       </div>
-                      {confirmedAnswers.size >= selectedSubmission.answers.filter(a => !a.autoGraded).length && (
-                        <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 shrink-0">Ready to finalize</span>
-                      )}
+                      {confirmedAnswers.size > 0 && confirmedAnswers.size >= selectedSubmission.answers.filter(a => !a.autoGraded).length ? (
+                        <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 shrink-0">All confirmed</span>
+                      ) : confirmedAnswers.size > 0 ? (
+                        <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 shrink-0">Ready to finalize</span>
+                      ) : null}
                     </div>
                   )}
                   {/* Draft restored banner */}

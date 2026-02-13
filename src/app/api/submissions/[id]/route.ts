@@ -2,6 +2,63 @@ import { NextResponse } from "next/server";
 import { getEffectiveSession } from "@/lib/impersonate";
 import { prisma } from "@/lib/prisma";
 
+// Convert a submission back to draft for editing
+export async function PATCH(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getEffectiveSession();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userId = (session.user as { id: string }).id;
+
+    const submission = await prisma.submission.findUnique({
+      where: { id: params.id },
+      include: {
+        assignment: { select: { lockAfterSubmit: true } },
+        answers: { select: { id: true, score: true } },
+      },
+    });
+
+    if (!submission) {
+      return NextResponse.json({ error: "Submission not found" }, { status: 404 });
+    }
+
+    if (submission.userId !== userId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    if (submission.assignment.lockAfterSubmit && !submission.isDraft) {
+      return NextResponse.json(
+        { error: "This assignment is locked after submission. You cannot edit." },
+        { status: 403 }
+      );
+    }
+
+    const gradingStarted = submission.gradedAt !== null || submission.answers.some((a) => a.score !== null);
+    if (gradingStarted && !submission.isDraft) {
+      return NextResponse.json(
+        { error: submission.gradedAt ? "This submission has been graded and cannot be edited." : "This submission is being graded and cannot be edited." },
+        { status: 403 }
+      );
+    }
+
+    // Convert back to draft
+    await prisma.submission.update({
+      where: { id: params.id },
+      data: { isDraft: true },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Edit submission error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
 export async function DELETE(
   req: Request,
   { params }: { params: { id: string } }

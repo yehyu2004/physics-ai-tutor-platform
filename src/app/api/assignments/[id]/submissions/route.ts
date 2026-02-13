@@ -95,6 +95,8 @@ export async function GET(
                 answer: a.answer,
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 answerImageUrls: (a as any).answerImageUrls,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                feedbackImageUrls: (a as any).feedbackImageUrls,
                 score: a.score,
                 feedback: a.feedback,
                 autoGraded: a.autoGraded,

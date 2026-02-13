@@ -1,12 +1,19 @@
-.PHONY: install dev build start db-up db-down db-setup db-migrate db-studio db-reset prisma-generate clean
+.PHONY: install dev build start db-up db-down db-setup db-migrate db-studio db-reset prisma-generate clean kill-port
 
 # Install all dependencies
 install:
 	npm install
 
 # Run development server (ensures deps, DB, and Prisma client are ready)
-dev: install prisma-generate db-push
-	npm run dev
+# Kills any stale process on port 3000 first, then starts Next.js dev server.
+# Ctrl+C will cleanly stop the server.
+dev: install prisma-generate db-push kill-port
+	@trap 'echo "\nShutting down dev server..."; kill %1 2>/dev/null; lsof -ti :3000 | xargs kill 2>/dev/null; echo "Dev server stopped."' INT TERM; \
+	npm run dev & wait
+
+# Kill any process on port 3000
+kill-port:
+	@lsof -ti :3000 | xargs kill -9 2>/dev/null || true
 
 # Build for production
 build:
