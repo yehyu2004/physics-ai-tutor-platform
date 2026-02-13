@@ -530,21 +530,19 @@ export default function GradingPage() {
             {assignments.filter((a) => a.submissionCount > 0).map((a) => (
               <SelectItem key={a.id} value={a.id}>
                 <div>
-                  <div className="flex items-center gap-1.5">
-                    <span>{a.title}</span>
+                  <div className="truncate">{a.title}</div>
+                  <div className="flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500">
+                    <span>{a.submissionCount} submissions</span>
                     {a.ungradedCount > 0 && (
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400">
+                      <span className="px-1.5 py-0.5 rounded font-semibold text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400">
                         {a.ungradedCount} ungraded
                       </span>
                     )}
                     {a.openAppealCount > 0 && (
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-400">
+                      <span className="px-1.5 py-0.5 rounded font-semibold text-[10px] bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-400">
                         {a.openAppealCount} pending
                       </span>
                     )}
-                  </div>
-                  <div className="text-[11px] text-gray-400 dark:text-gray-500">
-                    {a.submissionCount} submissions
                   </div>
                 </div>
               </SelectItem>
