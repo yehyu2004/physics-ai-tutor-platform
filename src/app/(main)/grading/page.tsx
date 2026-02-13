@@ -993,6 +993,15 @@ export default function GradingPage() {
                             <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Student Answer</p>
                           </div>
                           <p className="text-sm text-gray-800 dark:text-gray-200">{answer.answer || "No answer provided"}</p>
+                          {answer.answerImageUrls && (answer.answerImageUrls as string[]).length > 0 && (
+                            <div className="flex gap-2 mt-2 flex-wrap">
+                              {(answer.answerImageUrls as string[]).map((url: string, i: number) => (
+                                <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                                  <img src={url} alt={`Answer image ${i + 1}`} className="h-20 w-20 object-cover rounded-lg border border-gray-200 dark:border-gray-700 hover:opacity-80 transition-opacity" />
+                                </a>
+                              ))}
+                            </div>
+                          )}
                         </div>
 
                         {/* Score + AI Assist */}

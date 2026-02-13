@@ -195,6 +195,7 @@ model SubmissionAnswer {
   submissionId String
   questionId   String
   answer           String? @db.Text
+  answerImageUrls  Json?   // String[] - up to 3 image URLs attached by student
   score            Float?
   feedback         String? @db.Text
   feedbackImageUrls Json?   // String[] - up to 3 image URLs for feedback

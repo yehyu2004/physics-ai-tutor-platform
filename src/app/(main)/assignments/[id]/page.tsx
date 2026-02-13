@@ -85,6 +85,7 @@ interface SubmissionAnswer {
   id: string;
   questionId: string;
   answer: string | null;
+  answerImageUrls?: string[];
   score: number | null;
   feedback: string | null;
   feedbackImageUrls?: string[];
@@ -154,6 +155,7 @@ export default function AssignmentDetailPage({
   const [expandedAppeals, setExpandedAppeals] = useState<Record<string, boolean>>({});
   const [resolvingAppeal, setResolvingAppeal] = useState<string | null>(null);
   const [appealFilter, setAppealFilter] = useState<"ALL" | "OPEN">("OPEN");
+  const [answerImages, setAnswerImages] = useState<Record<string, string[]>>({});
   const [appealImages, setAppealImages] = useState<Record<string, string[]>>({});
   const [uploadingImage, setUploadingImage] = useState(false);
   const [draftRestored, setDraftRestored] = useState(false);
@@ -175,7 +177,11 @@ export default function AssignmentDetailPage({
       body: JSON.stringify({
         assignmentId: assignment.id,
         isDraft: true,
-        answers: answerEntries.map(([questionId, answer]) => ({ questionId, answer })),
+        answers: answerEntries.map(([questionId, answer]) => ({
+          questionId,
+          answer,
+          answerImageUrls: answerImages[questionId]?.length ? answerImages[questionId] : undefined,
+        })),
       }),
     });
   }, [assignment]);
@@ -233,10 +239,13 @@ export default function AssignmentDetailPage({
             // Restore draft answers
             if (data.submission.isDraft && data.submission.answers?.length > 0 && !draftRestoredRef.current) {
               const restored: Record<string, string> = {};
+              const restoredImages: Record<string, string[]> = {};
               for (const a of data.submission.answers) {
                 if (a.answer) restored[a.questionId] = a.answer;
+                if (a.answerImageUrls?.length) restoredImages[a.questionId] = a.answerImageUrls;
               }
               setAnswers(restored);
+              setAnswerImages(restoredImages);
               markSaved(restored);
               setDraftRestored(true);
               draftRestoredRef.current = true;
@@ -343,6 +352,7 @@ export default function AssignmentDetailPage({
           answers: Object.entries(answers).map(([questionId, answer]) => ({
             questionId,
             answer,
+            answerImageUrls: answerImages[questionId]?.length ? answerImages[questionId] : undefined,
           })),
           fileUrl,
         }),
@@ -737,6 +747,19 @@ export default function AssignmentDetailPage({
                     />
                   </div>
                 )}
+
+                {(q.questionType === "NUMERIC" || q.questionType === "FREE_RESPONSE") && (
+                  <div className="space-y-1 mt-2">
+                    <Label className="text-xs text-gray-500">Attach images (up to 3)</Label>
+                    <ImageUpload
+                      images={answerImages[q.id] || []}
+                      onImagesChange={(imgs) => setAnswerImages((prev) => ({ ...prev, [q.id]: imgs }))}
+                      onUpload={handleUploadImage}
+                      uploading={uploadingImage}
+                      maxImages={3}
+                    />
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}
@@ -905,6 +928,15 @@ export default function AssignmentDetailPage({
                         <p className="text-xs text-gray-500 dark:text-gray-400">
                           Your answer: {ans.answer}
                         </p>
+                      )}
+                      {ans.answerImageUrls && ans.answerImageUrls.length > 0 && (
+                        <div className="flex gap-2 mt-1 flex-wrap">
+                          {ans.answerImageUrls.map((url, i) => (
+                            <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                              <img src={url} alt={`Your image ${i + 1}`} className="h-16 w-16 object-cover rounded-lg border border-gray-200 dark:border-gray-700 hover:opacity-80 transition-opacity" />
+                            </a>
+                          ))}
+                        </div>
                       )}
                       {ans.feedback && (
                         <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-3">

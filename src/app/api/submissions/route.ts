@@ -73,9 +73,10 @@ export async function POST(req: Request) {
             fileUrl,
             submittedAt: new Date(),
             answers: {
-              create: (answers || []).map((a: { questionId: string; answer: string }) => ({
+              create: (answers || []).map((a: { questionId: string; answer: string; answerImageUrls?: string[] }) => ({
                 questionId: a.questionId,
                 answer: a.answer,
+                answerImageUrls: a.answerImageUrls?.length ? a.answerImageUrls : undefined,
                 autoGraded: false,
                 score: null,
               })),
@@ -94,9 +95,10 @@ export async function POST(req: Request) {
           fileUrl,
           isDraft: true,
           answers: {
-            create: (answers || []).map((a: { questionId: string; answer: string }) => ({
+            create: (answers || []).map((a: { questionId: string; answer: string; answerImageUrls?: string[] }) => ({
               questionId: a.questionId,
               answer: a.answer,
+              answerImageUrls: a.answerImageUrls?.length ? a.answerImageUrls : undefined,
               autoGraded: false,
               score: null,
             })),
@@ -146,7 +148,7 @@ export async function POST(req: Request) {
         fileUrl,
         isDraft: false,
         answers: {
-          create: (answers || []).map((a: { questionId: string; answer: string }) => {
+          create: (answers || []).map((a: { questionId: string; answer: string; answerImageUrls?: string[] }) => {
             const question = assignment.questions.find((q) => q.id === a.questionId);
             let autoGraded = false;
             let score: number | null = null;
@@ -161,6 +163,7 @@ export async function POST(req: Request) {
             return {
               questionId: a.questionId,
               answer: a.answer,
+              answerImageUrls: a.answerImageUrls?.length ? a.answerImageUrls : undefined,
               autoGraded,
               score,
             };
