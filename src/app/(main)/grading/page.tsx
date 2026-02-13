@@ -209,7 +209,7 @@ export default function GradingPage() {
 
   // Fetch assignment list
   useEffect(() => {
-    fetch("/api/assignments?filter=published&pageSize=100&hasSubmissions=true")
+    fetch("/api/assignments?filter=published&pageSize=100")
       .then((res) => res.json())
       .then((data) => {
         const list = (data.assignments || []).map((a: { id: string; title: string; type: string; totalPoints: number; ungradedCount?: number; gradedCount?: number; openAppealCount?: number; _count?: { submissions: number } }) => ({
@@ -527,7 +527,7 @@ export default function GradingPage() {
             <SelectValue placeholder="Select an assignment to grade" />
           </SelectTrigger>
           <SelectContent>
-            {assignments.filter((a) => a.submissionCount > 0).map((a) => (
+            {assignments.map((a) => (
               <SelectItem key={a.id} value={a.id}>
                 <div>
                   <div className="truncate">{a.title}</div>
