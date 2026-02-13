@@ -350,37 +350,59 @@ export async function aiAssistedGrading(
   studentAnswer: string,
   rubricDescription: string,
   maxPoints: number,
-  provider: AIProvider = "openai"
+  provider: AIProvider = "openai",
+  answerImageUrls?: string[]
 ) {
+  const hasImages = answerImageUrls && answerImageUrls.length > 0;
   const prompt = `Grade the following student answer for a physics problem.
 
 Question: ${questionText}
 Correct Answer: ${correctAnswer}
 Rubric: ${rubricDescription}
 Max Points: ${maxPoints}
-Student Answer: ${studentAnswer}
+Student Answer: ${studentAnswer || "(no typed answer)"}
+${hasImages ? `\nThe student also attached ${answerImageUrls.length} image(s) with their answer. Please examine them carefully as they may contain handwritten work, diagrams, or calculations.` : ""}
 
 Provide your response as JSON with:
 - score: number (0 to ${maxPoints})
 - feedback: string (constructive feedback explaining the grade, using LaTeX notation for all math formulas and expressions — use $...$ for inline math and $$...$$ for display math)`;
 
+  const systemMsg = "You are a fair and constructive physics grading assistant. Always respond with valid JSON. When images are provided, analyze them carefully for handwritten work, diagrams, and calculations.";
+
   if (provider === "openai") {
+    // Build input with images if available
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const userContent: any[] = [{ type: "input_text", text: prompt }];
+    if (hasImages) {
+      for (const url of answerImageUrls) {
+        userContent.push({ type: "input_image", image_url: url });
+      }
+    }
     const response = await openai.responses.create({
       model: "gpt-5.2",
       input: [
-        { role: "developer", content: "You are a fair and constructive physics grading assistant. Always respond with valid JSON." },
-        { role: "user", content: prompt },
+        { role: "developer", content: systemMsg },
+        { role: "user", content: userContent },
       ],
       reasoning: { effort: "low" },
       text: { format: { type: "json_object" } },
     });
     return response.output_text;
   } else {
+    // Build content with images if available
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const userContent: any[] = [];
+    if (hasImages) {
+      for (const url of answerImageUrls) {
+        userContent.push({ type: "image", source: { type: "url", url } });
+      }
+    }
+    userContent.push({ type: "text", text: prompt });
     const response = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 1024,
-      system: "You are a fair and constructive physics grading assistant. Always respond with valid JSON.",
-      messages: [{ role: "user", content: prompt }],
+      system: systemMsg,
+      messages: [{ role: "user", content: userContent }],
     });
     const block = response.content[0];
     return block.type === "text" ? block.text : null;

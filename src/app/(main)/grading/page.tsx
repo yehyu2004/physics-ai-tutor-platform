@@ -993,7 +993,7 @@ export default function GradingPage() {
                             <MessageSquare className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500" />
                             <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Student Answer</p>
                           </div>
-                          <p className="text-sm text-gray-800 dark:text-gray-200">{answer.answer || "No answer provided"}</p>
+                          <p className="text-sm text-gray-800 dark:text-gray-200">{answer.answer || "No typed answer provided"}</p>
                           {answer.answerImageUrls && (answer.answerImageUrls as string[]).length > 0 && (
                             <div className="flex gap-2 mt-2 flex-wrap">
                               {(answer.answerImageUrls as string[]).map((url: string, i: number) => (

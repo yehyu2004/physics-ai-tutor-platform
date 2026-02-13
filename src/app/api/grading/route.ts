@@ -143,13 +143,15 @@ export async function PUT(req: Request) {
       .map((r) => `${r.description} (${r.points} pts)`)
       .join("\n");
 
+    const imageUrls = (answer.answerImageUrls as string[] | null) || [];
     const result = await aiAssistedGrading(
       answer.question.questionText,
       answer.question.correctAnswer || "",
       answer.answer || "",
       rubricDesc || "Grade based on correctness and completeness",
       answer.question.points,
-      provider
+      provider,
+      imageUrls.length > 0 ? imageUrls : undefined
     );
 
     if (!result) {
