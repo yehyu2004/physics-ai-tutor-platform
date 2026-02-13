@@ -538,21 +538,21 @@ export default function AdminUserActivityPage() {
           {/* Two-column: Top Users + Recent Activity */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Top Users */}
-            <Card>
+            <Card className="flex flex-col">
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <Crown className="h-4 w-4 text-amber-500" />
                   <CardTitle className="text-base">Most Active Users</CardTitle>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="flex-1 overflow-hidden">
                 {data.topUsers.length === 0 ? (
                   <p className="text-sm text-neutral-400 dark:text-neutral-500 text-center py-8">
                     No user data available
                   </p>
                 ) : (
-                  <div className="space-y-3">
-                    {data.topUsers.slice(0, 8).map((user, i) => (
+                  <div className="space-y-3 max-h-[320px] overflow-y-auto pr-1">
+                    {data.topUsers.slice(0, 10).map((user, i) => (
                       <div
                         key={user.email}
                         className="flex items-center gap-3"
@@ -596,17 +596,17 @@ export default function AdminUserActivityPage() {
             </Card>
 
             {/* Recent Activity Feed */}
-            <Card>
+            <Card className="flex flex-col">
               <CardHeader>
                 <CardTitle className="text-base">Recent Activity</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="flex-1 overflow-hidden">
                 {data.recentActivity.length === 0 ? (
                   <p className="text-sm text-neutral-400 dark:text-neutral-500 text-center py-8">
                     No recent activity
                   </p>
                 ) : (
-                  <div className="space-y-1">
+                  <div className="space-y-1 max-h-[320px] overflow-y-auto pr-1">
                     {data.recentActivity.map((item) => (
                       <div
                         key={item.id}
