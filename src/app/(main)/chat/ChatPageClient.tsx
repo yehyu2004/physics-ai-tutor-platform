@@ -48,6 +48,7 @@ interface Conversation {
 interface ChatPageClientProps {
   conversations: Conversation[];
   userId: string;
+  conversationLimit: number;
 }
 
 
@@ -75,6 +76,7 @@ const SUGGESTED_TOPICS = [
 
 export default function ChatPageClient({
   conversations: initialConversations,
+  conversationLimit,
 }: ChatPageClientProps) {
   useTrackTime("AI_CHAT");
   const [conversations, setConversations] = useState<Conversation[]>(initialConversations);
@@ -417,7 +419,9 @@ export default function ChatPageClient({
             <Button
               onClick={createNewChat}
               size="sm"
-              className="h-7 gap-1.5 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-xs"
+              disabled={conversations.length >= conversationLimit}
+              title={conversations.length >= conversationLimit ? `Limit of ${conversationLimit} conversations reached. Delete old ones first.` : "New conversation"}
+              className="h-7 gap-1.5 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-xs disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Plus className="h-3 w-3" />
               New
@@ -434,6 +438,13 @@ export default function ChatPageClient({
             />
           </div>
         </div>
+
+        {/* Conversation Limit Warning */}
+        {conversations.length >= conversationLimit && (
+          <div className="mx-4 mb-2 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-xs text-amber-700 dark:text-amber-400">
+            You&apos;ve reached the limit of {conversationLimit} conversations. Delete old ones to start new chats.
+          </div>
+        )}
 
         {/* Conversation List */}
         <ScrollArea className="flex-1">
@@ -471,7 +482,7 @@ export default function ChatPageClient({
                   </div>
                   <button
                     onClick={(e) => deleteConversation(conv.id, e)}
-                    className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-all shrink-0"
+                    className="sm:opacity-0 sm:group-hover:opacity-100 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-all shrink-0"
                   >
                     <Trash2 className="h-3 w-3" />
                   </button>
