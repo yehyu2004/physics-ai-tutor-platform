@@ -146,6 +146,7 @@ export default function GradingPage() {
 
   // localStorage helpers for grading drafts
   const getLocalStorageKey = (submissionId: string) => `grading-draft-${submissionId}`;
+  const getConfirmedKey = (submissionId: string) => `grading-confirmed-${submissionId}`;
 
   const saveToLocalStorage = useCallback((submissionId: string, g: Record<string, { score: number; feedback: string }>) => {
     try {
@@ -172,6 +173,17 @@ export default function GradingPage() {
     if (!selectedSubmission || Object.keys(grades).length === 0) return;
     saveToLocalStorage(selectedSubmission.id, grades);
   }, [grades, selectedSubmission, saveToLocalStorage]);
+
+  // Save confirmed state to localStorage on every change
+  useEffect(() => {
+    if (!selectedSubmission) return;
+    try {
+      localStorage.setItem(getConfirmedKey(selectedSubmission.id), JSON.stringify({
+        confirmedAnswers: Array.from(confirmedAnswers),
+        overallGradeConfirmed,
+      }));
+    } catch { /* ignore */ }
+  }, [confirmedAnswers, overallGradeConfirmed, selectedSubmission]);
 
   // Server auto-save for grading drafts (5-second debounce)
   const saveGradingDraft = useCallback(async (data: Record<string, { score: number; feedback: string }>) => {
@@ -278,8 +290,19 @@ export default function GradingPage() {
     setFeedbackFile(null);
     setFeedbackFileUrl(null);
     setGradingDraftRestored(false);
-    // All answers start unchecked — grader must confirm each one
-    setConfirmedAnswers(new Set());
+    // Restore confirmed state from localStorage, or start all unchecked
+    try {
+      const savedConfirmed = localStorage.getItem(getConfirmedKey(sub.id));
+      if (savedConfirmed) {
+        const parsed = JSON.parse(savedConfirmed);
+        setConfirmedAnswers(new Set(parsed.confirmedAnswers || []));
+        setOverallGradeConfirmed(parsed.overallGradeConfirmed || false);
+      } else {
+        setConfirmedAnswers(new Set());
+      }
+    } catch {
+      setConfirmedAnswers(new Set());
+    }
 
     // Try to restore from localStorage
     const savedDraft = loadFromLocalStorage(sub.id);
@@ -315,7 +338,6 @@ export default function GradingPage() {
 
     setOverallScore(sub.totalScore || 0);
     setOverallFeedback("");
-    setOverallGradeConfirmed(false);
     // Auto-select grading mode
     if (sub.answers.length === 0 || assignmentInfo?.type === "FILE_UPLOAD") {
       setGradingMode("overall");
