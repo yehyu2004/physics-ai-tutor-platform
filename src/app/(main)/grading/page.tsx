@@ -525,7 +525,12 @@ export default function GradingPage() {
           <SelectContent>
             {assignments.filter((a) => a.submissionCount > 0).map((a) => (
               <SelectItem key={a.id} value={a.id}>
-                {a.title} ({a.submissionCount} submissions{a.ungradedCount > 0 ? ` · ${a.ungradedCount} pending` : ""})
+                <div>
+                  <div>{a.title}</div>
+                  <div className="text-[11px] text-gray-400 dark:text-gray-500">
+                    {a.submissionCount} submissions{a.ungradedCount > 0 ? ` · ${a.ungradedCount} pending` : " · all graded"}
+                  </div>
+                </div>
               </SelectItem>
             ))}
           </SelectContent>
