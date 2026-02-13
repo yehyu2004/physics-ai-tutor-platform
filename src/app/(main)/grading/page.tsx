@@ -544,7 +544,7 @@ export default function GradingPage() {
                     )}
                   </div>
                   <div className="text-[11px] text-gray-400 dark:text-gray-500">
-                    {a.submissionCount} submissions · {a.gradedCount} graded
+                    {a.submissionCount} submissions
                   </div>
                 </div>
               </SelectItem>
