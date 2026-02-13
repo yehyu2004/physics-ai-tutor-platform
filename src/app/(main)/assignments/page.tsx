@@ -14,6 +14,7 @@ import {
   BookOpen,
   Upload,
   ShieldAlert,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +43,7 @@ export default function AssignmentsPage() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"ALL" | "QUIZ" | "FILE_UPLOAD">("ALL");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const userRole = effectiveSession.role;
 
@@ -73,6 +75,27 @@ export default function AssignmentsPage() {
     if (!dueDate) return false;
     const diff = new Date(dueDate).getTime() - Date.now();
     return diff > 0 && diff < 3 * 24 * 60 * 60 * 1000;
+  };
+
+  const canManage = userRole === "TA" || userRole === "ADMIN" || userRole === "PROFESSOR";
+
+  const handleDeleteDraft = async (e: React.MouseEvent, assignmentId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!window.confirm("Are you sure you want to delete this draft assignment? This cannot be undone.")) return;
+    setDeletingId(assignmentId);
+    try {
+      const res = await fetch(`/api/assignments/${assignmentId}`, { method: "DELETE" });
+      if (res.ok) {
+        setAssignments((prev) => prev.filter((a) => a.id !== assignmentId));
+      } else {
+        alert("Failed to delete assignment");
+      }
+    } catch {
+      alert("Failed to delete assignment");
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   return (
@@ -203,34 +226,50 @@ export default function AssignmentsPage() {
                       )}
                     </div>
                   </div>
-                  <div className="text-right ml-4 shrink-0">
-                    {(userRole === "TA" || userRole === "ADMIN" || userRole === "PROFESSOR") && !assignment.mySubmitted ? (
-                      <>
-                        <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                          {assignment._count.submissions}
-                        </p>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">
-                          submission{assignment._count.submissions !== 1 ? "s" : ""}
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                          <span className={assignment.myScore !== null ? "text-emerald-600 dark:text-emerald-400" : "text-gray-400 dark:text-gray-500"}>
-                            {assignment.myScore !== null ? assignment.myScore : "_"}
-                          </span>
-                          <span className="text-gray-300 dark:text-gray-600">/</span>
-                          {assignment.totalPoints}
-                        </p>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">
-                          {assignment.myScore !== null
-                            ? "graded"
-                            : assignment.mySubmitted
-                              ? "submitted"
-                              : "points"}
-                        </p>
-                      </>
+                  <div className="flex items-center gap-2 ml-4 shrink-0">
+                    {canManage && !assignment.published && (
+                      <button
+                        onClick={(e) => handleDeleteDraft(e, assignment.id)}
+                        disabled={deletingId === assignment.id}
+                        className="p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:text-red-400 dark:hover:bg-red-950/50 transition-colors disabled:opacity-50"
+                        title="Delete draft"
+                      >
+                        {deletingId === assignment.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                      </button>
                     )}
+                    <div className="text-right">
+                      {canManage && !assignment.mySubmitted ? (
+                        <>
+                          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                            {assignment._count.submissions}
+                          </p>
+                          <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">
+                            submission{assignment._count.submissions !== 1 ? "s" : ""}
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                            <span className={assignment.myScore !== null ? "text-emerald-600 dark:text-emerald-400" : "text-gray-400 dark:text-gray-500"}>
+                              {assignment.myScore !== null ? assignment.myScore : "_"}
+                            </span>
+                            <span className="text-gray-300 dark:text-gray-600">/</span>
+                            {assignment.totalPoints}
+                          </p>
+                          <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">
+                            {assignment.myScore !== null
+                              ? "graded"
+                              : assignment.mySubmitted
+                                ? "submitted"
+                                : "points"}
+                          </p>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
