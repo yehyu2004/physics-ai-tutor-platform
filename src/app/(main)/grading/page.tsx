@@ -545,15 +545,6 @@ export default function GradingPage() {
 
       {/* Assignment Selector */}
       <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-        <div className="relative w-full sm:w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            placeholder="Search assignments..."
-            value={assignmentSearch}
-            onChange={(e) => { setAssignmentSearch(e.target.value); setAssignmentPage(1); }}
-            className="pl-9 h-9"
-          />
-        </div>
         <Select value={selectedAssignmentId} onValueChange={setSelectedAssignmentId}>
           <SelectTrigger className="w-full sm:w-80">
             <SelectValue placeholder="Select an assignment to grade" />
@@ -581,6 +572,16 @@ export default function GradingPage() {
             ))}
           </SelectContent>
         </Select>
+
+        <div className="relative w-full sm:w-56">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Search assignments..."
+            value={assignmentSearch}
+            onChange={(e) => { setAssignmentSearch(e.target.value); setAssignmentPage(1); }}
+            className="pl-9 h-9"
+          />
+        </div>
 
         {/* Assignment list pagination */}
         {assignmentTotalCount > 0 && (
