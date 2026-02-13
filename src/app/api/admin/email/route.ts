@@ -114,6 +114,9 @@ export async function POST(req: Request) {
 
     const sentCount = results.filter((r) => r.status === "fulfilled").length;
     const failedCount = results.filter((r) => r.status === "rejected").length;
+    const errors = results
+      .filter((r): r is PromiseRejectedResult => r.status === "rejected")
+      .map((r) => String(r.reason?.message || r.reason));
 
     await prisma.auditLog.create({
       data: {
@@ -132,7 +135,7 @@ export async function POST(req: Request) {
       },
     });
 
-    return NextResponse.json({ success: true, sentCount, failedCount });
+    return NextResponse.json({ success: true, sentCount, failedCount, ...(errors.length > 0 && { errors }) });
   } catch (error) {
     console.error("Bulk email error:", error);
     return NextResponse.json(
