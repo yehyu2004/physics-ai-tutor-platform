@@ -391,7 +391,7 @@ export default function ChatPageClient({
   };
 
   return (
-    <div className="flex h-[calc(100vh-5rem)] sm:h-[calc(100vh-6.5rem)] overflow-hidden">
+    <div className="flex h-[calc(100vh-5rem)] sm:h-[calc(100vh-6.5rem)] overflow-hidden -m-3 sm:-m-6">
       {/* Mobile sidebar overlay (only on small screens) */}
       {isMobile && (
         <div
