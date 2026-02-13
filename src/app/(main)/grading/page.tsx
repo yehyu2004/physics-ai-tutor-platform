@@ -96,6 +96,7 @@ interface SubmissionForGrading {
     feedback: string | null;
     autoGraded: boolean;
     maxPoints: number;
+    leftBlank?: boolean;
     appeals: Appeal[];
   }[];
 }
@@ -988,12 +989,16 @@ export default function GradingPage() {
                         <MarkdownContent content={answer.questionText} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed" />
 
                         {/* Student Answer */}
-                        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-100 dark:border-gray-800">
+                        <div className={`rounded-lg p-4 border ${answer.leftBlank ? "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900" : "bg-gray-50 dark:bg-gray-800 border-gray-100 dark:border-gray-800"}`}>
                           <div className="flex items-center gap-1.5 mb-2">
                             <MessageSquare className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500" />
                             <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Student Answer</p>
                           </div>
-                          <p className="text-sm text-gray-800 dark:text-gray-200">{answer.answer || "No typed answer provided"}</p>
+                          {answer.leftBlank ? (
+                            <p className="text-sm text-red-600 dark:text-red-400 italic">Student left this question blank</p>
+                          ) : (
+                            <p className="text-sm text-gray-800 dark:text-gray-200">{answer.answer || "No typed answer provided"}</p>
+                          )}
                           {answer.answerImageUrls && (answer.answerImageUrls as string[]).length > 0 && (
                             <div className="flex gap-2 mt-2 flex-wrap">
                               {(answer.answerImageUrls as string[]).map((url: string, i: number) => (

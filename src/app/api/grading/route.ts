@@ -30,16 +30,34 @@ export async function POST(req: Request) {
     // Per-question grading
     if (grades && grades.length > 0) {
       for (const grade of grades) {
-        await prisma.submissionAnswer.update({
-          where: { id: grade.answerId },
-          data: {
-            score: grade.score,
-            feedback: grade.feedback,
-            ...(feedbackImages?.[grade.answerId]?.length && {
-              feedbackImageUrls: feedbackImages[grade.answerId],
-            }),
-          },
-        });
+        if (grade.answerId.startsWith("blank-")) {
+          // Create a SubmissionAnswer for a question the student left blank
+          const questionId = grade.answerId.replace("blank-", "");
+          await prisma.submissionAnswer.create({
+            data: {
+              submissionId,
+              questionId,
+              answer: null,
+              score: grade.score,
+              feedback: grade.feedback,
+              autoGraded: false,
+              ...(feedbackImages?.[grade.answerId]?.length && {
+                feedbackImageUrls: feedbackImages[grade.answerId],
+              }),
+            },
+          });
+        } else {
+          await prisma.submissionAnswer.update({
+            where: { id: grade.answerId },
+            data: {
+              score: grade.score,
+              feedback: grade.feedback,
+              ...(feedbackImages?.[grade.answerId]?.length && {
+                feedbackImageUrls: feedbackImages[grade.answerId],
+              }),
+            },
+          });
+        }
       }
 
       const updatedAnswers = await prisma.submissionAnswer.findMany({
