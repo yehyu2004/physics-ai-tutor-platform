@@ -23,6 +23,7 @@
    - [Exam Mode](#exam-mode)
 4. [Administration](#4-administration)
    - [User Management](#user-management)
+   - [User Activity](#user-activity)
    - [Q&A History Monitoring](#qa-history-monitoring)
    - [Bulk Email](#bulk-email)
    - [Platform Analytics](#platform-analytics)
@@ -84,11 +85,17 @@ Students can have unlimited conversations with the AI physics tutor. The chat su
 
 ### Taking Assignments
 
-Students can view all published assignments, take quizzes directly in the browser, or upload file submissions. Each assignment shows:
+Students can view all published assignments, take quizzes directly in the browser, or upload file submissions.
 
+The assignments page includes **filter tabs** to quickly find what you need:
+- **All** — every assignment
+- **Published** — active assignments available for submission
+- **Drafts** — unpublished assignments (visible to instructors only)
+
+Each assignment card shows:
 - Assignment type (Quiz or File Upload)
 - Number of questions and due date
-- Submission status
+- Submission status and score
 
 #### Auto-Save
 
@@ -162,6 +169,10 @@ Instructors can create two types of assignments:
    - Suitable for handwritten homework
    - Manual grading with per-question feedback
    - Lock after submission also available for file uploads
+
+#### Managing Drafts
+
+Draft assignments can be deleted directly from the assignments list page using the trash icon — no need to open each assignment individually. Only unpublished (draft) assignments show the delete button. Use the **Drafts** filter tab to quickly find and clean up unused drafts.
 
 ![Create Assignment](screenshots/10-create-assignment.png)
 *The assignment creation form with title, description, type selection, due date, total points, optional PDF upload, and question builder.*
@@ -244,6 +255,20 @@ The admin panel provides full control over user accounts:
 
 ![User Management](screenshots/07-admin-users.png)
 *The User Management page showing all users with role selectors, verification status, and moderation actions (Verify, Restrict, Ban, Impersonate, Delete).*
+
+### User Activity
+
+The User Activity page provides admins and professors with a comprehensive view of how users engage with the platform:
+
+- **Summary cards** — total activities, unique users, time spent, and average daily activity
+- **Daily Activity Trend** — stacked bar chart showing activity by category (AI Chat, Assignments, Grading, Simulations, etc.) over time
+- **Most Active Users** — ranked leaderboard of the top 10 users with role badges and action counts
+- **Recent Activity** — live feed of the last 20 platform events with user avatars, category labels, and relative timestamps
+- **Usage Breakdown** — horizontal bar chart comparing activity counts by category or by user role (toggle between Activity and Identity views)
+- **Filters** — filter by role (Student, TA, Professor, Admin), activity type (Chat, Simulation, Submission, Other), and date range (7, 30, 90 days, or all time)
+- **CSV Export** — download a detailed activity log with timestamps, user info, categories, and durations
+
+The page fully supports dark mode and lazy-loads CSV data only when the Export button is clicked.
 
 ### Q&A History Monitoring
 
