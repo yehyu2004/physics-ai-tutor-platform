@@ -17,13 +17,20 @@ export async function GET(req: Request) {
     const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get("pageSize") || "15")));
     const filterType = searchParams.get("filter"); // "published" | "drafts" | null
 
-    const whereClause = userRole === "STUDENT"
+    const hasSubmissions = searchParams.get("hasSubmissions") === "true";
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const whereClause: any = userRole === "STUDENT"
       ? { published: true }
       : filterType === "published"
         ? { published: true }
         : filterType === "drafts"
           ? { published: false }
           : {};
+
+    if (hasSubmissions) {
+      whereClause.submissions = { some: { isDraft: false } };
+    }
 
     const totalCount = await prisma.assignment.count({ where: whereClause });
 

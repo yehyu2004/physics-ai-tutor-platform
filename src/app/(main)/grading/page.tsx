@@ -209,7 +209,7 @@ export default function GradingPage() {
 
   // Fetch assignment list
   useEffect(() => {
-    fetch("/api/assignments?filter=published&pageSize=100")
+    fetch("/api/assignments?filter=published&pageSize=100&hasSubmissions=true")
       .then((res) => res.json())
       .then((data) => {
         const list = (data.assignments || []).map((a: { id: string; title: string; type: string; totalPoints: number; ungradedCount?: number; gradedCount?: number; openAppealCount?: number; _count?: { submissions: number } }) => ({
