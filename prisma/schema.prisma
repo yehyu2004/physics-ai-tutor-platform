@@ -182,7 +182,8 @@ model Submission {
   totalScore   Float?
   gradedAt     DateTime?
   gradedById   String?
-  isDraft      Boolean   @default(false)
+  isDraft          Boolean   @default(false)
+  overallFeedback  String?   @db.Text
 
   assignment Assignment         @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
   user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)

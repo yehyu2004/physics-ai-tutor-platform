@@ -83,6 +83,7 @@ interface SubmissionForGrading {
   gradedAt: string | null;
   gradedByName: string | null;
   fileUrl: string | null;
+  overallFeedback: string | null;
   openAppealCount: number;
   totalAppealCount: number;
   answers: {
@@ -317,7 +318,7 @@ export default function GradingPage() {
 
     // Overall score & feedback
     setOverallScore(saved?.overallScore ?? sub.totalScore ?? 0);
-    setOverallFeedback(saved?.overallFeedback ?? "");
+    setOverallFeedback(saved?.overallFeedback ?? sub.overallFeedback ?? "");
 
     // Feedback images: prefer localStorage, fall back to server data
     if (saved?.feedbackImages && Object.keys(saved.feedbackImages).length > 0) {

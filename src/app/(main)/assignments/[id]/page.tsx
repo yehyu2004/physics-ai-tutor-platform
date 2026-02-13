@@ -99,6 +99,7 @@ interface ExistingSubmission {
   submittedAt: string;
   totalScore: number | null;
   isDraft?: boolean;
+  overallFeedback?: string | null;
   answers: SubmissionAnswer[];
 }
 
@@ -941,6 +942,14 @@ export default function AssignmentDetailPage({
                   )}
                   Edit & Resubmit
                 </Button>
+              </div>
+            )}
+
+            {/* Overall feedback from grader */}
+            {existingSubmission.overallFeedback && existingSubmission.totalScore !== null && (
+              <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-2 bg-gray-50 dark:bg-gray-800">
+                <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Grader Feedback</p>
+                <MarkdownContent content={existingSubmission.overallFeedback} className="text-sm text-gray-600 dark:text-gray-400" />
               </div>
             )}
 

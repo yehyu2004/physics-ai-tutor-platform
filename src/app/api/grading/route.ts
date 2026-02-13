@@ -68,65 +68,55 @@ export async function POST(req: Request) {
           });
         }
       }
+    }
 
+    // Determine total score: use overallScore if provided, otherwise sum per-question scores
+    let finalTotalScore: number;
+    if (overallScore !== undefined) {
+      finalTotalScore = overallScore;
+    } else if (grades && grades.length > 0) {
       const updatedAnswers = await prisma.submissionAnswer.findMany({
         where: { submissionId },
       });
-
-      const totalScore = updatedAnswers.reduce(
+      finalTotalScore = updatedAnswers.reduce(
         (sum, ans) => sum + (ans.score || 0),
         0
       );
+    } else {
+      return NextResponse.json({ error: "No grades provided" }, { status: 400 });
+    }
 
-      if (isDraft) {
-        // Draft grading: save scores but don't mark as graded
-        await prisma.submission.update({
-          where: { id: submissionId },
-          data: {
-            totalScore,
-            ...(feedbackFileUrl !== undefined && { fileUrl: feedbackFileUrl }),
-          },
-        });
-        return NextResponse.json({ success: true, totalScore, isDraft: true });
-      }
+    // Store overall feedback
+    if (overallFeedback !== undefined) {
+      await prisma.submission.update({
+        where: { id: submissionId },
+        data: { overallFeedback },
+      });
+    }
 
+    if (isDraft) {
+      // Draft grading: save scores but don't mark as graded
       await prisma.submission.update({
         where: { id: submissionId },
         data: {
-          totalScore,
-          gradedAt: new Date(),
-          gradedById: graderId,
+          totalScore: finalTotalScore,
           ...(feedbackFileUrl !== undefined && { fileUrl: feedbackFileUrl }),
         },
       });
-
-      return NextResponse.json({ success: true, totalScore });
+      return NextResponse.json({ success: true, totalScore: finalTotalScore, isDraft: true });
     }
 
-    // Overall grading (for FILE_UPLOAD or whole-paper grading)
-    if (overallScore !== undefined) {
-      await prisma.submission.update({
-        where: { id: submissionId },
-        data: {
-          totalScore: overallScore,
-          gradedAt: new Date(),
-          gradedById: graderId,
-          ...(feedbackFileUrl !== undefined && { fileUrl: feedbackFileUrl }),
-        },
-      });
+    await prisma.submission.update({
+      where: { id: submissionId },
+      data: {
+        totalScore: finalTotalScore,
+        gradedAt: new Date(),
+        gradedById: graderId,
+        ...(feedbackFileUrl !== undefined && { fileUrl: feedbackFileUrl }),
+      },
+    });
 
-      // Store overall feedback in the first answer if exists, or we just use the score
-      if (overallFeedback && submission.answers.length > 0) {
-        await prisma.submissionAnswer.update({
-          where: { id: submission.answers[0].id },
-          data: { feedback: overallFeedback, score: overallScore },
-        });
-      }
-
-      return NextResponse.json({ success: true, totalScore: overallScore });
-    }
-
-    return NextResponse.json({ error: "No grades provided" }, { status: 400 });
+    return NextResponse.json({ success: true, totalScore: finalTotalScore });
   } catch (error) {
     console.error("Grading error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
