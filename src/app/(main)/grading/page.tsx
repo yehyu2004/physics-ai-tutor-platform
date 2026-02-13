@@ -140,6 +140,7 @@ export default function GradingPage() {
   const [appealImages, setAppealImages] = useState<Record<string, string[]>>({});
   const [uploadingImage, setUploadingImage] = useState(false);
   const [confirmedAnswers, setConfirmedAnswers] = useState<Set<string>>(new Set());
+  const [overallGradeConfirmed, setOverallGradeConfirmed] = useState(false);
   const [gradingDraftRestored, setGradingDraftRestored] = useState(false);
   const prevSubmissionIdRef = useRef<string | null>(null);
 
@@ -277,10 +278,8 @@ export default function GradingPage() {
     setFeedbackFile(null);
     setFeedbackFileUrl(null);
     setGradingDraftRestored(false);
-    // Pre-confirm answers that already have scores
-    const preConfirmed = new Set<string>();
-    sub.answers.forEach((a) => { if (a.score !== null && a.score !== undefined) preConfirmed.add(a.id); });
-    setConfirmedAnswers(preConfirmed);
+    // All answers start unchecked — grader must confirm each one
+    setConfirmedAnswers(new Set());
 
     // Try to restore from localStorage
     const savedDraft = loadFromLocalStorage(sub.id);
@@ -316,6 +315,7 @@ export default function GradingPage() {
 
     setOverallScore(sub.totalScore || 0);
     setOverallFeedback("");
+    setOverallGradeConfirmed(false);
     // Auto-select grading mode
     if (sub.answers.length === 0 || assignmentInfo?.type === "FILE_UPLOAD") {
       setGradingMode("overall");
@@ -925,7 +925,7 @@ export default function GradingPage() {
                     ) : (
                       <Button
                         onClick={handleSaveGrades}
-                        disabled={saving || allAutoGraded || (!allAutoGraded && confirmedAnswers.size === 0)}
+                        disabled={saving || allAutoGraded || (gradingMode === "per-question" && confirmedAnswers.size === 0) || (gradingMode === "overall" && !overallGradeConfirmed)}
                         size="sm"
                         className="gap-1.5 bg-gray-900 dark:bg-gray-100 hover:bg-gray-800 dark:hover:bg-gray-200 text-white dark:text-gray-900 rounded-lg"
                       >
@@ -1008,14 +1008,28 @@ export default function GradingPage() {
                           <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
                             Score (max {assignmentInfo?.totalPoints})
                           </label>
-                          <Input
-                            type="number"
-                            min={0}
-                            max={assignmentInfo?.totalPoints || 100}
-                            value={overallScore}
-                            onChange={(e) => setOverallScore(Number(e.target.value))}
-                            className="font-semibold text-center"
-                          />
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="number"
+                              min={0}
+                              max={assignmentInfo?.totalPoints || 100}
+                              value={overallScore}
+                              onChange={(e) => setOverallScore(Number(e.target.value))}
+                              className="font-semibold text-center"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setOverallGradeConfirmed((prev) => !prev)}
+                              className={`shrink-0 h-8 w-8 rounded-md border-2 flex items-center justify-center transition-colors ${
+                                overallGradeConfirmed
+                                  ? "bg-emerald-500 border-emerald-500 text-white"
+                                  : "border-gray-300 dark:border-gray-600 hover:border-emerald-400"
+                              }`}
+                              title={overallGradeConfirmed ? "Unconfirm grade" : "Confirm grade"}
+                            >
+                              {overallGradeConfirmed && <CheckCircle2 className="h-4 w-4" />}
+                            </button>
+                          </div>
                         </div>
                       </div>
                       <div className="space-y-1.5">
