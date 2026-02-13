@@ -94,6 +94,7 @@ export default function CreateAssignmentPage() {
 
       // For scheduled assignments, redirect directly
       if (schedule) {
+        toast.success(`Assignment scheduled for ${new Date(scheduledPublishAt).toLocaleString()}`);
         router.push(`/assignments/${data.assignment.id}`);
         router.refresh();
         return;
