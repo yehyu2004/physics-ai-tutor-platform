@@ -33,13 +33,9 @@ for i in {1..30}; do
   sleep 1
 done
 
-# Hit all routes in parallel (max 4 concurrent)
+# Hit all routes (sequential to avoid overwhelming the dev server)
 for route in "${ROUTES[@]}"; do
   curl -s -o /dev/null "$BASE$route" &
-  # Limit concurrency to avoid overwhelming the server
-  if (( $(jobs -r | wc -l) >= 4 )); then
-    wait -n
-  fi
 done
 wait
 

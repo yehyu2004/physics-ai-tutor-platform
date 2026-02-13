@@ -38,7 +38,10 @@ export default function CreateAssignmentPage() {
     publish: boolean,
     schedule?: boolean,
   ) => {
-    if (!formData.title.trim()) return;
+    if (!formData.title.trim()) {
+      toast.error("Please enter a title for the assignment");
+      return;
+    }
 
     // Validate schedule date
     if (schedule && scheduledPublishAt) {
@@ -73,7 +76,11 @@ export default function CreateAssignmentPage() {
         }),
       });
 
-      if (!res.ok) throw new Error("Failed to create assignment");
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        toast.error(errData?.error || "Failed to create assignment");
+        return;
+      }
 
       const data = await res.json();
 
@@ -110,7 +117,8 @@ export default function CreateAssignmentPage() {
 
       setReminderOpen(true);
     } catch (err) {
-      console.error(err);
+      console.error("Create assignment error:", err);
+      toast.error(err instanceof Error ? err.message : "Failed to create assignment");
     } finally {
       setLoading(false);
     }
@@ -128,7 +136,10 @@ export default function CreateAssignmentPage() {
       imageUrl?: string;
     }>>,
   ) => {
-    if (!formData.title.trim()) return;
+    if (!formData.title.trim()) {
+      toast.error("Please enter a title for the assignment");
+      return;
+    }
     setExportingLatex(true);
 
     try {

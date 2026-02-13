@@ -9,7 +9,9 @@ install:
 # Ctrl+C will cleanly stop the server.
 dev: install prisma-generate db-push kill-port
 	@trap 'echo "\nShutting down dev server..."; kill %1 2>/dev/null; lsof -ti :3000 | xargs kill 2>/dev/null; echo "Dev server stopped."' INT TERM; \
-	npm run dev & wait
+	npm run dev & \
+	bash scripts/warmup.sh & \
+	wait
 
 # Kill any process on port 3000
 kill-port:
