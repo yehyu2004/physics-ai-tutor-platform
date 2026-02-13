@@ -288,6 +288,7 @@ export default function CreateAssignmentPage() {
           : "The assignment will be published when you confirm. Optionally send an email notification."
         }
         sendButtonLabel={isScheduleMode ? "Schedule Email" : "Confirm Publish"}
+        skipButtonLabel={isScheduleMode ? "Skip" : "Publish"}
         onSkip={async () => {
           // For publish mode, publish the assignment on skip (without email)
           if (!isScheduleMode && createdAssignmentId) {

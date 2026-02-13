@@ -55,6 +55,8 @@ interface NotifyUsersDialogProps {
   dialogDescription?: string;
   /** Override send button label (default: "Send Reminder") */
   sendButtonLabel?: string;
+  /** Override skip button label (default: "Skip") */
+  skipButtonLabel?: string;
   /** Override success message (default: "Reminder sent successfully") */
   successMessage?: string;
   /** Enable scheduling option (default: true) */
@@ -92,6 +94,7 @@ export function NotifyUsersDialog({
   dialogTitle = "Notify Users",
   dialogDescription = "Send an email notification to selected users. Filter by role or select individually.",
   sendButtonLabel = "Send Reminder",
+  skipButtonLabel = "Skip",
   successMessage = "Reminder sent successfully",
   enableScheduling = true,
   defaultScheduledAt,
@@ -506,7 +509,7 @@ export function NotifyUsersDialog({
                 disabled={sending}
               >
                 <SkipForward className="h-4 w-4 mr-2" />
-                Skip
+                {skipButtonLabel}
               </Button>
               <Button
                 onClick={handleSend}
