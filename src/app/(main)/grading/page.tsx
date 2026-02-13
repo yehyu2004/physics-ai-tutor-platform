@@ -849,18 +849,26 @@ export default function GradingPage() {
                         </div>
                       </div>
                       <div className="mt-2 ml-10 space-y-1">
-                        {isGraded ? (
-                          <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
-                            <CheckCircle2 className="h-3 w-3" />
-                            Score: {sub.totalScore}/{assignmentInfo?.totalPoints}
+                        <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border ${
+                          isGraded
+                            ? "text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950 border-emerald-200 dark:border-emerald-800"
+                            : "text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700"
+                        }`}>
+                          {isGraded ? <CheckCircle2 className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+                          {sub.totalScore ?? 0}/{assignmentInfo?.totalPoints}
+                        </span>
+                        {isGraded ? null : sub.openAppealCount > 0 ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-950 px-2 py-0.5 rounded-full border border-orange-200 dark:border-orange-800">
+                            <ShieldAlert className="h-3 w-3" />
+                            Pending · {sub.openAppealCount} appeal{sub.openAppealCount !== 1 ? "s" : ""}
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-800">
                             <Clock className="h-3 w-3" />
-                            Needs Grading
+                            Ungraded
                           </span>
                         )}
-                        {sub.openAppealCount > 0 && (
+                        {isGraded && sub.openAppealCount > 0 && (
                           <span className="inline-flex items-center gap-1 text-xs font-medium text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-950 px-2 py-0.5 rounded-full border border-orange-200 dark:border-orange-800">
                             <ShieldAlert className="h-3 w-3" />
                             {sub.openAppealCount} open appeal{sub.openAppealCount !== 1 ? "s" : ""}
