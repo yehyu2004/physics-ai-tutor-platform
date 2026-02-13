@@ -42,7 +42,7 @@ export default function AssignmentsPage() {
   const effectiveSession = useEffectiveSession();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"ALL" | "QUIZ" | "FILE_UPLOAD">("ALL");
+  const [filter, setFilter] = useState<"ALL" | "PUBLISHED" | "DRAFTS">("ALL");
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const userRole = effectiveSession.role;
@@ -60,7 +60,9 @@ export default function AssignmentsPage() {
   const filteredAssignments =
     filter === "ALL"
       ? assignments
-      : assignments.filter((a) => a.type === filter);
+      : filter === "PUBLISHED"
+        ? assignments.filter((a) => a.published)
+        : assignments.filter((a) => !a.published);
 
   if (loading) {
     return (
@@ -124,7 +126,7 @@ export default function AssignmentsPage() {
 
       {/* Filter Tabs */}
       <div className="flex items-center gap-2">
-        {(["ALL", "QUIZ", "FILE_UPLOAD"] as const).map((type) => (
+        {(["ALL", "PUBLISHED", "DRAFTS"] as const).map((type) => (
           <button
             key={type}
             onClick={() => setFilter(type)}
@@ -136,9 +138,9 @@ export default function AssignmentsPage() {
           >
             {type === "ALL"
               ? `All (${assignments.length})`
-              : type === "QUIZ"
-                ? `Quizzes (${assignments.filter((a) => a.type === "QUIZ").length})`
-                : `File Upload (${assignments.filter((a) => a.type === "FILE_UPLOAD").length})`}
+              : type === "PUBLISHED"
+                ? `Published (${assignments.filter((a) => a.published).length})`
+                : `Drafts (${assignments.filter((a) => !a.published).length})`}
           </button>
         ))}
       </div>
