@@ -945,8 +945,8 @@ export default function GradingPage() {
                               body: JSON.stringify({ submissionId: selectedSubmission.id, ungrade: true }),
                             });
                             if (res.ok) {
-                              setSubmissions((prev) => prev.map((s) => s.id !== selectedSubmission.id ? s : { ...s, gradedAt: null, gradedByName: null }));
-                              setSelectedSubmission((prev) => prev ? { ...prev, gradedAt: null, gradedByName: null } : prev);
+                              setSubmissions((prev) => prev.map((s) => s.id !== selectedSubmission.id ? s : { ...s, totalScore: null, gradedAt: null, gradedByName: null }));
+                              setSelectedSubmission((prev) => prev ? { ...prev, totalScore: null, gradedAt: null, gradedByName: null } : prev);
                             }
                           } finally { setSaving(false); }
                         }}
