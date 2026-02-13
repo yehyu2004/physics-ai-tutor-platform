@@ -36,6 +36,7 @@ interface Assignment {
   _count: { submissions: number; questions: number };
   myScore: number | null;
   mySubmitted: boolean;
+  myProgress?: { answeredCount: number; totalQuestions: number; status: string };
   ungradedCount?: number;
   openAppealCount?: number;
 }
@@ -258,6 +259,17 @@ export default function AssignmentsPage() {
                           <span className="flex items-center gap-1">
                             <Clock className="h-3.5 w-3.5" />
                             Due {formatShortDate(assignment.dueDate)}
+                          </span>
+                        )}
+                        {assignment.myProgress && !assignment.mySubmitted && (
+                          <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border ${
+                            assignment.myProgress.answeredCount === assignment.myProgress.totalQuestions
+                              ? "text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950 border-emerald-200 dark:border-emerald-800"
+                              : assignment.myProgress.answeredCount > 0
+                                ? "text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800"
+                                : "text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700"
+                          }`}>
+                            {assignment.myProgress.answeredCount}/{assignment.myProgress.totalQuestions} done
                           </span>
                         )}
                       </div>

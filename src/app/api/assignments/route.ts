@@ -55,9 +55,9 @@ export async function GET(req: Request) {
         },
         submissions: userRole === "STUDENT"
           ? {
-              where: { userId, isDraft: false },
-              select: { totalScore: true, submittedAt: true, gradedAt: true },
-              take: 1,
+              where: { userId },
+              select: { totalScore: true, submittedAt: true, gradedAt: true, isDraft: true, fileUrl: true, _count: { select: { answers: true } } },
+              take: 2, // get both draft and final if they exist
             }
           : {
               where: { isDraft: false },
@@ -96,21 +96,43 @@ export async function GET(req: Request) {
       appealCountByAssignment[aid] = (appealCountByAssignment[aid] || 0) + 1;
     }
 
-    const formatted = assignments.map((a) => {
-      const mySubmission = userRole === "STUDENT"
-        ? (a.submissions[0] || null)
-        : ((a.submissions as Array<{ userId?: string; totalScore: number | null }>).find((s) => s.userId === userId) || null);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const formatted = assignments.map((a: any) => {
+      let mySubmission = null;
+      let myProgress: { answeredCount: number; totalQuestions: number; status: string } | undefined;
+
+      if (userRole === "STUDENT") {
+        const finalSub = a.submissions.find((s: { isDraft: boolean }) => !s.isDraft);
+        const draftSub = a.submissions.find((s: { isDraft: boolean }) => s.isDraft);
+        mySubmission = finalSub || null;
+
+        if (finalSub) {
+          myProgress = { answeredCount: a._count.questions, totalQuestions: a._count.questions, status: "submitted" };
+        } else if (draftSub) {
+          const answeredCount = draftSub._count?.answers || 0;
+          myProgress = { answeredCount, totalQuestions: a._count.questions, status: "in-progress" };
+        }
+
+        // FILE_UPLOAD with file attached = done
+        if (a.type === "FILE_UPLOAD" && (finalSub?.fileUrl || draftSub?.fileUrl)) {
+          myProgress = { answeredCount: a._count.questions, totalQuestions: a._count.questions, status: finalSub ? "submitted" : "in-progress" };
+        }
+      } else {
+        mySubmission = (a.submissions as Array<{ userId?: string; totalScore: number | null }>).find((s) => s.userId === userId) || null;
+      }
+
       const ungradedCount = userRole !== "STUDENT"
-        ? a.submissions.filter((s) => s.gradedAt === null).length
+        ? a.submissions.filter((s: { gradedAt: Date | null }) => s.gradedAt === null).length
         : undefined;
       const gradedCount = userRole !== "STUDENT"
-        ? a.submissions.filter((s) => s.gradedAt !== null).length
+        ? a.submissions.filter((s: { gradedAt: Date | null }) => s.gradedAt !== null).length
         : undefined;
       return {
         ...a,
         submissions: undefined,
         myScore: mySubmission?.totalScore ?? null,
         mySubmitted: !!mySubmission,
+        myProgress,
         ungradedCount,
         gradedCount,
         openAppealCount: appealCountByAssignment[a.id] || 0,
