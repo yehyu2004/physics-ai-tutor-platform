@@ -48,10 +48,16 @@ export default function AnalyticsPage() {
 
   useTrackTime("ANALYTICS_VIEW");
 
+  // Get user's IANA timezone for server-side date grouping
+  const userTz = typeof window !== "undefined"
+    ? Intl.DateTimeFormat().resolvedOptions().timeZone
+    : "UTC";
+
   useEffect(() => {
+    const tzParam = `tz=${encodeURIComponent(userTz)}`;
     Promise.all([
       fetch("/api/analytics").then((r) => r.json()),
-      fetch("/api/activity/heatmap").then((r) => r.json()),
+      fetch(`/api/activity/heatmap?${tzParam}`).then((r) => r.json()),
       fetch("/api/activity/breakdown").then((r) => r.json()),
     ])
       .then(([analyticsJson, heatmapJson, breakdownJson]) => {
@@ -61,18 +67,21 @@ export default function AnalyticsPage() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Refetch heatmap when activity filter changes
   useEffect(() => {
-    const params = activityFilter !== "all" ? `?filter=${activityFilter}` : "";
-    fetch(`/api/activity/heatmap${params}`)
+    const params = new URLSearchParams({ tz: userTz });
+    if (activityFilter !== "all") params.set("filter", activityFilter);
+    fetch(`/api/activity/heatmap?${params}`)
       .then((r) => r.json())
       .then((json) => setHeatmapData(json.data || []))
       .catch(() => {});
     // Clear day detail when filter changes
     setSelectedDate(null);
     setDayActivities([]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activityFilter]);
 
   const formatDuration = (ms: number): string => {
@@ -107,8 +116,9 @@ export default function AnalyticsPage() {
     }
     setSelectedDate(date);
     setLoadingDetail(true);
-    const filterParam = activityFilter !== "all" ? `&filter=${activityFilter}` : "";
-    fetch(`/api/activity/detail?date=${date}${filterParam}`)
+    const detailParams = new URLSearchParams({ date, tz: userTz });
+    if (activityFilter !== "all") detailParams.set("filter", activityFilter);
+    fetch(`/api/activity/detail?${detailParams}`)
       .then((r) => r.json())
       .then((json) => {
         setDayActivities(json.activities || []);
@@ -293,12 +303,12 @@ export default function AnalyticsPage() {
       {/* Activity Heatmap */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
               <CardTitle className="text-base">Activity Heatmap</CardTitle>
               <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">Your feature usage over the past year — just like GitHub</p>
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
               {[
                 { key: "all", label: "All" },
                 { key: "chat", label: "Chat" },

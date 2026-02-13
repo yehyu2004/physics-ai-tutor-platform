@@ -23,6 +23,14 @@ function getLevel(count: number): number {
   return 4;
 }
 
+/** Format a local Date as YYYY-MM-DD (matches server's tz-aware keys) */
+function toLocalDateKey(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 const LEVEL_COLORS = [
   "bg-gray-100 dark:bg-gray-800",
   "bg-emerald-200 dark:bg-emerald-900",
@@ -43,15 +51,14 @@ export default function ContributionGraph({ data, selectedDate, onSelectDate }: 
       total += d.count;
     }
 
-    // Build weeks grid (columns = weeks, rows = days 0-6 Sun-Sat)
-    // Use UTC methods to match server's toISOString()-based date keys
+    // Build weeks grid using local timezone (server sends tz-aware date keys)
     const today = new Date();
-    today.setUTCHours(0, 0, 0, 0);
-    const dayOfWeek = today.getUTCDay(); // 0=Sun
+    today.setHours(0, 0, 0, 0);
+    const dayOfWeek = today.getDay(); // 0=Sun
 
     // Start from the Sunday of 52 weeks ago
     const startDate = new Date(today);
-    startDate.setUTCDate(startDate.getUTCDate() - (52 * 7 + dayOfWeek));
+    startDate.setDate(startDate.getDate() - (52 * 7 + dayOfWeek));
 
     const weeksArr: DayData[][] = [];
     const labels: { month: string; weekIndex: number }[] = [];
@@ -66,14 +73,14 @@ export default function ContributionGraph({ data, selectedDate, onSelectDate }: 
         if (currentDate > today) {
           break;
         }
-        const key = currentDate.toISOString().split("T")[0];
-        const month = currentDate.getUTCMonth();
+        const key = toLocalDateKey(currentDate);
+        const month = currentDate.getMonth();
         if (month !== lastMonth) {
           labels.push({ month: MONTHS[month], weekIndex });
           lastMonth = month;
         }
         week.push({ date: key, count: map.get(key) || 0 });
-        currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+        currentDate.setDate(currentDate.getDate() + 1);
       }
       weeksArr.push(week);
       weekIndex++;
@@ -86,7 +93,7 @@ export default function ContributionGraph({ data, selectedDate, onSelectDate }: 
     // Walk backwards from today
     const tempDate = new Date(today);
     for (let i = 0; i < 365; i++) {
-      const key = tempDate.toISOString().split("T")[0];
+      const key = toLocalDateKey(tempDate);
       const count = map.get(key) || 0;
       if (count > 0) {
         streak++;
@@ -96,7 +103,7 @@ export default function ContributionGraph({ data, selectedDate, onSelectDate }: 
         longest = Math.max(longest, streak);
         streak = 0;
       }
-      tempDate.setUTCDate(tempDate.getUTCDate() - 1);
+      tempDate.setDate(tempDate.getDate() - 1);
     }
     longest = Math.max(longest, streak);
 
@@ -174,13 +181,13 @@ export default function ContributionGraph({ data, selectedDate, onSelectDate }: 
           </div>
 
           {/* Cells */}
-          <div className="flex gap-[3px]">
+          <div className="flex gap-[3px] min-w-0">
             {weeks.map((week, wi) => (
               <div key={wi} className="flex flex-col gap-[3px]">
                 {week.map((day) => (
                   <div
                     key={day.date}
-                    className={`w-[12px] h-[12px] rounded-[2px] transition-colors cursor-pointer ${
+                    className={`w-[11px] h-[11px] sm:w-[12px] sm:h-[12px] rounded-[2px] transition-colors cursor-pointer ${
                       LEVEL_COLORS[getLevel(day.count)]
                     } hover:ring-1 hover:ring-gray-400 dark:hover:ring-gray-500${
                       selectedDate === day.date ? " ring-2 ring-indigo-500 dark:ring-indigo-400" : ""

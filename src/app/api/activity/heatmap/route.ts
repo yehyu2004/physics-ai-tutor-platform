@@ -8,6 +8,11 @@ const FILTER_CATEGORIES: Record<string, string[]> = {
   submission: ["ASSIGNMENT_SUBMIT", "ASSIGNMENT_VIEW"],
 };
 
+/** Format a Date as YYYY-MM-DD in a given IANA timezone */
+function toDateKey(date: Date, tz: string): string {
+  return date.toLocaleDateString("en-CA", { timeZone: tz });
+}
+
 export async function GET(req: Request) {
   try {
     const session = await getEffectiveSession();
@@ -19,9 +24,18 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const filter = searchParams.get("filter"); // "all" | "chat" | "simulation" | "submission" | "other"
 
-    // Get activities from the past 365 days (use UTC to match toISOString keys)
+    // Validate timezone (fallback to UTC)
+    const tzParam = searchParams.get("tz") || "UTC";
+    let tz = "UTC";
+    try {
+      Intl.DateTimeFormat(undefined, { timeZone: tzParam });
+      tz = tzParam;
+    } catch { /* invalid timezone */ }
+
+    // Get activities from the past ~366 days (extra buffer for timezone edge cases)
     const yearAgo = new Date();
     yearAgo.setUTCFullYear(yearAgo.getUTCFullYear() - 1);
+    yearAgo.setUTCDate(yearAgo.getUTCDate() - 2);
     yearAgo.setUTCHours(0, 0, 0, 0);
 
     // Build category filter
@@ -47,7 +61,7 @@ export async function GET(req: Request) {
       select: { createdAt: true },
     });
     for (const a of activities) {
-      const key = a.createdAt.toISOString().split("T")[0];
+      const key = toDateKey(a.createdAt, tz);
       countsByDate[key] = (countsByDate[key] || 0) + 1;
     }
 
@@ -62,7 +76,7 @@ export async function GET(req: Request) {
         select: { createdAt: true },
       });
       for (const m of messages) {
-        const key = m.createdAt.toISOString().split("T")[0];
+        const key = toDateKey(m.createdAt, tz);
         countsByDate[key] = (countsByDate[key] || 0) + 1;
       }
     }
@@ -77,19 +91,20 @@ export async function GET(req: Request) {
         select: { submittedAt: true },
       });
       for (const s of submissions) {
-        const key = s.submittedAt.toISOString().split("T")[0];
+        const key = toDateKey(s.submittedAt, tz);
         countsByDate[key] = (countsByDate[key] || 0) + 1;
       }
     }
 
-    // Build full 365-day array (use UTC to match toISOString keys)
-    const today = new Date();
-    today.setUTCHours(0, 0, 0, 0);
+    // Build full 365-day array using the user's local timezone
+    const todayKey = toDateKey(new Date(), tz);
+    const [ty, tm, td] = todayKey.split("-").map(Number);
     const data: { date: string; count: number }[] = [];
 
     for (let i = 364; i >= 0; i--) {
-      const d = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
-      const key = d.toISOString().split("T")[0];
+      // Use noon UTC to avoid DST edge cases when converting to local date
+      const d = new Date(Date.UTC(ty, tm - 1, td - i, 12, 0, 0));
+      const key = toDateKey(d, tz);
       data.push({ date: key, count: countsByDate[key] || 0 });
     }
 

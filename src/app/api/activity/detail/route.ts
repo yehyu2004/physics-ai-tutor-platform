@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { getEffectiveSession } from "@/lib/impersonate";
 import { prisma } from "@/lib/prisma";
 
+/** Format a Date as YYYY-MM-DD in a given IANA timezone */
+function toDateKey(date: Date, tz: string): string {
+  return date.toLocaleDateString("en-CA", { timeZone: tz });
+}
+
 export async function GET(req: Request) {
   try {
     const session = await getEffectiveSession();
@@ -19,6 +24,14 @@ export async function GET(req: Request) {
 
     const filter = searchParams.get("filter");
 
+    // Validate timezone (fallback to UTC)
+    const tzParam = searchParams.get("tz") || "UTC";
+    let tz = "UTC";
+    try {
+      Intl.DateTimeFormat(undefined, { timeZone: tzParam });
+      tz = tzParam;
+    } catch { /* invalid timezone */ }
+
     const FILTER_CATEGORIES: Record<string, string[]> = {
       chat: ["AI_CHAT"],
       simulation: ["SIMULATION"],
@@ -35,14 +48,17 @@ export async function GET(req: Request) {
       }
     }
 
-    const startOfDay = new Date(date + "T00:00:00.000Z");
-    const endOfDay = new Date(date + "T23:59:59.999Z");
+    // Query ±1 day buffer to account for timezone differences, then filter by local date
+    const bufferStart = new Date(date + "T00:00:00.000Z");
+    bufferStart.setUTCDate(bufferStart.getUTCDate() - 1);
+    const bufferEnd = new Date(date + "T23:59:59.999Z");
+    bufferEnd.setUTCDate(bufferEnd.getUTCDate() + 1);
 
     // 1. UserActivity records
     const activities = await prisma.userActivity.findMany({
       where: {
         userId,
-        createdAt: { gte: startOfDay, lte: endOfDay },
+        createdAt: { gte: bufferStart, lte: bufferEnd },
         ...whereCategory,
       },
       orderBy: { createdAt: "desc" },
@@ -55,14 +71,18 @@ export async function GET(req: Request) {
       },
     });
 
-    const results: { id: string; category: string; detail: string | null; durationMs: number | null; time: string }[] =
-      activities.map((a: { id: string; category: string; detail: string | null; durationMs: number | null; createdAt: Date }) => ({
+    const results: { id: string; category: string; detail: string | null; durationMs: number | null; time: string }[] = [];
+
+    for (const a of activities) {
+      if (toDateKey(a.createdAt, tz) !== date) continue;
+      results.push({
         id: a.id,
         category: a.category,
         detail: a.detail,
         durationMs: a.durationMs,
         time: a.createdAt.toISOString(),
-      }));
+      });
+    }
 
     // 2. Messages (chat interactions)
     if (!filter || filter === "all" || filter === "chat") {
@@ -70,7 +90,7 @@ export async function GET(req: Request) {
         where: {
           role: "user",
           conversation: { userId, isDeleted: false },
-          createdAt: { gte: startOfDay, lte: endOfDay },
+          createdAt: { gte: bufferStart, lte: bufferEnd },
         },
         orderBy: { createdAt: "desc" },
         select: {
@@ -81,6 +101,7 @@ export async function GET(req: Request) {
         },
       });
       for (const m of messages) {
+        if (toDateKey(m.createdAt, tz) !== date) continue;
         const preview = m.content.length > 60 ? m.content.slice(0, 60) + "…" : m.content;
         results.push({
           id: m.id,
@@ -97,7 +118,7 @@ export async function GET(req: Request) {
       const submissions = await prisma.submission.findMany({
         where: {
           userId,
-          submittedAt: { gte: startOfDay, lte: endOfDay },
+          submittedAt: { gte: bufferStart, lte: bufferEnd },
         },
         orderBy: { submittedAt: "desc" },
         select: {
@@ -108,6 +129,7 @@ export async function GET(req: Request) {
         },
       });
       for (const s of submissions) {
+        if (toDateKey(s.submittedAt, tz) !== date) continue;
         results.push({
           id: s.id,
           category: "SUBMISSION",
