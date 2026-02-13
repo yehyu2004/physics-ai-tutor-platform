@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useEffectiveSession } from "@/lib/effective-session-context";
 import { useTrackTime } from "@/lib/use-track-time";
@@ -52,17 +52,9 @@ export default function AssignmentsPage() {
   const [totalCount, setTotalCount] = useState(0);
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const [searchInput, setSearchInput] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [activeSearch, setActiveSearch] = useState("");
 
   const userRole = effectiveSession.role;
-
-  // Debounce search
-  useEffect(() => {
-    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    searchTimerRef.current = setTimeout(() => { setDebouncedSearch(searchInput); setPage(1); }, 300);
-    return () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current); };
-  }, [searchInput]);
 
   const fetchAssignments = useCallback((f?: string, p?: number, ps?: number, q?: string) => {
     setLoading(true);
@@ -84,8 +76,8 @@ export default function AssignmentsPage() {
   }, []);
 
   useEffect(() => {
-    fetchAssignments(filter, page, pageSize, debouncedSearch);
-  }, [fetchAssignments, filter, page, pageSize, debouncedSearch]);
+    fetchAssignments(filter, page, pageSize, activeSearch);
+  }, [fetchAssignments, filter, page, pageSize, activeSearch]);
 
   const handleFilterChange = (f: "ALL" | "PUBLISHED" | "DRAFTS") => {
     setFilter(f);
@@ -154,9 +146,10 @@ export default function AssignmentsPage() {
         <div className="relative w-full sm:w-64">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
-            placeholder="Search assignments..."
+            placeholder="Search and press Enter..."
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { setActiveSearch(searchInput); setPage(1); } }}
             className="pl-9 h-9"
           />
         </div>

@@ -114,8 +114,7 @@ export default function GradingPage() {
   const assignmentTotalPages = Math.max(1, Math.ceil(assignmentTotalCount / assignmentPageSize));
   const [assignmentFilter, setAssignmentFilter] = useState<"all" | "ungraded" | "pending">("all");
   const [assignmentSearch, setAssignmentSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [activeSearch, setActiveSearch] = useState("");
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<string>(initialAssignmentId || "");
   const [assignmentInfo, setAssignmentInfo] = useState<AssignmentInfo | null>(null);
   const [submissions, setSubmissions] = useState<SubmissionForGrading[]>([]);
@@ -241,16 +240,9 @@ export default function GradingPage() {
       .catch(() => setLoading(false));
   }, []);
 
-  // Debounce search input
   useEffect(() => {
-    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    searchTimerRef.current = setTimeout(() => setDebouncedSearch(assignmentSearch), 300);
-    return () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current); };
-  }, [assignmentSearch]);
-
-  useEffect(() => {
-    fetchAssignmentList(assignmentPage, assignmentPageSize, debouncedSearch);
-  }, [fetchAssignmentList, assignmentPage, assignmentPageSize, debouncedSearch]);
+    fetchAssignmentList(assignmentPage, assignmentPageSize, activeSearch);
+  }, [fetchAssignmentList, assignmentPage, assignmentPageSize, activeSearch]);
 
   const fetchSubmissions = useCallback((assignmentId: string) => {
     if (!assignmentId) return;
@@ -604,9 +596,10 @@ export default function GradingPage() {
         <div className="relative w-full sm:w-56">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
-            placeholder="Search assignments..."
+            placeholder="Search and press Enter..."
             value={assignmentSearch}
-            onChange={(e) => { setAssignmentSearch(e.target.value); setAssignmentPage(1); }}
+            onChange={(e) => setAssignmentSearch(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { setActiveSearch(assignmentSearch); setAssignmentPage(1); } }}
             className="pl-9 h-9"
           />
         </div>
