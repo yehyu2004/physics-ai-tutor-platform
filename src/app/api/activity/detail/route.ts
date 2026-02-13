@@ -38,6 +38,7 @@ export async function GET(req: Request) {
     const startOfDay = new Date(date + "T00:00:00.000Z");
     const endOfDay = new Date(date + "T23:59:59.999Z");
 
+    // 1. UserActivity records
     const activities = await prisma.userActivity.findMany({
       where: {
         userId,
@@ -54,16 +55,73 @@ export async function GET(req: Request) {
       },
     });
 
-    return NextResponse.json({
-      date,
-      activities: activities.map((a: { id: string; category: string; detail: string | null; durationMs: number | null; createdAt: Date }) => ({
+    const results: { id: string; category: string; detail: string | null; durationMs: number | null; time: string }[] =
+      activities.map((a: { id: string; category: string; detail: string | null; durationMs: number | null; createdAt: Date }) => ({
         id: a.id,
         category: a.category,
         detail: a.detail,
         durationMs: a.durationMs,
         time: a.createdAt.toISOString(),
-      })),
-    });
+      }));
+
+    // 2. Messages (chat interactions)
+    if (!filter || filter === "all" || filter === "chat") {
+      const messages = await prisma.message.findMany({
+        where: {
+          role: "user",
+          conversation: { userId, isDeleted: false },
+          createdAt: { gte: startOfDay, lte: endOfDay },
+        },
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          content: true,
+          createdAt: true,
+          conversation: { select: { title: true } },
+        },
+      });
+      for (const m of messages) {
+        const preview = m.content.length > 60 ? m.content.slice(0, 60) + "…" : m.content;
+        results.push({
+          id: m.id,
+          category: "AI_CHAT_MSG",
+          detail: `${m.conversation.title}: ${preview}`,
+          durationMs: null,
+          time: m.createdAt.toISOString(),
+        });
+      }
+    }
+
+    // 3. Submissions
+    if (!filter || filter === "all" || filter === "submission") {
+      const submissions = await prisma.submission.findMany({
+        where: {
+          userId,
+          submittedAt: { gte: startOfDay, lte: endOfDay },
+        },
+        orderBy: { submittedAt: "desc" },
+        select: {
+          id: true,
+          submittedAt: true,
+          totalScore: true,
+          assignment: { select: { title: true } },
+        },
+      });
+      for (const s of submissions) {
+        results.push({
+          id: s.id,
+          category: "SUBMISSION",
+          detail: `${s.assignment.title}${s.totalScore != null ? ` — Score: ${s.totalScore}` : ""}`,
+          durationMs: null,
+          time: s.submittedAt.toISOString(),
+        });
+      }
+    }
+
+    // Sort all results by time descending
+    results.sort((a, b) => b.time.localeCompare(a.time));
+
+    return NextResponse.json({ date, activities: results });
   } catch (error) {
     console.error("Activity detail error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

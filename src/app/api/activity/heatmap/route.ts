@@ -35,6 +35,9 @@ export async function GET(req: Request) {
       }
     }
 
+    const countsByDate: Record<string, number> = {};
+
+    // 1. Count UserActivity records
     const activities = await prisma.userActivity.findMany({
       where: {
         userId,
@@ -43,12 +46,40 @@ export async function GET(req: Request) {
       },
       select: { createdAt: true },
     });
-
-    // Aggregate by date
-    const countsByDate: Record<string, number> = {};
     for (const a of activities) {
       const key = a.createdAt.toISOString().split("T")[0];
       countsByDate[key] = (countsByDate[key] || 0) + 1;
+    }
+
+    // 2. Count user Messages (chat interactions) — richer than page-visit tracking
+    if (!filter || filter === "all" || filter === "chat") {
+      const messages = await prisma.message.findMany({
+        where: {
+          role: "user",
+          conversation: { userId, isDeleted: false },
+          createdAt: { gte: yearAgo },
+        },
+        select: { createdAt: true },
+      });
+      for (const m of messages) {
+        const key = m.createdAt.toISOString().split("T")[0];
+        countsByDate[key] = (countsByDate[key] || 0) + 1;
+      }
+    }
+
+    // 3. Count Submissions
+    if (!filter || filter === "all" || filter === "submission") {
+      const submissions = await prisma.submission.findMany({
+        where: {
+          userId,
+          submittedAt: { gte: yearAgo },
+        },
+        select: { submittedAt: true },
+      });
+      for (const s of submissions) {
+        const key = s.submittedAt.toISOString().split("T")[0];
+        countsByDate[key] = (countsByDate[key] || 0) + 1;
+      }
     }
 
     // Build full 365-day array (use UTC to match toISOString keys)

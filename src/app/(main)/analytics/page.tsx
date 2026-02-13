@@ -88,6 +88,8 @@ export default function AnalyticsPage() {
 
   const CATEGORY_LABELS: Record<string, string> = {
     AI_CHAT: "AI Chat",
+    AI_CHAT_MSG: "Chat Message",
+    SUBMISSION: "Submission",
     ASSIGNMENT_VIEW: "View Assignments",
     ASSIGNMENT_SUBMIT: "Submit Work",
     GRADING: "Grading",
