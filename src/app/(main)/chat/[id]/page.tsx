@@ -29,6 +29,7 @@ export default async function ChatConversationPage({
         updatedAt: c.updatedAt.toISOString(),
       }))}
       userId={user.id}
+      conversationLimit={50}
     />
   );
 }
