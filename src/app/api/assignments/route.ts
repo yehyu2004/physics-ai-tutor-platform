@@ -74,12 +74,16 @@ export async function GET() {
       const ungradedCount = userRole !== "STUDENT"
         ? a.submissions.filter((s) => s.gradedAt === null).length
         : undefined;
+      const gradedCount = userRole !== "STUDENT"
+        ? a.submissions.filter((s) => s.gradedAt !== null).length
+        : undefined;
       return {
         ...a,
         submissions: undefined,
         myScore: mySubmission?.totalScore ?? null,
         mySubmitted: !!mySubmission,
         ungradedCount,
+        gradedCount,
         openAppealCount: appealCountByAssignment[a.id] || 0,
       };
     });
