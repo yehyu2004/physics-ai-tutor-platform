@@ -417,6 +417,10 @@ export default function GradingPage() {
         body.feedbackFileUrl = feedbackFileUrl;
       }
 
+      // Always include overall score and feedback
+      body.overallScore = overallScore;
+      body.overallFeedback = overallFeedback;
+
       if (gradingMode === "per-question") {
         body.grades = Object.entries(grades).map(([answerId, g]) => ({
           answerId,
@@ -428,9 +432,6 @@ export default function GradingPage() {
         if (hasAnyImages) {
           body.feedbackImages = feedbackImages;
         }
-      } else {
-        body.overallScore = overallScore;
-        body.overallFeedback = overallFeedback;
       }
 
       const res = await fetch("/api/grading", {
@@ -958,7 +959,7 @@ export default function GradingPage() {
                     ) : (
                       <Button
                         onClick={handleSaveGrades}
-                        disabled={saving || allAutoGraded || (gradingMode === "overall" && !overallGradeConfirmed)}
+                        disabled={saving || allAutoGraded || !overallGradeConfirmed}
                         size="sm"
                         className="gap-1.5 bg-gray-900 dark:bg-gray-100 hover:bg-gray-800 dark:hover:bg-gray-200 text-white dark:text-gray-900 rounded-lg"
                       >
@@ -1032,8 +1033,8 @@ export default function GradingPage() {
                     </div>
                   )}
 
-                  {/* Overall grading mode */}
-                  {gradingMode === "overall" && !allAutoGraded && (
+                  {/* Overall score & feedback — always visible */}
+                  {!allAutoGraded && (
                     <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-5 space-y-4">
                       <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Overall Grade</h4>
                       <div className="flex items-end gap-4">
