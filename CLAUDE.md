@@ -170,3 +170,21 @@ prisma/
 - Prefix commits with type: `feat:`, `fix:`, `docs:`, `chore:`, `refactor:`
 - Include `Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>` in commit messages
 - Use squash merges for PRs to keep history clean
+
+## UI Development Rules 
+Always verify changes visually using Playwright browser screenshots before claiming a UI fix is complete. Never say a UI change is done without taking a screenshot to confirm.
+
+## Build & Deploy
+This is a TypeScript project. Always run `npx tsc --noEmit` or the project's type-check command after making changes to catch build errors before committing. Vercel deployments will fail on type errors.
+
+## Git Workflow
+When creating PRs, always create a NEW branch from main. Never commit to an already-merged PR branch. Ask the user to confirm the target branch if ambiguous.
+
+## UI Development Rules
+For mobile CSS fixes, test at viewport widths 375px and 768px using Playwright. Mobile layout issues (sidebar overlap, keyboard behavior, spacing) often require 2-3 attempts — take screenshots at each iteration before moving on.
+
+## Known Limitations
+When working with images or screenshots, keep dimensions under 2000px to avoid API limits. When batch-processing images, process them one at a time rather than in bulk to avoid size limit errors.
+
+## Build & Deploy
+After Vercel deployment, always verify the build succeeded by checking the deployment URL. Common issues: prisma generate not running (add to build command), .next cache stale on localhost (delete it), and CJS/ESM incompatibilities with packages like react-katex.

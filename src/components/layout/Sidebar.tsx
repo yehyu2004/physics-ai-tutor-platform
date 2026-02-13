@@ -22,8 +22,10 @@ import {
   Mail,
   FlaskConical,
   Activity,
+  CalendarClock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { isStaff } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -85,6 +87,8 @@ const adminItems: NavItem[] = [
   { label: "Users", href: "/admin/users", icon: Users },
   { label: "User Activity", href: "/admin/user-activity", icon: Activity },
   { label: "Email Records", href: "/admin/email-records", icon: Mail },
+  { label: "Email Templates", href: "/admin/email-templates", icon: FileText },
+  { label: "Scheduled Emails", href: "/admin/scheduled-emails", icon: CalendarClock },
   { label: "Analytics", href: "/admin/analytics", icon: BarChart3 },
   { label: "Q&A History", href: "/admin/qa-history", icon: BarChart3 },
   { label: "Settings", href: "/admin/settings", icon: Settings },
@@ -139,7 +143,7 @@ export default function Sidebar({ userRole, userName, collapsed = false, onToggl
     { label: "TOOLS", items: filterByRole(toolItems) },
   ];
 
-  if (userRole === "ADMIN" || userRole === "PROFESSOR" || userRole === "TA") {
+  if (isStaff(userRole)) {
     const staffItems = userRole === "ADMIN" || userRole === "PROFESSOR"
       ? adminItems
       : adminItems.filter((item) => item.href === "/admin/qa-history" || item.href === "/admin/users" || item.href === "/admin/email-records");
@@ -158,7 +162,7 @@ export default function Sidebar({ userRole, userName, collapsed = false, onToggl
         if (item.children) {
           item.children.forEach((child) => {
             if (child.href === "/assignments/create") {
-              if (userRole === "TA" || userRole === "PROFESSOR" || userRole === "ADMIN") {
+              if (isStaff(userRole)) {
                 items.push({ id: `${section.label}-${child.label}`, label: child.label, href: child.href, icon: item.icon, section: section.label });
               }
             } else {
@@ -225,7 +229,7 @@ export default function Sidebar({ userRole, userName, collapsed = false, onToggl
               {item.children
                 .filter((child) => {
                   if (child.href === "/assignments/create") {
-                    return userRole === "TA" || userRole === "PROFESSOR" || userRole === "ADMIN";
+                    return isStaff(userRole);
                   }
                   return true;
                 })
@@ -292,6 +296,7 @@ export default function Sidebar({ userRole, userName, collapsed = false, onToggl
           onClick={onToggleCollapse}
           className="hidden lg:flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           <PanelLeftClose className={cn("h-4 w-4 transition-transform duration-300", collapsed && "rotate-180")} />
         </button>
@@ -334,20 +339,22 @@ export default function Sidebar({ userRole, userName, collapsed = false, onToggl
 
       {/* Navigation */}
       <ScrollArea className={cn("flex-1", collapsed ? "px-1.5" : "px-3")}>
-        <div className="space-y-6 py-1">
-          {sections.map((section) => (
-            <div key={section.label}>
-              {!collapsed && (
-                <p className="px-3 mb-2 text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-                  {section.label}
-                </p>
-              )}
-              <div className="space-y-0.5">
-                {section.items.map(renderNavItem)}
+        <nav aria-label="Main navigation">
+          <div className="space-y-6 py-1">
+            {sections.map((section) => (
+              <div key={section.label} role="group" aria-label={section.label}>
+                {!collapsed && (
+                  <p className="px-3 mb-2 text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                    {section.label}
+                  </p>
+                )}
+                <div className="space-y-0.5">
+                  {section.items.map(renderNavItem)}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </nav>
       </ScrollArea>
 
       {/* User profile */}
@@ -427,10 +434,15 @@ export default function Sidebar({ userRole, userName, collapsed = false, onToggl
             : "opacity-0 pointer-events-none"
         )}
         onClick={() => onMobileToggle?.(false)}
+        onKeyDown={(e) => { if (e.key === "Escape") onMobileToggle?.(false); }}
+        role="button"
+        tabIndex={-1}
+        aria-label="Close navigation menu"
       />
 
       {/* Sidebar */}
       <aside
+        aria-label="Main navigation"
         className={cn(
           "fixed left-0 top-0 z-40 h-screen border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 transition-all duration-300 ease-in-out lg:translate-x-0",
           collapsed ? "lg:w-[68px]" : "lg:w-64",

@@ -1,15 +1,12 @@
 import { NextResponse } from "next/server";
-import { getEffectiveSession } from "@/lib/impersonate";
 import { prisma } from "@/lib/prisma";
+import { requireApiAuth, isErrorResponse } from "@/lib/api-auth";
 
 export async function GET(req: Request) {
   try {
-    const session = await getEffectiveSession();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userId = (session.user as { id: string }).id;
+    const auth = await requireApiAuth();
+    if (isErrorResponse(auth)) return auth;
+    const userId = auth.user.id;
     const { searchParams } = new URL(req.url);
     const assignmentId = searchParams.get("assignmentId");
 
@@ -18,7 +15,7 @@ export async function GET(req: Request) {
     }
 
     const submission = await prisma.submission.findFirst({
-      where: { assignmentId, userId },
+      where: { assignmentId, userId, isDeleted: false },
       include: { answers: true },
     });
 
@@ -31,12 +28,9 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const session = await getEffectiveSession();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userId = (session.user as { id: string }).id;
+    const auth = await requireApiAuth();
+    if (isErrorResponse(auth)) return auth;
+    const userId = auth.user.id;
     const { assignmentId, answers, fileUrl, isDraft } = await req.json();
 
     const assignment = await prisma.assignment.findUnique({
@@ -133,7 +127,7 @@ export async function POST(req: Request) {
           const fs = await import("fs/promises");
           const path = await import("path");
           const filePath = path.join(process.cwd(), "public", existingSubmission.fileUrl);
-          await fs.unlink(filePath).catch(() => {});
+          await fs.unlink(filePath).catch((err) => console.error("[cleanup] Failed to delete old file:", err));
         } catch { /* ignore cleanup errors */ }
       }
       await prisma.submission.delete({

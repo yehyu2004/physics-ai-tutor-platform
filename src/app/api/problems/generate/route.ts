@@ -1,6 +1,6 @@
-import { getEffectiveSession } from "@/lib/impersonate";
 import { prisma } from "@/lib/prisma";
 import { streamGenerateProblems, type AIProvider } from "@/lib/ai";
+import { requireApiRole, isErrorResponse } from "@/lib/api-auth";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function normalizeDiagram(raw: any): { type: string; content: string } | null {
@@ -52,15 +52,8 @@ function extractSvgFromText(text: string): { cleanText: string; diagram: { type:
 
 export async function GET() {
   try {
-    const session = await getEffectiveSession();
-    if (!session?.user) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userRole = (session.user as { role?: string }).role;
-    if (userRole !== "TA" && userRole !== "PROFESSOR" && userRole !== "ADMIN") {
-      return Response.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const auth = await requireApiRole(["TA", "PROFESSOR", "ADMIN"]);
+    if (isErrorResponse(auth)) return auth;
 
     const problemSets = await prisma.problemSet.findMany({
       orderBy: { createdAt: "desc" },
@@ -91,16 +84,10 @@ export async function GET() {
 
 export async function DELETE(req: Request) {
   try {
-    const session = await getEffectiveSession();
-    if (!session?.user) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userId = (session.user as { id: string }).id;
-    const userRole = (session.user as { role?: string }).role;
-    if (userRole !== "TA" && userRole !== "PROFESSOR" && userRole !== "ADMIN") {
-      return Response.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const auth = await requireApiRole(["TA", "PROFESSOR", "ADMIN"]);
+    if (isErrorResponse(auth)) return auth;
+    const userId = auth.user.id;
+    const userRole = auth.user.role;
 
     const { id } = await req.json();
     if (!id) {
@@ -129,16 +116,9 @@ export async function DELETE(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const session = await getEffectiveSession();
-    if (!session?.user) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userId = (session.user as { id: string }).id;
-    const userRole = (session.user as { role?: string }).role;
-    if (userRole !== "TA" && userRole !== "PROFESSOR" && userRole !== "ADMIN") {
-      return Response.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const auth = await requireApiRole(["TA", "PROFESSOR", "ADMIN"]);
+    if (isErrorResponse(auth)) return auth;
+    const userId = auth.user.id;
 
     const { topic, difficulty, count, questionType, customInstructions } = await req.json();
 

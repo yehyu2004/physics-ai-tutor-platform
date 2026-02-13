@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { getEffectiveSession } from "@/lib/impersonate";
 import { prisma } from "@/lib/prisma";
 import { checkAndBanSpammer } from "@/lib/spam-guard";
+import { requireApiAuth, isErrorResponse } from "@/lib/api-auth";
 
 const VALID_CATEGORIES = [
   "AI_CHAT",
@@ -14,24 +14,29 @@ const VALID_CATEGORIES = [
   "ADMIN_ACTION",
 ] as const;
 
-// Probabilistic cleanup: delete records older than 1 year (~1% of requests)
-async function maybeCleanupOldRecords() {
-  if (Math.random() > 0.01) return;
+// Deterministic cleanup: delete records older than 1 year, at most once per hour
+let lastCleanup = 0;
+const CLEANUP_INTERVAL = 60 * 60 * 1000; // 1 hour
+
+function maybeCleanupOldRecords() {
+  const now = Date.now();
+  if (now - lastCleanup < CLEANUP_INTERVAL) return;
+  lastCleanup = now;
+
   const oneYearAgo = new Date();
   oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-  await prisma.userActivity.deleteMany({
+
+  // Fire and forget — don't block the request
+  prisma.userActivity.deleteMany({
     where: { createdAt: { lt: oneYearAgo } },
-  }).catch(() => {}); // silently ignore errors
+  }).catch(err => console.error("[cleanup] Failed to prune old activity records:", err));
 }
 
 export async function POST(req: Request) {
   try {
-    const session = await getEffectiveSession();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userId = (session.user as { id: string }).id;
+    const auth = await requireApiAuth();
+    if (isErrorResponse(auth)) return auth;
+    const userId = auth.user.id;
 
     // Check if user is banned
     const currentUser = await prisma.user.findUnique({
@@ -96,12 +101,9 @@ export async function POST(req: Request) {
 
 export async function PATCH(req: Request) {
   try {
-    const session = await getEffectiveSession();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userId = (session.user as { id: string }).id;
+    const auth = await requireApiAuth();
+    if (isErrorResponse(auth)) return auth;
+    const userId = auth.user.id;
     const body = await req.json();
     const { id, durationMs } = body;
 

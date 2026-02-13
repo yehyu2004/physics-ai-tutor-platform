@@ -1,22 +1,46 @@
 import { NextResponse } from "next/server";
-import { getEffectiveSession } from "@/lib/impersonate";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { aiAssistedGrading, type AIProvider } from "@/lib/ai";
+import { requireApiRole, isErrorResponse } from "@/lib/api-auth";
+import { logger } from "@/lib/logger";
+
+const gradeItemSchema = z.object({
+  answerId: z.string().min(1),
+  score: z.number().min(0),
+  feedback: z.string().max(10000).optional().nullable(),
+});
+
+const gradingPostSchema = z.object({
+  submissionId: z.string().min(1),
+  grades: z.array(gradeItemSchema).optional(),
+  overallScore: z.number().min(0).optional(),
+  overallFeedback: z.string().max(10000).optional().nullable(),
+  feedbackFileUrl: z.string().optional().nullable(),
+  feedbackImages: z.record(z.string(), z.array(z.string())).optional().nullable(),
+  isDraft: z.boolean().optional(),
+  ungrade: z.boolean().optional(),
+});
+
+const gradingPutSchema = z.object({
+  answerId: z.string().min(1),
+});
 
 export async function POST(req: Request) {
   try {
-    const session = await getEffectiveSession();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await requireApiRole(["TA", "PROFESSOR", "ADMIN"]);
+    if (isErrorResponse(auth)) return auth;
+    const graderId = auth.user.id;
 
-    const userRole = (session.user as { role?: string }).role;
-    if (userRole !== "TA" && userRole !== "PROFESSOR" && userRole !== "ADMIN") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const parseResult = gradingPostSchema.safeParse(await req.json());
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { error: "Invalid input", details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
     }
-
-    const graderId = (session.user as { id: string }).id;
-    const { submissionId, grades, overallScore, overallFeedback, feedbackFileUrl, feedbackImages, isDraft, ungrade } = await req.json();
+    const { submissionId, grades, overallScore, overallFeedback, feedbackFileUrl, feedbackImages, isDraft, ungrade } = parseResult.data;
 
     // Ungrade: clear gradedAt and gradedById
     if (ungrade && submissionId) {
@@ -29,19 +53,64 @@ export async function POST(req: Request) {
 
     const submission = await prisma.submission.findUnique({
       where: { id: submissionId },
-      include: { answers: true },
+      include: { answers: { include: { question: true } } },
     });
 
     if (!submission) {
       return NextResponse.json({ error: "Submission not found" }, { status: 404 });
     }
 
-    // Per-question grading
+    // Per-question grading with score bounds validation
     if (grades && grades.length > 0) {
+      // Build a lookup of questionId -> max points for bounds checking
+      const questionPointsMap = new Map<string, number>();
+      for (const ans of submission.answers) {
+        questionPointsMap.set(ans.questionId, ans.question.points);
+        questionPointsMap.set(ans.id, ans.question.points); // also index by answerId
+      }
+
       for (const grade of grades) {
+        let questionId: string;
+        let maxPoints: number | undefined;
+
         if (grade.answerId.startsWith("blank-")) {
+          questionId = grade.answerId.replace("blank-", "");
+          // Fetch the question directly for blank answers not in the submission
+          if (!questionPointsMap.has(questionId)) {
+            const question = await prisma.assignmentQuestion.findUnique({
+              where: { id: questionId },
+              select: { points: true },
+            });
+            if (question) {
+              questionPointsMap.set(questionId, question.points);
+            }
+          }
+          maxPoints = questionPointsMap.get(questionId);
+        } else {
+          maxPoints = questionPointsMap.get(grade.answerId);
+          if (maxPoints === undefined) {
+            // Fetch via the answer record if not already in the map
+            const answer = await prisma.submissionAnswer.findUnique({
+              where: { id: grade.answerId },
+              include: { question: { select: { points: true } } },
+            });
+            if (answer) {
+              maxPoints = answer.question.points;
+              questionPointsMap.set(grade.answerId, maxPoints);
+            }
+          }
+        }
+
+        if (maxPoints !== undefined && grade.score > maxPoints) {
+          return NextResponse.json(
+            { error: `Score ${grade.score} exceeds maximum points (${maxPoints}) for answer ${grade.answerId}` },
+            { status: 400 }
+          );
+        }
+
+        if (grade.answerId.startsWith("blank-")) {
+          questionId = grade.answerId.replace("blank-", "");
           // Create a SubmissionAnswer for a question the student left blank
-          const questionId = grade.answerId.replace("blank-", "");
           await prisma.submissionAnswer.create({
             data: {
               submissionId,
@@ -112,24 +181,41 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, totalScore: finalTotalScore });
   } catch (error) {
-    console.error("Grading error:", error);
+    logger.error("Grading POST error", {
+      route: "/api/grading",
+      error: error instanceof Error ? error.message : String(error),
+    });
+
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: "Validation failed", details: error.issues }, { status: 400 });
+    }
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === "P2025") {
+        return NextResponse.json({ error: "Resource not found" }, { status: 404 });
+      }
+      if (error.code === "P2002") {
+        return NextResponse.json({ error: "Duplicate record conflict" }, { status: 409 });
+      }
+    }
+
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
 export async function PUT(req: Request) {
   try {
-    const session = await getEffectiveSession();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await requireApiRole(["TA", "PROFESSOR", "ADMIN"]);
+    if (isErrorResponse(auth)) return auth;
 
-    const userRole = (session.user as { role?: string }).role;
-    if (userRole !== "TA" && userRole !== "PROFESSOR" && userRole !== "ADMIN") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const parseResult = gradingPutSchema.safeParse(await req.json());
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { error: "Invalid input", details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
     }
-
-    const { answerId } = await req.json();
+    const { answerId } = parseResult.data;
 
     const answer = await prisma.submissionAnswer.findUnique({
       where: { id: answerId },
@@ -177,7 +263,31 @@ export async function PUT(req: Request) {
       suggestedFeedback: parsed.feedback,
     });
   } catch (error) {
-    console.error("AI grading error:", error);
+    logger.error("AI-assisted grading error", {
+      route: "/api/grading",
+      error: error instanceof Error ? error.message : String(error),
+    });
+
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: "Validation failed", details: error.issues }, { status: 400 });
+    }
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === "P2025") {
+        return NextResponse.json({ error: "Resource not found" }, { status: 404 });
+      }
+    }
+
+    if (error instanceof SyntaxError) {
+      return NextResponse.json({ error: "AI returned invalid response" }, { status: 502 });
+    }
+
+    if (error instanceof Error) {
+      if (error.message.includes("rate limit") || error.message.includes("429")) {
+        return NextResponse.json({ error: "AI service rate limited. Please try again in a moment." }, { status: 429 });
+      }
+    }
+
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

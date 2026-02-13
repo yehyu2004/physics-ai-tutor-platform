@@ -1,13 +1,11 @@
 import { NextResponse } from "next/server";
-import { getEffectiveSession } from "@/lib/impersonate";
 import { put } from "@vercel/blob";
+import { requireApiAuth, isErrorResponse } from "@/lib/api-auth";
 
 export async function POST(req: Request) {
   try {
-    const session = await getEffectiveSession();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await requireApiAuth();
+    if (isErrorResponse(auth)) return auth;
 
     const formData = await req.formData();
     const file = formData.get("file") as File;
@@ -16,6 +14,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
+    // NOTE: File size is checked after the request body has been fully read into memory.
+    // For production hardening, consider using presigned upload URLs (e.g., Vercel Blob
+    // client uploads or S3 presigned URLs) so the server never buffers the full file.
+    // This is a known limitation; the current check still prevents storage of oversized files.
     const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json({ error: "File exceeds the 20 MB size limit" }, { status: 413 });

@@ -29,35 +29,8 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { useTheme } from "next-themes";
-
-const CATEGORY_COLORS: Record<string, string> = {
-  AI_CHAT: "#6366f1",
-  ASSIGNMENT_VIEW: "#8b5cf6",
-  ASSIGNMENT_SUBMIT: "#a78bfa",
-  GRADING: "#10b981",
-  SIMULATION: "#f59e0b",
-  PROBLEM_GEN: "#ec4899",
-  ANALYTICS_VIEW: "#06b6d4",
-  ADMIN_ACTION: "#64748b",
-};
-
-const CATEGORY_LABELS: Record<string, string> = {
-  AI_CHAT: "AI Chat",
-  ASSIGNMENT_VIEW: "View Assignments",
-  ASSIGNMENT_SUBMIT: "Submit Work",
-  GRADING: "Grading",
-  SIMULATION: "Simulations",
-  PROBLEM_GEN: "Problem Gen",
-  ANALYTICS_VIEW: "Analytics",
-  ADMIN_ACTION: "Admin",
-};
-
-const ROLE_BADGE_COLORS: Record<string, string> = {
-  ADMIN: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-  PROFESSOR: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
-  TA: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-  STUDENT: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400",
-};
+import { CATEGORY_COLORS, CATEGORY_LABELS, ROLE_BADGE_COLORS } from "@/lib/constants";
+import { formatDuration, timeAgo } from "@/lib/utils";
 
 interface RecentActivityItem {
   id: string;
@@ -103,33 +76,6 @@ interface ActivityData {
   timeByRole: { label: string; count: number; totalMs: number }[];
   recentActivity: RecentActivityItem[];
   topUsers: TopUser[];
-}
-
-function timeAgo(dateStr: string): string {
-  const now = Date.now();
-  const then = new Date(dateStr).getTime();
-  const diffSec = Math.floor((now - then) / 1000);
-  if (diffSec < 60) return "just now";
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr}h ago`;
-  const diffDay = Math.floor(diffHr / 24);
-  if (diffDay < 7) return `${diffDay}d ago`;
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function formatDuration(ms: number): string {
-  if (ms < 1000) return "<1s";
-  const sec = Math.floor(ms / 1000);
-  if (sec < 60) return `${sec}s`;
-  const min = Math.floor(sec / 60);
-  if (min < 60) return `${min}m`;
-  const hr = (min / 60).toFixed(1);
-  return `${hr}h`;
 }
 
 function UserAvatar({

@@ -1,13 +1,11 @@
 import { NextResponse } from "next/server";
-import { getEffectiveSession } from "@/lib/impersonate";
 import { prisma } from "@/lib/prisma";
+import { requireApiAuth, requireApiRole, isErrorResponse } from "@/lib/api-auth";
 
 export async function GET() {
   try {
-    const session = await getEffectiveSession();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await requireApiAuth();
+    if (isErrorResponse(auth)) return auth;
 
     const latest = await prisma.examMode.findFirst({
       orderBy: { toggledAt: "desc" },
@@ -28,17 +26,9 @@ export async function GET() {
 
 export async function PATCH(req: Request) {
   try {
-    const session = await getEffectiveSession();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userRole = (session.user as { role?: string }).role;
-    if (userRole !== "TA" && userRole !== "PROFESSOR" && userRole !== "ADMIN") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    const toggledById = (session.user as { id: string }).id;
+    const auth = await requireApiRole(["TA", "PROFESSOR", "ADMIN"]);
+    if (isErrorResponse(auth)) return auth;
+    const toggledById = auth.user.id;
     const { isActive, message } = await req.json();
 
     const record = await prisma.examMode.create({

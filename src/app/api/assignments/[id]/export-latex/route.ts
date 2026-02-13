@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { getEffectiveSession } from "@/lib/impersonate";
 import { prisma } from "@/lib/prisma";
 import { convertToLatex, escapeLatex } from "@/lib/latex-utils";
+import { requireApiRole, isErrorResponse } from "@/lib/api-auth";
 import JSZip from "jszip";
 import fs from "fs";
 import path from "path";
@@ -48,15 +48,8 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getEffectiveSession();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userRole = (session.user as { role?: string }).role;
-    if (userRole !== "TA" && userRole !== "PROFESSOR" && userRole !== "ADMIN") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const auth = await requireApiRole(["TA", "PROFESSOR", "ADMIN"]);
+    if (isErrorResponse(auth)) return auth;
 
     const assignment = await prisma.assignment.findUnique({
       where: { id: params.id },
@@ -110,12 +103,12 @@ export async function GET(
       if (q.imageUrl) {
         const imgFilename = `q${qNum}-image${path.extname(q.imageUrl) || ".png"}`;
         try {
-          const imgPath = path.join(
-            process.cwd(),
-            "public",
-            q.imageUrl.replace(/^\//, "")
-          );
-          const imgData = fs.readFileSync(imgPath);
+          const publicDir = path.resolve(process.cwd(), "public");
+          const resolved = path.resolve(publicDir, q.imageUrl.replace(/^\//, ""));
+          if (!resolved.startsWith(publicDir + path.sep) && resolved !== publicDir) {
+            throw new Error("Invalid path");
+          }
+          const imgData = fs.readFileSync(resolved);
           imagesFolder.file(imgFilename, imgData);
           lines.push("");
           lines.push(

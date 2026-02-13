@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
-import { Loader2, Mail } from "lucide-react";
+import { Mail } from "lucide-react";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { formatShortDate } from "@/lib/utils";
+import { Pagination } from "@/components/ui/pagination";
 import {
   Select,
   SelectContent,
@@ -61,12 +63,7 @@ export default function EmailRecordsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 gap-3">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400 dark:text-gray-500" />
-        <p className="text-sm text-gray-400 dark:text-gray-500">Loading email records...</p>
-      </div>
-    );
+    return <LoadingSpinner message="Loading email records..." />;
   }
 
   return (
@@ -196,46 +193,7 @@ export default function EmailRecordsPage() {
               </SelectContent>
             </Select>
           </div>
-          {totalPages > 1 && <div className="flex items-center gap-1">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="px-3 py-1.5 text-sm rounded-md border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
-              &lt;
-            </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1)
-              .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 2)
-              .reduce<number[]>((acc, p) => {
-                if (acc.length > 0 && p - acc[acc.length - 1] > 1) acc.push(-1);
-                acc.push(p);
-                return acc;
-              }, [])
-              .map((p, i) =>
-                p === -1 ? (
-                  <span key={`gap-${i}`} className="px-2 text-sm text-gray-400">...</span>
-                ) : (
-                  <button
-                    key={p}
-                    onClick={() => setPage(p)}
-                    className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
-                      p === page
-                        ? "bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900"
-                        : "border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
-                    }`}
-                  >
-                    {p}
-                  </button>
-                )
-              )}
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-              className="px-3 py-1.5 text-sm rounded-md border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
-              &gt;
-            </button>
-          </div>}
+          <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
         </div>
       )}
     </div>

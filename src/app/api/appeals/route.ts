@@ -1,25 +1,38 @@
 import { NextResponse } from "next/server";
-import { getEffectiveSession } from "@/lib/impersonate";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { checkAndBanSpammer } from "@/lib/spam-guard";
+import { requireApiAuth, isErrorResponse } from "@/lib/api-auth";
+import { isStaff as isStaffRole } from "@/lib/constants";
+
+const appealPostSchema = z.object({
+  submissionAnswerId: z.string().min(1, "submissionAnswerId is required"),
+  reason: z.string().min(1, "reason is required").max(5000, "reason must be 5000 characters or fewer"),
+  imageUrls: z.array(z.string()).max(3).optional(),
+});
+
+const appealPatchSchema = z.object({
+  appealId: z.string().min(1, "appealId is required"),
+  status: z.enum(["OPEN", "RESOLVED", "REJECTED"]).optional(),
+  message: z.string().max(5000).optional(),
+  newScore: z.number().min(0).optional(),
+  imageUrls: z.array(z.string()).max(3).optional(),
+});
 
 // GET: Fetch appeals for a submission (student sees own, TA/ADMIN sees all)
 export async function GET(req: Request) {
   try {
-    const session = await getEffectiveSession();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userId = (session.user as { id: string }).id;
-    const userRole = (session.user as { role?: string }).role;
+    const auth = await requireApiAuth();
+    if (isErrorResponse(auth)) return auth;
+    const userId = auth.user.id;
+    const userRole = auth.user.role;
     const { searchParams } = new URL(req.url);
     const submissionId = searchParams.get("submissionId");
     const assignmentId = searchParams.get("assignmentId");
 
     // Staff can fetch all open appeals without params (for dashboard)
     if (!submissionId && !assignmentId) {
-      if (userRole === "TA" || userRole === "PROFESSOR" || userRole === "ADMIN") {
+      if (isStaffRole(userRole)) {
         const appeals = await prisma.gradeAppeal.findMany({
           where: { status: "OPEN" },
           include: {
@@ -87,7 +100,7 @@ export async function GET(req: Request) {
 
     // Fetch appeals per assignment (for TA/ADMIN)
     if (assignmentId) {
-      if (userRole === "TA" || userRole === "PROFESSOR" || userRole === "ADMIN") {
+      if (isStaffRole(userRole)) {
         const appeals = await prisma.gradeAppeal.findMany({
           where: {
             submissionAnswer: {
@@ -142,17 +155,18 @@ export async function GET(req: Request) {
 // POST: Student creates a new appeal for a specific answer
 export async function POST(req: Request) {
   try {
-    const session = await getEffectiveSession();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await requireApiAuth();
+    if (isErrorResponse(auth)) return auth;
+    const userId = auth.user.id;
 
-    const userId = (session.user as { id: string }).id;
-    const { submissionAnswerId, reason, imageUrls } = await req.json();
-
-    if (!submissionAnswerId || !reason) {
-      return NextResponse.json({ error: "submissionAnswerId and reason are required" }, { status: 400 });
+    const parseResult = appealPostSchema.safeParse(await req.json());
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { error: "Invalid input", details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
     }
+    const { submissionAnswerId, reason, imageUrls } = parseResult.data;
 
     // Verify the answer belongs to this student's submission
     const answer = await prisma.submissionAnswer.findUnique({
@@ -218,22 +232,30 @@ export async function POST(req: Request) {
 // PATCH: TA/ADMIN updates appeal status (resolve/reject) or adds a message
 export async function PATCH(req: Request) {
   try {
-    const session = await getEffectiveSession();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await requireApiAuth();
+    if (isErrorResponse(auth)) return auth;
+    const userId = auth.user.id;
+    const userRole = auth.user.role;
 
-    const userId = (session.user as { id: string }).id;
-    const userRole = (session.user as { role?: string }).role;
-    const { appealId, status, message, newScore, imageUrls: msgImageUrls } = await req.json();
-
-    if (!appealId) {
-      return NextResponse.json({ error: "appealId is required" }, { status: 400 });
+    const parseResult = appealPatchSchema.safeParse(await req.json());
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { error: "Invalid input", details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
     }
+    const { appealId, status, message, newScore, imageUrls: msgImageUrls } = parseResult.data;
 
     const appeal = await prisma.gradeAppeal.findUnique({
       where: { id: appealId },
-      include: { submissionAnswer: { include: { submission: true } } },
+      include: {
+        submissionAnswer: {
+          include: {
+            submission: true,
+            question: { select: { points: true } },
+          },
+        },
+      },
     });
 
     if (!appeal) {
@@ -242,7 +264,7 @@ export async function PATCH(req: Request) {
 
     // Students can add messages to their own appeals; TA/ADMIN can do anything
     const isOwner = appeal.studentId === userId;
-    const isStaff = userRole === "TA" || userRole === "PROFESSOR" || userRole === "ADMIN";
+    const isStaff = isStaffRole(userRole);
 
     if (!isOwner && !isStaff) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -261,7 +283,7 @@ export async function PATCH(req: Request) {
 
       // Check for appeal spam (30 messages/min auto-ban, non-blocking)
       if (!isStaff) {
-        checkAndBanSpammer({ userId, source: "appeal" }).catch(() => {});
+        checkAndBanSpammer({ userId, source: "appeal" }).catch((err) => console.error("[spam] Failed to check spammer:", err));
       }
     }
 
@@ -272,8 +294,15 @@ export async function PATCH(req: Request) {
         data: { status },
       });
 
-      // If resolving with a new score, update the submission answer
+      // If resolving with a new score, validate bounds and update the submission answer
       if (status === "RESOLVED" && newScore !== undefined) {
+        const maxPoints = appeal.submissionAnswer.question.points;
+        if (newScore > maxPoints) {
+          return NextResponse.json(
+            { error: `New score ${newScore} exceeds maximum points (${maxPoints}) for this question` },
+            { status: 400 }
+          );
+        }
         await prisma.submissionAnswer.update({
           where: { id: appeal.submissionAnswerId },
           data: { score: newScore },

@@ -1,20 +1,17 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireApiRole, isErrorResponse } from "@/lib/api-auth";
 
 export async function GET() {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await requireApiRole(["TA", "PROFESSOR", "ADMIN"]);
+    if (isErrorResponse(auth)) return auth;
 
-    const userRole = (session.user as { role?: string }).role;
-    if (userRole !== "ADMIN" && userRole !== "PROFESSOR" && userRole !== "TA") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    // Daily activity for last 14 days
+    const now = new Date();
+    const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
 
-    const [totalUsers, totalConversations, totalMessages, totalSubmissions, submissions, recentMessages] = await Promise.all([
+    const [totalUsers, totalConversations, totalMessages, totalSubmissions, submissions, dailyMessageCounts] = await Promise.all([
       prisma.user.count({ where: { isDeleted: false } }),
       prisma.conversation.count(),
       prisma.message.count(),
@@ -28,27 +25,25 @@ export async function GET() {
         orderBy: { submittedAt: "desc" },
         take: 100,
       }),
-      prisma.message.findMany({
-        select: { createdAt: true },
-        orderBy: { createdAt: "desc" },
-        take: 5000,
-      }),
+      prisma.$queryRaw<Array<{ date: Date; count: number }>>`
+        SELECT DATE_TRUNC('day', "createdAt") as date, COUNT(*)::int as count
+        FROM "Message"
+        WHERE "createdAt" >= ${twoWeeksAgo}
+        GROUP BY DATE_TRUNC('day', "createdAt")
+        ORDER BY date
+      `,
     ]);
 
-    // Daily activity for last 14 days
-    const now = new Date();
-    const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+    // Build daily activity map with all 14 days initialized to 0
     const dailyActivity: Record<string, number> = {};
     for (let i = 13; i >= 0; i--) {
       const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
       dailyActivity[d.toISOString().split("T")[0]] = 0;
     }
-    for (const msg of recentMessages) {
-      if (msg.createdAt >= twoWeeksAgo) {
-        const key = msg.createdAt.toISOString().split("T")[0];
-        if (dailyActivity[key] !== undefined) {
-          dailyActivity[key]++;
-        }
+    for (const row of dailyMessageCounts) {
+      const key = new Date(row.date).toISOString().split("T")[0];
+      if (dailyActivity[key] !== undefined) {
+        dailyActivity[key] = row.count;
       }
     }
 

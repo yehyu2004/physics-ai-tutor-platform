@@ -1,21 +1,14 @@
 import { NextResponse } from "next/server";
-import { getEffectiveSession } from "@/lib/impersonate";
 import { prisma } from "@/lib/prisma";
+import { requireApiRole, isErrorResponse } from "@/lib/api-auth";
 
 export async function GET(
   req: Request,
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getEffectiveSession();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userRole = (session.user as { role?: string }).role;
-    if (userRole !== "TA" && userRole !== "PROFESSOR" && userRole !== "ADMIN") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const auth = await requireApiRole(["TA", "PROFESSOR", "ADMIN"]);
+    if (isErrorResponse(auth)) return auth;
 
     const assignment = await prisma.assignment.findUnique({
       where: { id: params.id },
@@ -30,7 +23,7 @@ export async function GET(
     });
 
     const submissions = await prisma.submission.findMany({
-      where: { assignmentId: params.id, isDraft: false },
+      where: { assignmentId: params.id, isDraft: false, isDeleted: false },
       include: {
         user: { select: { name: true, email: true } },
         gradedBy: { select: { name: true } },

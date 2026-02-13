@@ -2,6 +2,7 @@
 
 import React, { useRef } from "react";
 import { ImagePlus, X, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface ImageUploadProps {
   images: string[]; // URLs of uploaded images
@@ -34,7 +35,7 @@ export function ImageUpload({
     for (const file of filesToUpload) {
       if (!file.type.startsWith("image/")) continue;
       if (file.size > MAX_IMAGE_SIZE) {
-        alert(`Image "${file.name}" exceeds the 5 MB limit. Please use a smaller image.`);
+        toast.error(`Image "${file.name}" exceeds the 5 MB limit. Please use a smaller image.`);
         continue;
       }
       const url = await onUpload(file);

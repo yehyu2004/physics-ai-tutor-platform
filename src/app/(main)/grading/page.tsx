@@ -1,32 +1,25 @@
 "use client";
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
+import { useUploadFile } from "@/hooks/useUploadFile";
 import { useSearchParams } from "next/navigation";
 import { useTrackTime } from "@/lib/use-track-time";
 import {
   Loader2,
   ClipboardList,
-  Sparkles,
   CheckCircle2,
   Clock,
   User,
-  MessageSquare,
-  Upload,
-  FileText,
-  X,
-  Filter,
   Download,
   ShieldAlert,
-  Send,
   XCircle,
   Search,
+  ChevronDown,
+  Filter,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { MarkdownContent } from "@/components/ui/markdown-content";
-import { ImageUpload } from "@/components/ui/image-upload";
 import {
   Select,
   SelectContent,
@@ -34,9 +27,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { formatShortDate } from "@/lib/utils";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { SaveStatusIndicator } from "@/components/ui/save-status";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Pagination } from "@/components/ui/pagination";
+import { toast } from "sonner";
+
+// Extracted subcomponents
+import { SubmissionList } from "@/components/grading/SubmissionList";
+import { GradingPanel } from "@/components/grading/GradingPanel";
+import { OverallGradeForm } from "@/components/grading/OverallGradeForm";
+import type {
+  AssignmentInfo,
+  SubmissionForGrading,
+  Appeal,
+  GradingMode,
+  FilterMode,
+} from "@/components/grading/types";
 
 interface AssignmentOption {
   id: string;
@@ -49,61 +59,52 @@ interface AssignmentOption {
   openAppealCount: number;
 }
 
-interface AssignmentInfo {
-  title: string;
-  type: string;
-  totalPoints: number;
-  dueDate: string | null;
+// --- Consolidated state types ---
+
+interface OverallGradeState {
+  score: number;
+  feedback: string;
+  confirmed: boolean;
 }
 
-interface AppealMessage {
-  id: string;
-  content: string;
-  imageUrls?: string[];
-  createdAt: string;
-  user: { id: string; name: string | null; role: string };
+interface AssignmentPickerState {
+  filter: "all" | "ungraded" | "pending";
+  search: string;
+  open: boolean;
 }
 
-interface Appeal {
-  id: string;
-  status: string;
-  reason: string;
-  imageUrls?: string[];
-  createdAt: string;
-  student: { id: string; name: string | null };
-  messages: AppealMessage[];
+interface FeedbackFileState {
+  file: File | null;
+  url: string | null;
 }
 
-interface SubmissionForGrading {
-  id: string;
-  userName: string;
-  userEmail: string;
-  submittedAt: string;
-  totalScore: number | null;
-  gradedAt: string | null;
-  gradedByName: string | null;
-  fileUrl: string | null;
-  overallFeedback: string | null;
-  openAppealCount: number;
-  totalAppealCount: number;
-  answers: {
-    id: string;
-    questionText: string;
-    questionType: string;
-    answer: string | null;
-    answerImageUrls?: string[];
-    feedbackImageUrls?: string[];
-    score: number | null;
-    feedback: string | null;
-    autoGraded: boolean;
-    maxPoints: number;
-    leftBlank?: boolean;
-    appeals: Appeal[];
-  }[];
+// --- localStorage schema versioning ---
+
+const GRADING_STATE_VERSION = 1;
+
+interface GradingDraftData {
+  _version: number;
+  grades: Record<string, { score: number; feedback: string }>;
+  confirmedAnswers: string[];
+  overallGrade: { score: number; feedback: string; confirmed: boolean };
+  feedbackImages: Record<string, string[]>;
+  feedbackFileUrl: string | null;
+  gradingMode: GradingMode;
 }
 
-type GradingMode = "per-question" | "overall";
-type FilterMode = "all" | "ungraded" | "graded" | "appeals";
+function isValidGradingDraft(data: unknown): data is GradingDraftData {
+  if (typeof data !== "object" || data === null) return false;
+  const d = data as Record<string, unknown>;
+  if (d._version !== GRADING_STATE_VERSION) return false;
+  if (typeof d.grades !== "object" || d.grades === null) return false;
+  if (!Array.isArray(d.confirmedAnswers)) return false;
+  if (typeof d.overallGrade !== "object" || d.overallGrade === null) return false;
+  const og = d.overallGrade as Record<string, unknown>;
+  if (typeof og.score !== "number" || typeof og.feedback !== "string" || typeof og.confirmed !== "boolean") return false;
+  if (typeof d.feedbackImages !== "object" || d.feedbackImages === null) return false;
+  if (typeof d.gradingMode !== "string") return false;
+  return true;
+}
 
 export default function GradingPage() {
   useTrackTime("GRADING");
@@ -112,11 +113,15 @@ export default function GradingPage() {
 
   const [assignments, setAssignments] = useState<AssignmentOption[]>([]);
   const [assignmentPage, setAssignmentPage] = useState(1);
-  const [assignmentPageSize, setAssignmentPageSize] = useState(10);
+  const [assignmentPageSize] = useState(10);
   const [assignmentTotalCount, setAssignmentTotalCount] = useState(0);
   const assignmentTotalPages = Math.max(1, Math.ceil(assignmentTotalCount / assignmentPageSize));
-  const [assignmentFilter, setAssignmentFilter] = useState<"all" | "ungraded" | "pending">("all");
-  const [assignmentSearch, setAssignmentSearch] = useState("");
+  // Consolidated: assignment picker state (filter, search, open)
+  const [assignmentPicker, setAssignmentPicker] = useState<AssignmentPickerState>({
+    filter: "all",
+    search: "",
+    open: false,
+  });
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<string>(initialAssignmentId || "");
   const [assignmentInfo, setAssignmentInfo] = useState<AssignmentInfo | null>(null);
   const [submissions, setSubmissions] = useState<SubmissionForGrading[]>([]);
@@ -124,53 +129,71 @@ export default function GradingPage() {
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<SubmissionForGrading | null>(null);
   const [grades, setGrades] = useState<Record<string, { score: number; feedback: string }>>({});
-  const [overallScore, setOverallScore] = useState<number>(0);
-  const [overallFeedback, setOverallFeedback] = useState("");
+  // Consolidated: overall grade state (score, feedback, confirmed)
+  const [overallGrade, setOverallGrade] = useState<OverallGradeState>({
+    score: 0,
+    feedback: "",
+    confirmed: false,
+  });
   const [gradingMode, setGradingMode] = useState<GradingMode>("per-question");
   const [saving, setSaving] = useState(false);
   const [aiLoading, setAiLoading] = useState<string | null>(null);
   const [filterMode, setFilterMode] = useState<FilterMode>("all");
-  const [feedbackFile, setFeedbackFile] = useState<File | null>(null);
-  const [uploadingFeedback, setUploadingFeedback] = useState(false);
-  const [feedbackFileUrl, setFeedbackFileUrl] = useState<string | null>(null);
+  // Consolidated: feedback file state (file object, url)
+  const [feedbackFileState, setFeedbackFileState] = useState<FeedbackFileState>({
+    file: null,
+    url: null,
+  });
+  const { upload: uploadFeedbackFile, uploading: uploadingFeedback } = useUploadFile({
+    maxSizeBytes: 20 * 1024 * 1024,
+    onSizeError: () => toast.error("File exceeds the 20 MB limit. Please use a smaller file."),
+  });
   const [feedbackImages, setFeedbackImages] = useState<Record<string, string[]>>({});
   const [appealMessages, setAppealMessages] = useState<Record<string, string>>({});
   const [appealNewScores, setAppealNewScores] = useState<Record<string, string>>({});
   const [resolvingAppeal, setResolvingAppeal] = useState<string | null>(null);
   const [expandedAppeals, setExpandedAppeals] = useState<Record<string, boolean>>({});
   const [appealImages, setAppealImages] = useState<Record<string, string[]>>({});
-  const [uploadingImage, setUploadingImage] = useState(false);
+  const { upload: handleUploadImage, uploading: uploadingImage } = useUploadFile();
   const [confirmedAnswers, setConfirmedAnswers] = useState<Set<string>>(new Set());
-  const [overallGradeConfirmed, setOverallGradeConfirmed] = useState(false);
   const [gradingDraftRestored, setGradingDraftRestored] = useState(false);
   const prevSubmissionIdRef = useRef<string | null>(null);
 
-  // localStorage helpers for grading drafts
+  // localStorage helpers for grading drafts with schema versioning
   const getLocalStorageKey = (submissionId: string) => `grading-state-${submissionId}`;
 
   const saveAllToLocalStorage = useCallback(() => {
     if (!selectedSubmission) return;
     try {
-      localStorage.setItem(getLocalStorageKey(selectedSubmission.id), JSON.stringify({
+      const draft: GradingDraftData = {
+        _version: GRADING_STATE_VERSION,
         grades,
         confirmedAnswers: Array.from(confirmedAnswers),
-        overallGradeConfirmed,
-        overallScore,
-        overallFeedback,
+        overallGrade,
         feedbackImages,
-        feedbackFileUrl,
+        feedbackFileUrl: feedbackFileState.url,
         gradingMode,
-      }));
+      };
+      localStorage.setItem(getLocalStorageKey(selectedSubmission.id), JSON.stringify(draft));
     } catch { /* quota exceeded or similar */ }
-  }, [selectedSubmission, grades, confirmedAnswers, overallGradeConfirmed, overallScore, overallFeedback, feedbackImages, feedbackFileUrl, gradingMode]);
+  }, [selectedSubmission, grades, confirmedAnswers, overallGrade, feedbackImages, feedbackFileState.url, gradingMode]);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const loadAllFromLocalStorage = useCallback((submissionId: string): any | null => {
+  const loadAllFromLocalStorage = useCallback((submissionId: string): GradingDraftData | null => {
     try {
-      const data = localStorage.getItem(getLocalStorageKey(submissionId));
-      if (data) return JSON.parse(data);
-    } catch { /* parse error */ }
-    return null;
+      const raw = localStorage.getItem(getLocalStorageKey(submissionId));
+      if (!raw) return null;
+      const parsed: unknown = JSON.parse(raw);
+      // Validate schema version and shape; discard stale data
+      if (!isValidGradingDraft(parsed)) {
+        localStorage.removeItem(getLocalStorageKey(submissionId));
+        return null;
+      }
+      return parsed;
+    } catch {
+      // Parse error — remove corrupt data
+      try { localStorage.removeItem(getLocalStorageKey(submissionId)); } catch { /* ignore */ }
+      return null;
+    }
   }, []);
 
   const clearLocalStorage = useCallback((submissionId: string) => {
@@ -212,27 +235,9 @@ export default function GradingPage() {
     enabled: !!selectedSubmission,
   });
 
-  const handleUploadImage = useCallback(async (file: File): Promise<string | null> => {
-    setUploadingImage(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch("/api/upload", { method: "POST", body: formData });
-      if (res.ok) {
-        const data = await res.json();
-        return data.url;
-      }
-      return null;
-    } catch {
-      return null;
-    } finally {
-      setUploadingImage(false);
-    }
-  }, []);
-
   // Fetch assignment list with pagination and search
-  const fetchAssignmentList = useCallback((p?: number, ps?: number, q?: string) => {
-    setLoading(true);
+  const fetchAssignmentList = useCallback((p?: number, ps?: number, q?: string, silent?: boolean) => {
+    if (!silent) setLoading(true);
     const params = new URLSearchParams({ filter: "published", page: String(p ?? 1), pageSize: String(ps ?? 10) });
     if (q) params.set("search", q);
     fetch(`/api/assignments?${params}`)
@@ -250,9 +255,9 @@ export default function GradingPage() {
         }));
         setAssignments(list);
         setAssignmentTotalCount(data.totalCount ?? 0);
-        setLoading(false);
+        if (!silent) setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => { if (!silent) setLoading(false); });
   }, []);
 
   useEffect(() => {
@@ -287,10 +292,10 @@ export default function GradingPage() {
     prevSubmissionIdRef.current = sub.id;
 
     setSelectedSubmission(sub);
-    setFeedbackFile(null);
+    setFeedbackFileState({ file: null, url: null });
     setGradingDraftRestored(false);
 
-    // Try to restore all state from localStorage
+    // Try to restore all state from localStorage (validated)
     const saved = loadAllFromLocalStorage(sub.id);
     let restored = false;
 
@@ -312,13 +317,13 @@ export default function GradingPage() {
     setGrades(initialGrades);
     if (restored) setGradingDraftRestored(true);
 
-    // Confirmed answers
+    // Confirmed answers & overall grade (consolidated)
     setConfirmedAnswers(new Set(saved?.confirmedAnswers || []));
-    setOverallGradeConfirmed(saved?.overallGradeConfirmed || false);
-
-    // Overall score & feedback
-    setOverallScore(saved?.overallScore ?? sub.totalScore ?? 0);
-    setOverallFeedback(saved?.overallFeedback ?? sub.overallFeedback ?? "");
+    setOverallGrade({
+      score: saved?.overallGrade?.score ?? sub.totalScore ?? 0,
+      feedback: saved?.overallGrade?.feedback ?? sub.overallFeedback ?? "",
+      confirmed: saved?.overallGrade?.confirmed ?? false,
+    });
 
     // Feedback images: prefer localStorage, fall back to server data
     if (saved?.feedbackImages && Object.keys(saved.feedbackImages).length > 0) {
@@ -334,7 +339,7 @@ export default function GradingPage() {
     }
 
     // Feedback file URL
-    setFeedbackFileUrl(saved?.feedbackFileUrl ?? null);
+    setFeedbackFileState((prev) => ({ ...prev, url: saved?.feedbackFileUrl ?? null }));
 
     // Grading mode: prefer saved, fall back to auto-detect
     if (saved?.gradingMode) {
@@ -373,25 +378,28 @@ export default function GradingPage() {
   };
 
   const handleUploadFeedbackFile = async (file: File) => {
-    if (file.size > 20 * 1024 * 1024) {
-      alert("File exceeds the 20 MB limit. Please use a smaller file.");
-      return;
-    }
-    setFeedbackFile(file);
-    setUploadingFeedback(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch("/api/upload", { method: "POST", body: formData });
-      if (res.ok) {
-        const data = await res.json();
-        setFeedbackFileUrl(data.url);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setUploadingFeedback(false);
-    }
+    setFeedbackFileState((prev) => ({ ...prev, file }));
+    const url = await uploadFeedbackFile(file);
+    if (url) setFeedbackFileState((prev) => ({ ...prev, url }));
+  };
+
+  const handleGradeChange = (answerId: string, field: "score" | "feedback", value: number | string) => {
+    setGrades((prev) => ({
+      ...prev,
+      [answerId]: {
+        ...prev[answerId],
+        [field]: value,
+      },
+    }));
+  };
+
+  const handleToggleConfirm = (answerId: string) => {
+    setConfirmedAnswers((prev) => {
+      const next = new Set(prev);
+      if (next.has(answerId)) next.delete(answerId);
+      else next.add(answerId);
+      return next;
+    });
   };
 
   const handleSaveGrades = async () => {
@@ -414,14 +422,14 @@ export default function GradingPage() {
         submissionId: selectedSubmission.id,
       };
 
-      if (feedbackFileUrl) {
-        body.feedbackFileUrl = feedbackFileUrl;
+      if (feedbackFileState.url) {
+        body.feedbackFileUrl = feedbackFileState.url;
       }
 
       // Include overall score and feedback when confirmed
-      if (overallGradeConfirmed) {
-        body.overallScore = overallScore;
-        body.overallFeedback = overallFeedback;
+      if (overallGrade.confirmed) {
+        body.overallScore = overallGrade.score;
+        body.overallFeedback = overallGrade.feedback;
       }
 
       if (gradingMode === "per-question") {
@@ -462,6 +470,7 @@ export default function GradingPage() {
         setSelectedSubmission((prev) =>
           prev ? { ...prev, totalScore: data.totalScore, gradedAt: new Date().toISOString(), gradedByName: "You" } : prev
         );
+        fetchAssignmentList(assignmentPage, assignmentPageSize, undefined, true);
       }
     } catch (err) {
       console.error(err);
@@ -490,7 +499,7 @@ export default function GradingPage() {
         setAppealImages((prev) => ({ ...prev, [appealId]: [] }));
       }
     } catch {
-      alert("Failed to send message");
+      toast.error("Failed to send message");
     }
   };
 
@@ -523,9 +532,10 @@ export default function GradingPage() {
         if (status === "RESOLVED" && newScore !== undefined) {
           fetchSubmissions(selectedAssignmentId);
         }
+        fetchAssignmentList(assignmentPage, assignmentPageSize, undefined, true);
       }
     } catch {
-      alert("Failed to update appeal");
+      toast.error("Failed to update appeal");
     } finally {
       setResolvingAppeal(null);
     }
@@ -570,12 +580,7 @@ export default function GradingPage() {
   const allAutoGraded = (selectedSubmission?.answers.length ?? 0) > 0 && (selectedSubmission?.answers.every((a) => a.autoGraded) ?? false);
 
   if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 gap-3">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400 dark:text-gray-500" />
-        <p className="text-sm text-gray-400 dark:text-gray-500">Loading...</p>
-      </div>
-    );
+    return <LoadingSpinner message="Loading..." />;
   }
 
   return (
@@ -588,84 +593,77 @@ export default function GradingPage() {
         </div>
       </div>
 
-      {/* Assignment Filter Tabs */}
-      <div className="flex items-center gap-1.5">
-        {([
-          { key: "all", label: "All" },
-          { key: "ungraded", label: "Ungraded" },
-          { key: "pending", label: "Pending Appeals" },
-        ] as const).map((f) => (
-          <button
-            key={f.key}
-            onClick={() => { setAssignmentFilter(f.key); setAssignmentPage(1); }}
-            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-              assignmentFilter === f.key
-                ? "bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900 shadow-sm"
-                : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Assignment Selector */}
-      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-        <Select value={selectedAssignmentId} onValueChange={setSelectedAssignmentId}>
-          <SelectTrigger className="w-full sm:w-80">
-            <SelectValue placeholder="Select an assignment to grade" />
-          </SelectTrigger>
-          <SelectContent>
-            {assignments
-              .filter((a) => {
-                if (assignmentFilter === "ungraded" && a.ungradedCount <= 0) return false;
-                if (assignmentFilter === "pending" && a.openAppealCount <= 0) return false;
-                return true;
-              })
-              .map((a) => (
-              <SelectItem key={a.id} value={a.id}>
-                <div>
-                  <div className="truncate">{a.title}</div>
-                  <div className="flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500">
-                    <span>{a.submissionCount} submissions</span>
-                    {a.ungradedCount > 0 && (
-                      <span className="px-1.5 py-0.5 rounded font-semibold text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400">
-                        {a.ungradedCount} ungraded
-                      </span>
-                    )}
-                    {a.openAppealCount > 0 && (
-                      <span className="px-1.5 py-0.5 rounded font-semibold text-[10px] bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-400">
-                        {a.openAppealCount} pending
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* Search picker — type to find and select an assignment */}
-        <div className="relative w-full sm:w-56">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            placeholder="Search assignment..."
-            value={assignmentSearch}
-            onChange={(e) => setAssignmentSearch(e.target.value)}
-            className="pl-9 h-9"
-          />
-          {assignmentSearch.length > 0 && (
-            <div className="absolute z-20 top-full mt-1 w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-              {assignments
-                .filter((a) => a.title.toLowerCase().includes(assignmentSearch.toLowerCase()))
-                .map((a) => (
+      {/* Assignment Picker & Submission Controls */}
+      <div className="space-y-3">
+        {/* Assignment Picker */}
+        <Popover open={assignmentPicker.open} onOpenChange={(open) => setAssignmentPicker((prev) => ({ ...prev, open }))}>
+          <PopoverTrigger asChild>
+            <button
+              className="flex h-10 w-full sm:w-96 items-center justify-between rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 px-3 py-2 text-sm shadow-sm hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors"
+            >
+              <span className={selectedAssignmentId ? "text-gray-900 dark:text-gray-100 font-medium truncate" : "text-gray-400 dark:text-gray-500"}>
+                {assignments.find((a) => a.id === selectedAssignmentId)?.title || "Select an assignment to grade"}
+              </span>
+              <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="sm:w-96 p-0">
+            {/* Search */}
+            <div className="p-2 border-b border-neutral-100 dark:border-neutral-800">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+                <Input
+                  placeholder="Search assignments..."
+                  value={assignmentPicker.search}
+                  onChange={(e) => setAssignmentPicker((prev) => ({ ...prev, search: e.target.value }))}
+                  className="pl-8 h-8 text-sm"
+                />
+              </div>
+            </div>
+            {/* Filter tabs */}
+            <div className="flex items-center gap-1 p-2 border-b border-neutral-100 dark:border-neutral-800">
+              {([
+                { key: "all", label: "All" },
+                { key: "ungraded", label: "Ungraded" },
+                { key: "pending", label: "Appeals" },
+              ] as const).map((f) => (
+                <button
+                  key={f.key}
+                  onClick={() => { setAssignmentPicker((prev) => ({ ...prev, filter: f.key })); setAssignmentPage(1); }}
+                  className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
+                    assignmentPicker.filter === f.key
+                      ? "bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900"
+                      : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+            {/* Assignment list */}
+            <div className="max-h-64 overflow-y-auto p-1">
+              {(() => {
+                const filtered = assignments.filter((a) => {
+                  if (assignmentPicker.search && !a.title.toLowerCase().includes(assignmentPicker.search.toLowerCase())) return false;
+                  if (assignmentPicker.filter === "ungraded" && a.ungradedCount <= 0) return false;
+                  if (assignmentPicker.filter === "pending" && a.openAppealCount <= 0) return false;
+                  return true;
+                });
+                if (filtered.length === 0) {
+                  return <div className="px-3 py-6 text-sm text-gray-400 text-center">No matching assignments</div>;
+                }
+                return filtered.map((a) => (
                   <button
                     key={a.id}
-                    onClick={() => { setSelectedAssignmentId(a.id); setAssignmentSearch(""); }}
-                    className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-b border-gray-100 dark:border-gray-800 last:border-0"
+                    onClick={() => { setSelectedAssignmentId(a.id); setAssignmentPicker((prev) => ({ ...prev, open: false, search: "" })); }}
+                    className={`w-full text-left rounded-md px-3 py-2.5 transition-colors ${
+                      a.id === selectedAssignmentId
+                        ? "bg-gray-100 dark:bg-gray-800"
+                        : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    }`}
                   >
                     <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{a.title}</div>
-                    <div className="flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500">
+                    <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-gray-400 dark:text-gray-500">
                       <span>{a.submissionCount} submissions</span>
                       {a.ungradedCount > 0 && (
                         <span className="px-1.5 py-0.5 rounded font-semibold text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400">
@@ -674,61 +672,26 @@ export default function GradingPage() {
                       )}
                       {a.openAppealCount > 0 && (
                         <span className="px-1.5 py-0.5 rounded font-semibold text-[10px] bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-400">
-                          {a.openAppealCount} pending
+                          {a.openAppealCount} appeal{a.openAppealCount !== 1 ? "s" : ""}
                         </span>
                       )}
                     </div>
                   </button>
-                ))}
-              {assignments.filter((a) => a.title.toLowerCase().includes(assignmentSearch.toLowerCase())).length === 0 && (
-                <div className="px-3 py-4 text-sm text-gray-400 text-center">No matching assignments</div>
-              )}
+                ));
+              })()}
             </div>
-          )}
-        </div>
-
-        {/* Assignment list pagination */}
-        {assignmentTotalCount > 0 && (
-          <div className="w-full flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm text-neutral-500 dark:text-neutral-400">
-              <span className="text-xs">Rows:</span>
-              <Select value={String(assignmentPageSize)} onValueChange={(v) => { setAssignmentPageSize(Number(v)); setAssignmentPage(1); }}>
-                <SelectTrigger className="w-16 h-7 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="20">20</SelectItem>
-                  <SelectItem value="30">30</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Pagination */}
             {assignmentTotalPages > 1 && (
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setAssignmentPage((p) => Math.max(1, p - 1))}
-                  disabled={assignmentPage === 1}
-                  className="px-2.5 py-1 text-xs rounded-md border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                >
-                  &lt;
-                </button>
-                <span className="text-xs text-neutral-500 dark:text-neutral-400 px-1">
-                  {assignmentPage} / {assignmentTotalPages}
-                </span>
-                <button
-                  onClick={() => setAssignmentPage((p) => Math.min(assignmentTotalPages, p + 1))}
-                  disabled={assignmentPage === assignmentTotalPages}
-                  className="px-2.5 py-1 text-xs rounded-md border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                >
-                  &gt;
-                </button>
+              <div className="flex items-center justify-center px-3 py-2 border-t border-neutral-100 dark:border-neutral-800">
+                <Pagination currentPage={assignmentPage} totalPages={assignmentTotalPages} onPageChange={setAssignmentPage} />
               </div>
             )}
-          </div>
-        )}
+          </PopoverContent>
+        </Popover>
 
+        {/* Submission controls -- only visible after selecting an assignment */}
         {selectedAssignmentId && (
-          <>
+          <div className="flex flex-wrap items-center gap-2">
             <Select value={filterMode} onValueChange={(v) => setFilterMode(v as FilterMode)}>
               <SelectTrigger className="w-32 sm:w-44">
                 <Filter className="h-3.5 w-3.5 mr-1.5" />
@@ -758,14 +721,14 @@ export default function GradingPage() {
               <span className="sm:hidden">Export</span>
             </Button>
 
-            <div className="flex items-center gap-2 ml-auto">
+            <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
               <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 bg-emerald-50 dark:bg-emerald-950 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">
                 <CheckCircle2 className="h-3 w-3" />
                 {gradedCount} Graded
               </span>
               <span className="flex items-center gap-1.5 text-xs font-medium text-amber-600 bg-amber-50 dark:bg-amber-950 px-2.5 py-1 rounded-full border border-amber-200 dark:border-amber-800">
                 <Clock className="h-3 w-3" />
-                {ungradedCount} Pending
+                {ungradedCount} Ungraded
               </span>
               {appealsCount > 0 && (
                 <span className="flex items-center gap-1.5 text-xs font-medium text-orange-600 bg-orange-50 dark:bg-orange-950 px-2.5 py-1 rounded-full border border-orange-200 dark:border-orange-800">
@@ -774,118 +737,28 @@ export default function GradingPage() {
                 </span>
               )}
             </div>
-          </>
+          </div>
         )}
       </div>
 
       {!selectedAssignmentId ? (
-        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 py-16 text-center shadow-sm">
-          <div className="mx-auto w-14 h-14 rounded-full bg-gray-50 dark:bg-gray-800 flex items-center justify-center mb-4">
-            <ClipboardList className="h-7 w-7 text-gray-400 dark:text-gray-500" />
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Select an assignment to grade</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Choose an assignment from the dropdown above.</p>
-        </div>
+        <EmptyState
+          icon={ClipboardList}
+          title="Select an assignment to grade"
+          description="Choose an assignment from the dropdown above."
+        />
       ) : loadingSubmissions ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-gray-400 dark:text-gray-500" />
-        </div>
+        <LoadingSpinner />
       ) : (
         <div className="flex flex-col md:flex-row gap-4 md:gap-6 md:h-[calc(100vh-16rem)]">
           {/* Submission List */}
-          <div className="w-full md:w-80 shrink-0 flex flex-col bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden shadow-sm max-h-[40vh] md:max-h-none">
-            <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
-              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                Submissions ({filteredSubmissions.length})
-              </h2>
-              {assignmentInfo && (
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 truncate">
-                  {assignmentInfo.title} &middot; {assignmentInfo.totalPoints} pts
-                </p>
-              )}
-            </div>
-            <div className="flex-1 overflow-auto p-2 space-y-1.5">
-              {filteredSubmissions.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <ClipboardList className="h-6 w-6 text-gray-300 dark:text-gray-600 mb-2" />
-                  <p className="text-xs text-gray-400 dark:text-gray-500">
-                    {filterMode === "ungraded" ? "All submissions graded!" : "No submissions yet."}
-                  </p>
-                </div>
-              ) : (
-                filteredSubmissions.map((sub) => {
-                  const isSelected = selectedSubmission?.id === sub.id;
-                  const isGraded = sub.totalScore !== null;
-
-                  return (
-                    <button
-                      key={sub.id}
-                      onClick={() => selectSubmission(sub)}
-                      className={`w-full text-left rounded-lg p-3 transition-colors border ${
-                        isSelected
-                          ? "bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-600 shadow-sm"
-                          : "border-transparent hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-gray-200 dark:hover:border-gray-700"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-                          isSelected
-                            ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900"
-                            : isGraded
-                              ? "bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-400"
-                              : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
-                        }`}>
-                          {sub.userName.charAt(0).toUpperCase()}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{sub.userName}</p>
-                          <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{sub.userEmail}</p>
-                          <p className="text-[10px] text-gray-400 dark:text-gray-500">
-                            Submitted {new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(sub.submittedAt))}
-                            {assignmentInfo?.dueDate && new Date(sub.submittedAt) > new Date(assignmentInfo.dueDate) && (
-                              <span className="ml-1.5 inline-flex items-center gap-0.5 text-[10px] font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950 px-1.5 py-0.5 rounded-full">Late</span>
-                            )}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="mt-2 ml-10 space-y-1">
-                        <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border ${
-                          isGraded
-                            ? "text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950 border-emerald-200 dark:border-emerald-800"
-                            : "text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700"
-                        }`}>
-                          {isGraded ? <CheckCircle2 className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
-                          {sub.totalScore ?? 0}/{assignmentInfo?.totalPoints}
-                        </span>
-                        {isGraded ? null : sub.openAppealCount > 0 ? (
-                          <span className="inline-flex items-center gap-1 text-xs font-medium text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-950 px-2 py-0.5 rounded-full border border-orange-200 dark:border-orange-800">
-                            <ShieldAlert className="h-3 w-3" />
-                            Pending · {sub.openAppealCount} appeal{sub.openAppealCount !== 1 ? "s" : ""}
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-800">
-                            <Clock className="h-3 w-3" />
-                            Ungraded
-                          </span>
-                        )}
-                        {isGraded && sub.openAppealCount > 0 && (
-                          <span className="inline-flex items-center gap-1 text-xs font-medium text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-950 px-2 py-0.5 rounded-full border border-orange-200 dark:border-orange-800">
-                            <ShieldAlert className="h-3 w-3" />
-                            {sub.openAppealCount} open appeal{sub.openAppealCount !== 1 ? "s" : ""}
-                          </span>
-                        )}
-                        {sub.gradedByName && (
-                          <p className="text-[10px] text-gray-400 dark:text-gray-500">
-                            Graded by {sub.gradedByName}
-                          </p>
-                        )}
-                      </div>
-                    </button>
-                  );
-                })
-              )}
-            </div>
-          </div>
+          <SubmissionList
+            submissions={filteredSubmissions}
+            selectedSubmission={selectedSubmission}
+            onSelectSubmission={selectSubmission}
+            assignmentInfo={assignmentInfo}
+            filterMode={filterMode}
+          />
 
           {/* Grading Panel */}
           <div className="flex-1 flex flex-col bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden shadow-sm">
@@ -899,26 +772,24 @@ export default function GradingPage() {
                     </div>
                     <div className="min-w-0">
                       <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{selectedSubmission.userName}</h3>
-                      <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-xs text-gray-400 dark:text-gray-500">
+                        Submitted {formatShortDate(selectedSubmission.submittedAt)}
+                      </p>
+                      {selectedSubmission.gradedByName && (
                         <p className="text-xs text-gray-400 dark:text-gray-500">
-                          Submitted {formatShortDate(selectedSubmission.submittedAt)}
+                          &middot; Graded by {selectedSubmission.gradedByName}
                         </p>
-                        {selectedSubmission.gradedByName && (
-                          <p className="text-xs text-gray-400 dark:text-gray-500">
-                            &middot; Graded by {selectedSubmission.gradedByName}
-                          </p>
-                        )}
-                        {assignmentInfo?.dueDate && new Date(selectedSubmission.submittedAt) > new Date(assignmentInfo.dueDate) && (
-                          <Badge className="bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800 text-[10px]">
-                            Late
-                          </Badge>
-                        )}
-                        {allAutoGraded && selectedSubmission.answers.length > 0 && (
-                          <Badge className="bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800 text-[10px]">
-                            Auto-graded
-                          </Badge>
-                        )}
-                      </div>
+                      )}
+                      {assignmentInfo?.dueDate && new Date(selectedSubmission.submittedAt) > new Date(assignmentInfo.dueDate) && (
+                        <Badge className="bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800 text-[10px]">
+                          Late
+                        </Badge>
+                      )}
+                      {allAutoGraded && selectedSubmission.answers.length > 0 && (
+                        <Badge className="bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800 text-[10px]">
+                          Auto-graded
+                        </Badge>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 ml-auto">
@@ -955,6 +826,7 @@ export default function GradingPage() {
                             if (res.ok) {
                               setSubmissions((prev) => prev.map((s) => s.id !== selectedSubmission.id ? s : { ...s, totalScore: null, gradedAt: null, gradedByName: null }));
                               setSelectedSubmission((prev) => prev ? { ...prev, totalScore: null, gradedAt: null, gradedByName: null } : prev);
+                              fetchAssignmentList(assignmentPage, assignmentPageSize, undefined, true);
                             }
                           } finally { setSaving(false); }
                         }}
@@ -970,7 +842,7 @@ export default function GradingPage() {
                     ) : (
                       <Button
                         onClick={handleSaveGrades}
-                        disabled={saving || allAutoGraded || (selectedSubmission.answers.filter(a => !a.autoGraded).length === 0 && !overallGradeConfirmed)}
+                        disabled={saving || allAutoGraded || (selectedSubmission.answers.filter(a => !a.autoGraded).length === 0 && !overallGrade.confirmed)}
                         size="sm"
                         className="gap-1.5 bg-gray-900 dark:bg-gray-100 hover:bg-gray-800 dark:hover:bg-gray-200 text-white dark:text-gray-900 rounded-lg"
                       >
@@ -1045,433 +917,49 @@ export default function GradingPage() {
                   )}
 
                   {/* Per-question grading */}
-                  {gradingMode === "per-question" && selectedSubmission.answers.map((answer, index) => (
-                    <div key={answer.id} className="rounded-xl border border-gray-100 dark:border-gray-800 overflow-hidden shadow-sm">
-                      {/* Question Header */}
-                      <div className="flex items-center justify-between px-5 py-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-800">
-                        <div className="flex items-center gap-2">
-                          <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-bold">
-                            {index + 1}
-                          </span>
-                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Question {index + 1}
-                          </span>
-                          <span className="text-xs text-gray-400 dark:text-gray-500">
-                            ({answer.maxPoints} pts)
-                          </span>
-                        </div>
-                        {answer.autoGraded && (
-                          <Badge className="bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800 text-xs">
-                            Auto-graded
-                          </Badge>
-                        )}
-                      </div>
-
-                      <div className="p-5 space-y-4">
-                        <MarkdownContent content={answer.questionText} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed" />
-
-                        {/* Student Answer */}
-                        <div className={`rounded-lg p-4 border ${answer.leftBlank ? "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900" : "bg-gray-50 dark:bg-gray-800 border-gray-100 dark:border-gray-800"}`}>
-                          <div className="flex items-center gap-1.5 mb-2">
-                            <MessageSquare className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500" />
-                            <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Student Answer</p>
-                          </div>
-                          {answer.leftBlank ? (
-                            <p className="text-sm text-red-600 dark:text-red-400 italic">Student left this question blank</p>
-                          ) : (
-                            <p className="text-sm text-gray-800 dark:text-gray-200">{answer.answer || "No typed answer provided"}</p>
-                          )}
-                          {answer.answerImageUrls && (answer.answerImageUrls as string[]).length > 0 && (
-                            <div className="flex gap-2 mt-2 flex-wrap">
-                              {(answer.answerImageUrls as string[]).map((url: string, i: number) => (
-                                <a key={i} href={url} target="_blank" rel="noopener noreferrer">
-                                  <img src={url} alt={`Answer image ${i + 1}`} className="h-20 w-20 object-cover rounded-lg border border-gray-200 dark:border-gray-700 hover:opacity-80 transition-opacity" />
-                                </a>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Score + Confirm + AI Assist */}
-                        <div className="flex items-end gap-4">
-                          <div className="space-y-1.5 flex-1 max-w-[200px]">
-                            <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
-                              Score (max {answer.maxPoints})
-                            </label>
-                            <div className="flex items-center gap-2">
-                              <Input
-                                type="number"
-                                min={0}
-                                max={answer.maxPoints}
-                                value={grades[answer.id]?.score || 0}
-                                onChange={(e) =>
-                                  setGrades((prev) => ({
-                                    ...prev,
-                                    [answer.id]: {
-                                      ...prev[answer.id],
-                                      score: Number(e.target.value),
-                                    },
-                                  }))
-                                }
-                                disabled={answer.autoGraded}
-                                className="font-semibold text-center"
-                              />
-                              {!answer.autoGraded && (
-                                <button
-                                  type="button"
-                                  onClick={() => setConfirmedAnswers((prev) => {
-                                    const next = new Set(prev);
-                                    if (next.has(answer.id)) next.delete(answer.id);
-                                    else next.add(answer.id);
-                                    return next;
-                                  })}
-                                  className={`shrink-0 h-8 w-8 rounded-md border-2 flex items-center justify-center transition-colors ${
-                                    confirmedAnswers.has(answer.id)
-                                      ? "bg-emerald-500 border-emerald-500 text-white"
-                                      : "border-gray-300 dark:border-gray-600 hover:border-emerald-400"
-                                  }`}
-                                  title={confirmedAnswers.has(answer.id) ? "Unconfirm score" : "Confirm score"}
-                                >
-                                  {confirmedAnswers.has(answer.id) && <CheckCircle2 className="h-4 w-4" />}
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                          {!answer.autoGraded && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleAIGrade(answer.id)}
-                              disabled={aiLoading === answer.id}
-                              className="gap-1.5 rounded-lg"
-                            >
-                              {aiLoading === answer.id ? (
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              ) : (
-                                <Sparkles className="h-3.5 w-3.5" />
-                              )}
-                              AI Assist
-                            </Button>
-                          )}
-                        </div>
-
-                        {/* Feedback */}
-                        {!answer.autoGraded && (
-                          <div className="space-y-1.5">
-                            <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">Feedback</label>
-                            <Textarea
-                              value={grades[answer.id]?.feedback || ""}
-                              onChange={(e) =>
-                                setGrades((prev) => ({
-                                  ...prev,
-                                  [answer.id]: {
-                                    ...prev[answer.id],
-                                    feedback: e.target.value,
-                                  },
-                                }))
-                              }
-                              placeholder="Add feedback for the student..."
-                              rows={2}
-                              className="resize-none"
-                            />
-                            <ImageUpload
-                              images={feedbackImages[answer.id] || []}
-                              onImagesChange={(imgs) => setFeedbackImages((prev) => ({ ...prev, [answer.id]: imgs }))}
-                              onUpload={handleUploadImage}
-                              uploading={uploadingImage}
-                              maxImages={3}
-                            />
-                          </div>
-                        )}
-
-                        {/* Appeals for this question */}
-                        {answer.appeals.length > 0 && (
-                          <div className="space-y-2">
-                            {answer.appeals.map((appeal) => {
-                              const isExpanded = expandedAppeals[appeal.id];
-                              return (
-                                <div
-                                  key={appeal.id}
-                                  className={`rounded-lg border p-3 space-y-2 ${
-                                    appeal.status === "OPEN"
-                                      ? "border-orange-200 dark:border-orange-800 bg-orange-50/50 dark:bg-orange-950/30"
-                                      : "border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50"
-                                  }`}
-                                >
-                                  <button
-                                    onClick={() => setExpandedAppeals((prev) => ({ ...prev, [appeal.id]: !prev[appeal.id] }))}
-                                    className="w-full flex items-center justify-between cursor-pointer group"
-                                  >
-                                    <div className="flex items-center gap-2">
-                                      <ShieldAlert className="h-3.5 w-3.5 text-orange-500 dark:text-orange-400" />
-                                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                                        Appeal by {appeal.student.name || "Student"}
-                                      </span>
-                                      <Badge
-                                        className={`text-[10px] px-1.5 py-0 gap-0.5 ${
-                                          appeal.status === "OPEN"
-                                            ? "bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900 dark:text-amber-400 dark:border-amber-700"
-                                            : appeal.status === "RESOLVED"
-                                              ? "bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-900 dark:text-emerald-400 dark:border-emerald-700"
-                                              : "bg-red-100 text-red-700 border-red-300 dark:bg-red-900 dark:text-red-400 dark:border-red-700"
-                                        }`}
-                                      >
-                                        {appeal.status === "OPEN" ? "Pending" : appeal.status === "RESOLVED" ? "Accepted" : "Denied"}
-                                      </Badge>
-                                      {appeal.messages.length > 0 && (
-                                        <span className="text-[10px] text-gray-400 dark:text-gray-500">
-                                          {appeal.messages.length} message{appeal.messages.length !== 1 ? "s" : ""}
-                                        </span>
-                                      )}
-                                    </div>
-                                    <svg className={`h-3.5 w-3.5 text-gray-400 transition-transform ${isExpanded ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                                  </button>
-
-                                  {isExpanded && (
-                                    <div className="space-y-2 pt-1">
-                                      {/* Original reason */}
-                                      <div className="bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 rounded-md p-2.5">
-                                        <div className="flex items-center gap-2 mb-0.5">
-                                          <span className="text-[10px] font-semibold text-amber-700 dark:text-amber-400">
-                                            {appeal.student.name || "Student"}
-                                          </span>
-                                          <span className="text-[10px] text-amber-500 dark:text-amber-600">
-                                            {formatShortDate(appeal.createdAt)}
-                                          </span>
-                                        </div>
-                                        <MarkdownContent content={appeal.reason} className="text-xs text-amber-800 dark:text-amber-300" />
-                                        {appeal.imageUrls && appeal.imageUrls.length > 0 && (
-                                          <div className="flex gap-2 mt-1.5 flex-wrap">
-                                            {appeal.imageUrls.map((url, i) => (
-                                              <a key={i} href={url} target="_blank" rel="noopener noreferrer">
-                                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                                <img src={url} alt={`Attachment ${i + 1}`} className="h-16 w-16 object-cover rounded border border-amber-200 dark:border-amber-700 hover:opacity-80 transition-opacity" />
-                                              </a>
-                                            ))}
-                                          </div>
-                                        )}
-                                      </div>
-
-                                      {/* Messages */}
-                                      {appeal.messages.map((msg) => {
-                                        const isStaff = msg.user.role === "TA" || msg.user.role === "ADMIN" || msg.user.role === "PROFESSOR";
-                                        return (
-                                          <div
-                                            key={msg.id}
-                                            className={`rounded-md p-2.5 border ${
-                                              isStaff
-                                                ? "bg-indigo-50 dark:bg-indigo-950/50 border-indigo-200 dark:border-indigo-800"
-                                                : "bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700"
-                                            }`}
-                                          >
-                                            <div className="flex items-center gap-1.5 mb-0.5">
-                                              <span className={`text-[10px] font-semibold ${isStaff ? "text-indigo-700 dark:text-indigo-400" : "text-gray-700 dark:text-gray-300"}`}>
-                                                {msg.user.name || "User"}
-                                              </span>
-                                              {isStaff && (
-                                                <Badge className="text-[9px] px-1 py-0 bg-indigo-100 text-indigo-600 border-indigo-200 dark:bg-indigo-900 dark:text-indigo-400 dark:border-indigo-700">
-                                                  {msg.user.role}
-                                                </Badge>
-                                              )}
-                                              <span className="text-[10px] text-gray-400 dark:text-gray-500">
-                                                {formatShortDate(msg.createdAt)}
-                                              </span>
-                                            </div>
-                                            <MarkdownContent content={msg.content} className="text-xs text-gray-800 dark:text-gray-200" />
-                                            {msg.imageUrls && msg.imageUrls.length > 0 && (
-                                              <div className="flex gap-2 mt-1.5 flex-wrap">
-                                                {msg.imageUrls.map((url, i) => (
-                                                  <a key={i} href={url} target="_blank" rel="noopener noreferrer">
-                                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                                    <img src={url} alt={`Attachment ${i + 1}`} className="h-16 w-16 object-cover rounded border border-gray-200 dark:border-gray-700 hover:opacity-80 transition-opacity" />
-                                                  </a>
-                                                ))}
-                                              </div>
-                                            )}
-                                          </div>
-                                        );
-                                      })}
-
-                                      {/* Reply + action controls */}
-                                      <div className="space-y-2 pt-1 border-t border-gray-200 dark:border-gray-700">
-                                        <Textarea
-                                          value={appealMessages[appeal.id] || ""}
-                                          onChange={(e) => setAppealMessages((prev) => ({ ...prev, [appeal.id]: e.target.value }))}
-                                          placeholder={appeal.status === "OPEN" ? "Reply or note before resolving..." : "Add a follow-up message..."}
-                                          rows={2}
-                                          className="text-xs"
-                                        />
-                                        <ImageUpload
-                                          images={appealImages[appeal.id] || []}
-                                          onImagesChange={(imgs) => setAppealImages((prev) => ({ ...prev, [appeal.id]: imgs }))}
-                                          onUpload={handleUploadImage}
-                                          uploading={uploadingImage}
-                                          maxImages={3}
-                                        />
-                                        {appeal.status === "OPEN" && (
-                                          <div className="flex items-center gap-2">
-                                            <Input
-                                              type="number"
-                                              step="0.5"
-                                              min="0"
-                                              max={answer.maxPoints}
-                                              value={appealNewScores[appeal.id] || ""}
-                                              onChange={(e) => setAppealNewScores((prev) => ({ ...prev, [appeal.id]: e.target.value }))}
-                                              placeholder={`New score (max ${answer.maxPoints})`}
-                                              className="w-40 text-xs"
-                                            />
-                                          </div>
-                                        )}
-                                        <div className="flex items-center gap-1.5">
-                                          {appeal.status === "OPEN" ? (
-                                            <>
-                                              <Button
-                                                size="sm"
-                                                variant="outline"
-                                                onClick={() => handleResolveAppeal(appeal.id, "RESOLVED")}
-                                                disabled={resolvingAppeal === appeal.id}
-                                                className="gap-1 text-xs h-7 text-emerald-600 border-emerald-200 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-950"
-                                              >
-                                                {resolvingAppeal === appeal.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
-                                                Accept
-                                              </Button>
-                                              <Button
-                                                size="sm"
-                                                variant="outline"
-                                                onClick={() => handleResolveAppeal(appeal.id, "REJECTED")}
-                                                disabled={resolvingAppeal === appeal.id}
-                                                className="gap-1 text-xs h-7 text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-950"
-                                              >
-                                                {resolvingAppeal === appeal.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <XCircle className="h-3 w-3" />}
-                                                Deny
-                                              </Button>
-                                            </>
-                                          ) : (
-                                            <Button
-                                              size="sm"
-                                              variant="outline"
-                                              onClick={() => handleResolveAppeal(appeal.id, "OPEN")}
-                                              disabled={resolvingAppeal === appeal.id}
-                                              className="gap-1 text-xs h-7 text-amber-600 border-amber-200 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-800 dark:hover:bg-amber-950"
-                                            >
-                                              {resolvingAppeal === appeal.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <ShieldAlert className="h-3 w-3" />}
-                                              Reopen
-                                            </Button>
-                                          )}
-                                          <div className="flex-1" />
-                                          <Button
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={() => handleAppealMessage(appeal.id)}
-                                            disabled={!appealMessages[appeal.id]?.trim()}
-                                            className="gap-1 text-xs h-7"
-                                          >
-                                            <Send className="h-3 w-3" />
-                                            Reply
-                                          </Button>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-
-                  {/* Overall score & feedback — near feedback file */}
-                  {!allAutoGraded && (
-                    <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-5 space-y-4">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Overall Grade</h4>
-                        <span className="text-[10px] text-gray-400 dark:text-gray-500">When confirmed, overrides per-question total</span>
-                      </div>
-                      <div className="flex items-end gap-4">
-                        <div className="space-y-1.5 w-48">
-                          <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
-                            Score (max {assignmentInfo?.totalPoints})
-                          </label>
-                          <div className="flex items-center gap-2">
-                            <Input
-                              type="number"
-                              min={0}
-                              max={assignmentInfo?.totalPoints || 100}
-                              value={overallScore}
-                              onChange={(e) => setOverallScore(Number(e.target.value))}
-                              className="font-semibold text-center"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setOverallGradeConfirmed((prev) => !prev)}
-                              className={`shrink-0 h-8 w-8 rounded-md border-2 flex items-center justify-center transition-colors ${
-                                overallGradeConfirmed
-                                  ? "bg-emerald-500 border-emerald-500 text-white"
-                                  : "border-gray-300 dark:border-gray-600 hover:border-emerald-400"
-                              }`}
-                              title={overallGradeConfirmed ? "Unconfirm grade" : "Confirm grade"}
-                            >
-                              {overallGradeConfirmed && <CheckCircle2 className="h-4 w-4" />}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">Feedback</label>
-                        <Textarea
-                          value={overallFeedback}
-                          onChange={(e) => setOverallFeedback(e.target.value)}
-                          placeholder="Overall feedback for the student..."
-                          rows={4}
-                          className="resize-none"
-                        />
-                      </div>
-                    </div>
+                  {gradingMode === "per-question" && (
+                    <GradingPanel
+                      answers={selectedSubmission.answers}
+                      grades={grades}
+                      onGradeChange={handleGradeChange}
+                      confirmedAnswers={confirmedAnswers}
+                      onToggleConfirm={handleToggleConfirm}
+                      aiLoading={aiLoading}
+                      onAIGrade={handleAIGrade}
+                      feedbackImages={feedbackImages}
+                      onFeedbackImagesChange={(answerId, imgs) => setFeedbackImages((prev) => ({ ...prev, [answerId]: imgs }))}
+                      onUploadImage={handleUploadImage}
+                      uploadingImage={uploadingImage}
+                      appealMessages={appealMessages}
+                      onAppealMessageChange={(id, v) => setAppealMessages((prev) => ({ ...prev, [id]: v }))}
+                      appealImages={appealImages}
+                      onAppealImagesChange={(id, imgs) => setAppealImages((prev) => ({ ...prev, [id]: imgs }))}
+                      appealNewScores={appealNewScores}
+                      onAppealNewScoreChange={(id, v) => setAppealNewScores((prev) => ({ ...prev, [id]: v }))}
+                      expandedAppeals={expandedAppeals}
+                      onToggleAppealExpand={(id) => setExpandedAppeals((prev) => ({ ...prev, [id]: !prev[id] }))}
+                      resolvingAppeal={resolvingAppeal}
+                      onResolveAppeal={handleResolveAppeal}
+                      onSendAppealMessage={handleAppealMessage}
+                    />
                   )}
 
-                  {/* Attach feedback file (for TA) */}
+                  {/* Overall score & feedback + feedback file */}
                   {!allAutoGraded && (
-                    <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-4 space-y-3">
-                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Attach Feedback File (Optional)</p>
-                      {feedbackFileUrl ? (
-                        <div className="flex items-center gap-3 p-3 bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 rounded-lg">
-                          <FileText className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                          <span className="text-sm text-emerald-700 dark:text-emerald-400 truncate flex-1">
-                            {feedbackFile?.name || "File attached"}
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-red-500"
-                            onClick={() => { setFeedbackFile(null); setFeedbackFileUrl(null); }}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <label className="flex items-center gap-2 px-4 py-3 border-2 border-dashed rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                          {uploadingFeedback ? (
-                            <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
-                          ) : (
-                            <Upload className="h-4 w-4 text-gray-400" />
-                          )}
-                          <span className="text-sm text-gray-500 dark:text-gray-400">
-                            {uploadingFeedback ? "Uploading..." : "Upload annotated PDF or feedback file"}
-                          </span>
-                          <input
-                            type="file"
-                            className="hidden"
-                            accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
-                            onChange={(e) => {
-                              const f = e.target.files?.[0];
-                              if (f) handleUploadFeedbackFile(f);
-                            }}
-                          />
-                        </label>
-                      )}
-                    </div>
+                    <OverallGradeForm
+                      totalPoints={assignmentInfo?.totalPoints || 100}
+                      overallScore={overallGrade.score}
+                      onOverallScoreChange={(score) => setOverallGrade((prev) => ({ ...prev, score }))}
+                      overallFeedback={overallGrade.feedback}
+                      onOverallFeedbackChange={(feedback) => setOverallGrade((prev) => ({ ...prev, feedback }))}
+                      overallGradeConfirmed={overallGrade.confirmed}
+                      onToggleOverallConfirm={() => setOverallGrade((prev) => ({ ...prev, confirmed: !prev.confirmed }))}
+                      feedbackFileUrl={feedbackFileState.url}
+                      feedbackFileName={feedbackFileState.file?.name || null}
+                      uploadingFeedback={uploadingFeedback}
+                      onUploadFeedbackFile={handleUploadFeedbackFile}
+                      onClearFeedbackFile={() => setFeedbackFileState({ file: null, url: null })}
+                    />
                   )}
                 </div>
               </>

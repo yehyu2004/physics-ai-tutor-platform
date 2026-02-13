@@ -137,7 +137,7 @@ export default function ChatPageClient({
     fetch("/api/exam-mode")
       .then((res) => res.ok ? res.json() : null)
       .then((data) => { if (data) setExamModeActive(data.isActive); })
-      .catch(() => {});
+      .catch((err) => console.error("[exam-mode] Failed to check exam mode:", err));
   }, []);
 
   const filteredConversations = conversations.filter((conv) =>
@@ -407,6 +407,10 @@ export default function ChatPageClient({
             sidebarOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
           )}
           onClick={() => setSidebarOpen(false)}
+          onKeyDown={(e) => { if (e.key === "Escape") setSidebarOpen(false); }}
+          role="button"
+          tabIndex={-1}
+          aria-label="Close conversation sidebar"
         />
       )}
 
@@ -441,6 +445,7 @@ export default function ChatPageClient({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search..."
+              aria-label="Search conversations"
               className="pl-9 h-8 bg-gray-50 dark:bg-gray-800 border-gray-100 dark:border-gray-800 rounded-lg text-sm focus-visible:ring-gray-300"
             />
           </div>
@@ -454,7 +459,7 @@ export default function ChatPageClient({
         )}
 
         {/* Conversation List */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto" role="list" aria-label="Conversations">
           <div className="px-4 pb-2 space-y-0.5">
             {filteredConversations.map((conv) => (
               <div
@@ -463,6 +468,8 @@ export default function ChatPageClient({
                 role="button"
                 tabIndex={0}
                 onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") loadConversation(conv.id); }}
+                aria-label={`Conversation: ${conv.title}`}
+                aria-current={activeConversationId === conv.id ? "true" : undefined}
                 className={cn(
                   "w-full text-left rounded-lg px-2 py-2 transition-all group cursor-pointer overflow-hidden",
                   activeConversationId === conv.id
@@ -533,6 +540,7 @@ export default function ChatPageClient({
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className="p-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors shrink-0"
+              aria-label={sidebarOpen ? "Close conversation list" : "Open conversation list"}
             >
               {sidebarOpen ? (
                 <PanelLeftClose className="h-5 w-5 text-gray-500 dark:text-gray-400" />
@@ -877,11 +885,13 @@ export default function ChatPageClient({
                 multiple
                 onChange={handleImageSelect}
                 className="hidden"
+                aria-label="Upload image"
               />
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                aria-label="Attach image"
               >
                 <ImageIcon className="h-4 w-4" />
               </button>
@@ -894,6 +904,7 @@ export default function ChatPageClient({
                 }}
                 onKeyDown={handleKeyDown}
                 placeholder="Ask a physics question..."
+                aria-label="Message input"
                 disabled={loading}
                 rows={1}
                 className="flex-1 resize-none bg-transparent text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none py-2 px-1 max-h-32 leading-relaxed disabled:opacity-50"

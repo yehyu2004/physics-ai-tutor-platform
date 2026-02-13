@@ -1,19 +1,17 @@
 import { NextResponse } from "next/server";
-import { getEffectiveSession } from "@/lib/impersonate";
 import { prisma } from "@/lib/prisma";
+import { requireApiAuth, isErrorResponse } from "@/lib/api-auth";
 
 export async function GET(
   req: Request,
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getEffectiveSession();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userId = (session.user as { id: string }).id;
-    const userRole = (session.user as { role?: string }).role;
+    const auth = await requireApiAuth();
+    if (isErrorResponse(auth)) return auth;
+    const { user } = auth;
+    const userId = user.id;
+    const userRole = user.role;
 
     const conversation = await prisma.conversation.findUnique({
       where: { id: params.id },
