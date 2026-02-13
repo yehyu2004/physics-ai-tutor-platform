@@ -418,9 +418,11 @@ export default function GradingPage() {
         body.feedbackFileUrl = feedbackFileUrl;
       }
 
-      // Always include overall score and feedback
-      body.overallScore = overallScore;
-      body.overallFeedback = overallFeedback;
+      // Include overall score and feedback when confirmed
+      if (overallGradeConfirmed) {
+        body.overallScore = overallScore;
+        body.overallFeedback = overallFeedback;
+      }
 
       if (gradingMode === "per-question") {
         body.grades = Object.entries(grades).map(([answerId, g]) => ({
