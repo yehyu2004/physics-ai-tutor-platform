@@ -20,6 +20,8 @@ import {
   ShieldAlert,
   CheckCircle2,
   XCircle,
+  Lock,
+  Unlock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -613,6 +615,17 @@ export default function AssignmentDetailPage({
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-2xl font-bold tracking-tight">{assignment.title}</h1>
             {!assignment.published && <Badge variant="warning">Draft</Badge>}
+            {assignment.lockAfterSubmit ? (
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-800">
+                <Lock className="h-3 w-3" />
+                Locked after submit
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                <Unlock className="h-3 w-3" />
+                Resubmit allowed
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-4 text-sm text-neutral-500 mt-1">
             <span>By {assignment.createdBy.name || "Unknown"}</span>

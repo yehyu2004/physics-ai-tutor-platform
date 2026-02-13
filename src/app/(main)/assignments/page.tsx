@@ -16,6 +16,8 @@ import {
   ShieldAlert,
   Trash2,
   Search,
+  Lock,
+  Unlock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -237,6 +239,17 @@ export default function AssignmentsPage() {
                         <Badge variant="secondary" className="font-medium bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700">
                           {assignment.type === "QUIZ" ? "Quiz" : "File Upload"}
                         </Badge>
+                        {assignment.lockAfterSubmit ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-800">
+                            <Lock className="h-3 w-3" />
+                            Locked after submit
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                            <Unlock className="h-3 w-3" />
+                            Resubmit allowed
+                          </span>
+                        )}
                         <span className="flex items-center gap-1">
                           <CheckCircle2 className="h-3.5 w-3.5" />
                           {assignment._count.questions} questions
