@@ -18,6 +18,7 @@ export default function CreateAssignmentPage() {
   const [scheduledPublishAt, setScheduledPublishAt] = useState("");
   const [showScheduleOptions, setShowScheduleOptions] = useState(false);
   const [createdAssignmentId, setCreatedAssignmentId] = useState<string | null>(null);
+  const [isScheduleMode, setIsScheduleMode] = useState(false);
 
   // Reminder dialog state
   const [reminderOpen, setReminderOpen] = useState(false);
@@ -94,6 +95,7 @@ export default function CreateAssignmentPage() {
       // For scheduled assignments, show notify dialog
       if (schedule) {
         toast.success(`Assignment scheduled for ${new Date(scheduledPublishAt).toLocaleString()}`);
+        setIsScheduleMode(true);
         setCreatedAssignmentId(data.assignment.id);
         const dueDateStr = formData.dueDate
           ? new Date(formData.dueDate).toLocaleString("en-US", {
@@ -125,6 +127,7 @@ export default function CreateAssignmentPage() {
         `A new assignment has been posted on PhysTutor.\n\nTitle: ${formData.title}${formData.description ? `\nDescription: ${formData.description}` : ""}\nDue: ${dueDateStr}\nPoints: ${formData.totalPoints}\n\nPlease log in to PhysTutor to view the full assignment details.`
       );
 
+      setIsScheduleMode(false);
       setReminderOpen(true);
     } catch (err) {
       console.error("Create assignment error:", err);
@@ -300,6 +303,8 @@ export default function CreateAssignmentPage() {
         onOpenChange={setReminderOpen}
         defaultSubject={reminderSubject}
         defaultMessage={reminderMessage}
+        enableScheduling={isScheduleMode}
+        defaultScheduledAt={isScheduleMode ? scheduledPublishAt : undefined}
         onSkip={() => {
           const target = createdAssignmentId ? `/assignments/${createdAssignmentId}` : "/assignments";
           router.push(target);

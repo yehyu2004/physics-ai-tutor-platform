@@ -59,6 +59,8 @@ interface NotifyUsersDialogProps {
   successMessage?: string;
   /** Enable scheduling option (default: true) */
   enableScheduling?: boolean;
+  /** Pre-fill the scheduled time and auto-enable schedule mode */
+  defaultScheduledAt?: string;
   /** Called when a scheduled email is created successfully */
   onScheduled?: () => void;
 }
@@ -90,6 +92,7 @@ export function NotifyUsersDialog({
   sendButtonLabel = "Send Reminder",
   successMessage = "Reminder sent successfully",
   enableScheduling = true,
+  defaultScheduledAt,
   onScheduled,
 }: NotifyUsersDialogProps) {
   const [users, setUsers] = useState<NotifyUser[]>([]);
@@ -116,8 +119,9 @@ export function NotifyUsersDialog({
     setSubject(defaultSubject);
     setMessage(defaultMessage);
     setRoleFilter("ALL");
-    setScheduleMode(false);
-    setScheduledAt("");
+    setScheduleMode(!!defaultScheduledAt);
+    setScheduledAt(defaultScheduledAt || "");
+    setAlsoEmail(!!defaultScheduledAt);
     setSuccessMsg(successMessage);
     setLoading(true);
 
@@ -143,7 +147,7 @@ export function NotifyUsersDialog({
         setUsers([]);
       })
       .finally(() => setLoading(false));
-  }, [open, defaultSubject, defaultMessage]);
+  }, [open, defaultSubject, defaultMessage, defaultScheduledAt]);
 
   const filteredUsers =
     roleFilter === "ALL" ? users : users.filter((u) => u.role === roleFilter);
@@ -279,8 +283,8 @@ export function NotifyUsersDialog({
 
               {alsoEmail && (
               <>
-              {/* Schedule toggle */}
-              {enableScheduling && (
+              {/* Schedule toggle — hidden when defaultScheduledAt pre-sets the time */}
+              {enableScheduling && !defaultScheduledAt && (
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
@@ -295,8 +299,19 @@ export function NotifyUsersDialog({
                 </label>
               )}
 
-              {/* Schedule datetime picker */}
-              {scheduleMode && enableScheduling && (
+              {/* Pre-set schedule time (read-only) */}
+              {scheduleMode && defaultScheduledAt && (
+                <div className="flex items-center gap-2 rounded-lg bg-blue-50 dark:bg-blue-950 px-3 py-2 text-sm text-blue-700 dark:text-blue-300">
+                  <CalendarClock className="h-4 w-4 shrink-0" />
+                  <span>Email will be sent on {new Date(defaultScheduledAt).toLocaleString("en-US", {
+                    weekday: "long", year: "numeric", month: "long", day: "numeric",
+                    hour: "numeric", minute: "2-digit",
+                  })}</span>
+                </div>
+              )}
+
+              {/* Schedule datetime picker (manual) */}
+              {scheduleMode && enableScheduling && !defaultScheduledAt && (
                 <div className="space-y-1.5">
                   <Label className="text-sm font-medium flex items-center gap-1.5">
                     <Clock className="h-3.5 w-3.5" />
