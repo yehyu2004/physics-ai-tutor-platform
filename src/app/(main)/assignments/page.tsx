@@ -46,7 +46,7 @@ export default function AssignmentsPage() {
   const [filter, setFilter] = useState<"ALL" | "PUBLISHED" | "DRAFTS">("ALL");
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(15);
+  const [pageSize, setPageSize] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
@@ -56,7 +56,7 @@ export default function AssignmentsPage() {
     setLoading(true);
     const params = new URLSearchParams();
     params.set("page", String(p ?? 1));
-    params.set("pageSize", String(ps ?? 15));
+    params.set("pageSize", String(ps ?? 10));
     const filterVal = f ?? "ALL";
     if (filterVal === "PUBLISHED") params.set("filter", "published");
     else if (filterVal === "DRAFTS") params.set("filter", "drafts");
@@ -306,9 +306,9 @@ export default function AssignmentsPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="15">15</SelectItem>
-                    <SelectItem value="25">25</SelectItem>
-                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="20">20</SelectItem>
+                    <SelectItem value="30">30</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
