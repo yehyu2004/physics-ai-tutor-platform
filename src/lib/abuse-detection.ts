@@ -94,6 +94,8 @@ export async function handleContentFlag(
           <p><strong>Message preview:</strong></p>
           <blockquote>${message.slice(0, 500)}</blockquote>
           <p>Review this user in the <a href="${process.env.NEXTAUTH_URL || ""}/admin/users">admin panel</a>.</p>
+          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 16px 0;" />
+          <p style="color: #9ca3af; font-size: 12px;">This is an automated message from PhysTutor. Please do not reply to this email.</p>
         `,
       }).catch(() => {});
     }
@@ -139,6 +141,8 @@ export async function trackRateLimitAbuse(userId: string, userName: string) {
           <p><strong>Rate limit hits:</strong> ${entry.count} times in the last hour</p>
           <p>This user has repeatedly exceeded the message rate limit. Consider restricting or contacting them.</p>
           <p>Review this user in the <a href="${process.env.NEXTAUTH_URL || ""}/admin/users">admin panel</a>.</p>
+          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 16px 0;" />
+          <p style="color: #9ca3af; font-size: 12px;">This is an automated message from PhysTutor. Please do not reply to this email.</p>
         `,
       }).catch(() => {});
     }
