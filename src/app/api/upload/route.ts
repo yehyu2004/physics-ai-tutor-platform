@@ -49,9 +49,21 @@ export async function POST(req: Request) {
 
     const uniqueName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
 
-    const blob = await put(uniqueName, file, { access: "public" });
+    // Use Vercel Blob in production, fall back to local storage in dev
+    if (process.env.BLOB_READ_WRITE_TOKEN) {
+      const blob = await put(uniqueName, file, { access: "public" });
+      return NextResponse.json({ url: blob.url });
+    }
 
-    return NextResponse.json({ url: blob.url });
+    // Local fallback: save to public/uploads/
+    const fs = await import("fs/promises");
+    const path = await import("path");
+    const uploadsDir = path.join(process.cwd(), "public", "uploads");
+    await fs.mkdir(uploadsDir, { recursive: true });
+    const filePath = path.join(uploadsDir, uniqueName);
+    const buffer = Buffer.from(await file.arrayBuffer());
+    await fs.writeFile(filePath, buffer);
+    return NextResponse.json({ url: `/uploads/${uniqueName}` });
   } catch (error) {
     console.error("Upload error:", error);
     return NextResponse.json(

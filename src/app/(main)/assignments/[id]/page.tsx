@@ -169,7 +169,7 @@ export default function AssignmentDetailPage({
 
   const saveDraft = useCallback(async (data: Record<string, string>) => {
     if (!assignment) return;
-    const answerEntries = Object.entries(data).filter(([, v]) => v.trim() !== "");
+    const answerEntries = Object.entries(data).filter(([qId, v]) => v.trim() !== "" || (answerImages[qId]?.length ?? 0) > 0);
     if (answerEntries.length === 0) return;
     await fetch("/api/submissions", {
       method: "POST",
@@ -349,11 +349,17 @@ export default function AssignmentDetailPage({
         body: JSON.stringify({
           assignmentId: assignment.id,
           isDraft: false,
-          answers: Object.entries(answers).map(([questionId, answer]) => ({
-            questionId,
-            answer,
-            answerImageUrls: answerImages[questionId]?.length ? answerImages[questionId] : undefined,
-          })),
+          answers: (() => {
+            const allQuestionIds = new Set([
+              ...Object.keys(answers),
+              ...Object.keys(answerImages).filter(qId => answerImages[qId]?.length > 0),
+            ]);
+            return Array.from(allQuestionIds).map(questionId => ({
+              questionId,
+              answer: answers[questionId] || "",
+              answerImageUrls: answerImages[questionId]?.length ? answerImages[questionId] : undefined,
+            }));
+          })(),
           fileUrl,
         }),
       });
