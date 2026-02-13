@@ -6,7 +6,7 @@ function isAuthorized(role?: string): boolean {
   return role === "ADMIN" || role === "PROFESSOR" || role === "TA";
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const session = await getEffectiveSession();
     if (!session?.user) {
@@ -18,18 +18,26 @@ export async function GET() {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const logs = await prisma.auditLog.findMany({
-      where: {
-        action: "bulk_email_sent",
-      },
-      take: 200,
-      orderBy: { createdAt: "desc" },
-      include: {
-        user: {
-          select: { name: true, email: true },
+    const { searchParams } = new URL(req.url);
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+    const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get("pageSize") || "15", 10)));
+
+    const where = { action: "bulk_email_sent" as const };
+
+    const [logs, totalCount] = await Promise.all([
+      prisma.auditLog.findMany({
+        where,
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        orderBy: { createdAt: "desc" },
+        include: {
+          user: {
+            select: { name: true, email: true },
+          },
         },
-      },
-    });
+      }),
+      prisma.auditLog.count({ where }),
+    ]);
 
     return NextResponse.json({
       records: logs.map((l) => ({
@@ -41,6 +49,9 @@ export async function GET() {
         details: l.details,
         createdAt: l.createdAt.toISOString(),
       })),
+      totalCount,
+      page,
+      pageSize,
     });
   } catch (error) {
     console.error("Email records error:", error);

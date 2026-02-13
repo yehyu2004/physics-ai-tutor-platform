@@ -1,8 +1,15 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Loader2, Mail } from "lucide-react";
 import { formatShortDate } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface EmailRecord {
   id: string;
@@ -26,16 +33,32 @@ interface EmailRecord {
 export default function EmailRecordsPage() {
   const [records, setRecords] = useState<EmailRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(15);
+  const [totalCount, setTotalCount] = useState(0);
 
-  useEffect(() => {
-    fetch("/api/admin/email-records")
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+
+  const fetchRecords = useCallback((p: number, ps: number) => {
+    setLoading(true);
+    fetch(`/api/admin/email-records?page=${p}&pageSize=${ps}`)
       .then((res) => res.json())
       .then((data) => {
         setRecords(data.records || []);
+        setTotalCount(data.totalCount ?? 0);
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    fetchRecords(page, pageSize);
+  }, [page, pageSize, fetchRecords]);
+
+  const handlePageSizeChange = (value: string) => {
+    setPageSize(Number(value));
+    setPage(1);
+  };
 
   if (loading) {
     return (
@@ -54,7 +77,7 @@ export default function EmailRecordsPage() {
           Email Records
         </h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          View history of all emails sent through PhysTutor ({records.length} records)
+          View history of all emails sent through PhysTutor ({totalCount} records)
         </p>
       </div>
 
@@ -69,7 +92,7 @@ export default function EmailRecordsPage() {
               Total Emails Sent
             </span>
           </div>
-          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{records.length}</p>
+          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{totalCount}</p>
         </div>
         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5 shadow-sm">
           <div className="flex items-center gap-2 mb-3">
@@ -156,6 +179,65 @@ export default function EmailRecordsPage() {
           </div>
         )}
       </div>
+
+      {/* Pagination */}
+      {totalCount > 0 && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+            <span>Rows per page:</span>
+            <Select value={String(pageSize)} onValueChange={handlePageSizeChange}>
+              <SelectTrigger className="w-20 h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="15">15</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {totalPages > 1 && <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-3 py-1.5 text-sm rounded-md border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              &lt;
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 2)
+              .reduce<number[]>((acc, p) => {
+                if (acc.length > 0 && p - acc[acc.length - 1] > 1) acc.push(-1);
+                acc.push(p);
+                return acc;
+              }, [])
+              .map((p, i) =>
+                p === -1 ? (
+                  <span key={`gap-${i}`} className="px-2 text-sm text-gray-400">...</span>
+                ) : (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                      p === page
+                        ? "bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900"
+                        : "border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                )
+              )}
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="px-3 py-1.5 text-sm rounded-md border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              &gt;
+            </button>
+          </div>}
+        </div>
+      )}
     </div>
   );
 }

@@ -54,21 +54,30 @@ export default function QAHistoryPage() {
   const [users, setUsers] = useState<UserOption[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>("all");
   const [verifiedFilter, setVerifiedFilter] = useState<"all" | "verified" | "unverified">("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(15);
+  const [totalCount, setTotalCount] = useState(0);
 
-  const fetchConversations = useCallback((userId?: string) => {
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+
+  const fetchConversations = useCallback((userId?: string, p?: number, ps?: number) => {
     setLoading(true);
-    const params = userId && userId !== "all" ? `?userId=${userId}` : "";
-    fetch(`/api/admin/qa-history${params}`)
+    const params = new URLSearchParams();
+    if (userId && userId !== "all") params.set("userId", userId);
+    params.set("page", String(p ?? 1));
+    params.set("pageSize", String(ps ?? 15));
+    fetch(`/api/admin/qa-history?${params}`)
       .then((res) => res.json())
       .then((data) => {
         setConversations(data.conversations || []);
+        setTotalCount(data.totalCount ?? 0);
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, []);
 
   useEffect(() => {
-    fetchConversations();
+    fetchConversations(selectedUserId, page, pageSize);
     fetch("/api/admin/users")
       .then((res) => res.json())
       .then((data) => {
@@ -82,12 +91,22 @@ export default function QAHistoryPage() {
         setUsers(userList);
       })
       .catch(() => {});
-  }, [fetchConversations]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    fetchConversations(selectedUserId, page, pageSize);
+  }, [page, pageSize, fetchConversations, selectedUserId]);
 
   const handleUserChange = (value: string) => {
     setSelectedUserId(value);
     setExpandedId(null);
-    fetchConversations(value);
+    setPage(1);
+  };
+
+  const handlePageSizeChange = (value: string) => {
+    setPageSize(Number(value));
+    setPage(1);
   };
 
   const toggleExpand = async (convId: string) => {
@@ -144,7 +163,7 @@ export default function QAHistoryPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight dark:text-gray-100">Q&A History</h1>
         <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
-          Browse all user conversations ({conversations.length} total)
+          Browse all user conversations ({totalCount} total)
         </p>
       </div>
 
@@ -285,6 +304,65 @@ export default function QAHistoryPage() {
                 </p>
               </CardContent>
             </Card>
+          )}
+
+          {/* Pagination */}
+          {totalCount > 0 && (
+            <div className="flex items-center justify-between pt-2">
+              <div className="flex items-center gap-2 text-sm text-neutral-500 dark:text-neutral-400">
+                <span>Rows per page:</span>
+                <Select value={String(pageSize)} onValueChange={handlePageSizeChange}>
+                  <SelectTrigger className="w-20 h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="15">15</SelectItem>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {totalPages > 1 && <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-3 py-1.5 text-sm rounded-md border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  &lt;
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 2)
+                  .reduce<number[]>((acc, p) => {
+                    if (acc.length > 0 && p - acc[acc.length - 1] > 1) acc.push(-1);
+                    acc.push(p);
+                    return acc;
+                  }, [])
+                  .map((p, i) =>
+                    p === -1 ? (
+                      <span key={`gap-${i}`} className="px-2 text-sm text-neutral-400">...</span>
+                    ) : (
+                      <button
+                        key={p}
+                        onClick={() => setPage(p)}
+                        className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                          p === page
+                            ? "bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900"
+                            : "border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    )
+                  )}
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="px-3 py-1.5 text-sm rounded-md border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  &gt;
+                </button>
+              </div>}
+            </div>
           )}
         </div>
       )}
