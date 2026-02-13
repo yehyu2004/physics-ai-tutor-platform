@@ -7,7 +7,6 @@ import {
   Loader2,
   ClipboardList,
   Sparkles,
-  Save,
   CheckCircle2,
   Clock,
   User,
@@ -882,9 +881,9 @@ export default function GradingPage() {
                       size="sm"
                       className="gap-1.5 bg-gray-900 dark:bg-gray-100 hover:bg-gray-800 dark:hover:bg-gray-200 text-white dark:text-gray-900 rounded-lg"
                     >
-                      {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                      <span className="hidden sm:inline">Save Grades</span>
-                      <span className="sm:hidden">Save</span>
+                      {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                      <span className="hidden sm:inline">Finalize Grading</span>
+                      <span className="sm:hidden">Finalize</span>
                     </Button>
                   </div>
                 </div>
