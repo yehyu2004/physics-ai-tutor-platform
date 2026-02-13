@@ -46,6 +46,7 @@ interface AssignmentOption {
   submissionCount: number;
   ungradedCount: number;
   gradedCount: number;
+  openAppealCount: number;
 }
 
 interface AssignmentInfo {
@@ -211,7 +212,7 @@ export default function GradingPage() {
     fetch("/api/assignments")
       .then((res) => res.json())
       .then((data) => {
-        const list = (data.assignments || []).map((a: { id: string; title: string; type: string; totalPoints: number; ungradedCount?: number; gradedCount?: number; _count?: { submissions: number } }) => ({
+        const list = (data.assignments || []).map((a: { id: string; title: string; type: string; totalPoints: number; ungradedCount?: number; gradedCount?: number; openAppealCount?: number; _count?: { submissions: number } }) => ({
           id: a.id,
           title: a.title,
           type: a.type,
@@ -219,6 +220,7 @@ export default function GradingPage() {
           submissionCount: a._count?.submissions || 0,
           ungradedCount: a.ungradedCount || 0,
           gradedCount: a.gradedCount || 0,
+          openAppealCount: a.openAppealCount || 0,
         }));
         setAssignments(list);
         setLoading(false);
@@ -531,6 +533,7 @@ export default function GradingPage() {
                   <div>{a.title}</div>
                   <div className="text-[11px] text-gray-400 dark:text-gray-500">
                     {a.submissionCount} submissions · {a.gradedCount} graded · {a.ungradedCount} ungraded
+                    {a.openAppealCount > 0 && ` · ${a.openAppealCount} pending`}
                   </div>
                 </div>
               </SelectItem>
