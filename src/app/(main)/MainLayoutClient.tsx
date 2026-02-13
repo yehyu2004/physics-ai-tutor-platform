@@ -58,7 +58,7 @@ export default function MainLayoutClient({
   };
 
   return (
-    <div className="h-screen h-[100dvh] bg-white dark:bg-gray-950 overflow-hidden">
+    <div className="h-screen bg-white dark:bg-gray-950 overflow-hidden">
       {isImpersonating && (
         <div className="bg-amber-500 text-white px-4 py-2 text-center text-sm font-medium flex items-center justify-center gap-3 z-50">
           <EyeOff className="h-4 w-4" />
@@ -87,7 +87,7 @@ export default function MainLayoutClient({
         className={`flex flex-col transition-[margin] duration-300 ease-in-out ${
           sidebarCollapsed ? "lg:ml-[68px]" : "lg:ml-64"
         }`}
-        style={{ height: isImpersonating ? "calc(100dvh - 40px)" : "100dvh" }}
+        style={{ height: isImpersonating ? "calc(100vh - 40px)" : "100vh" }}
       >
         <Topbar
           userName={userName}

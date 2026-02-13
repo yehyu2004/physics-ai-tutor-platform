@@ -27,10 +27,16 @@ canvas {
   --accent-light: #1e1b4b;
 }
 
-html, body {
-  overflow: hidden;
+html {
   height: 100%;
-  height: 100dvh;
+  overflow: hidden;
+}
+
+body {
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
 }
 
 body {
