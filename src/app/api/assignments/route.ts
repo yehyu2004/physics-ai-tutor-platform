@@ -3,6 +3,30 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { requireApiAuth, requireApiRole, isErrorResponse } from "@/lib/api-auth";
 import { logger } from "@/lib/logger";
+import { z } from "zod";
+
+const QuestionSchema = z.object({
+  questionText: z.string().min(1).max(10000),
+  questionType: z.enum(["MC", "NUMERIC", "FREE_RESPONSE"]),
+  options: z.array(z.string().max(2000)).optional().default([]),
+  correctAnswer: z.string().max(2000).optional().default(""),
+  points: z.number().min(0).max(1000).optional().default(10),
+  diagram: z.object({ type: z.string(), content: z.string() }).optional(),
+  imageUrl: z.string().max(2000).optional(),
+});
+
+const CreateAssignmentSchema = z.object({
+  title: z.string().min(1, "Title is required").max(200),
+  description: z.string().max(5000).optional().default(""),
+  dueDate: z.string().nullable().optional(),
+  type: z.enum(["QUIZ", "FILE_UPLOAD"]).default("QUIZ"),
+  totalPoints: z.number().min(0).max(10000).optional().default(100),
+  questions: z.array(QuestionSchema).optional().default([]),
+  pdfUrl: z.string().max(2000).nullable().optional(),
+  lockAfterSubmit: z.boolean().optional().default(false),
+  scheduledPublishAt: z.string().nullable().optional(),
+  notifyOnPublish: z.boolean().optional().default(false),
+});
 
 export async function GET(req: Request) {
   try {
@@ -18,8 +42,7 @@ export async function GET(req: Request) {
 
     const hasSubmissions = searchParams.get("hasSubmissions") === "true";
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const whereClause: any = userRole === "STUDENT"
+    const whereClause: Prisma.AssignmentWhereInput = userRole === "STUDENT"
       ? { published: true, isDeleted: false }
       : filterType === "published"
         ? { published: true, isDeleted: false }
@@ -57,12 +80,12 @@ export async function GET(req: Request) {
         submissions: userRole === "STUDENT"
           ? {
               where: { userId },
-              select: { totalScore: true, submittedAt: true, gradedAt: true, isDraft: true, fileUrl: true, _count: { select: { answers: true } } },
+              select: { userId: true, totalScore: true, submittedAt: true, gradedAt: true, isDraft: true, fileUrl: true, _count: { select: { answers: true } } },
               take: 2, // get both draft and final if they exist
             }
           : {
               where: { isDraft: false },
-              select: { userId: true, totalScore: true, submittedAt: true, gradedAt: true },
+              select: { userId: true, totalScore: true, submittedAt: true, gradedAt: true, isDraft: true, fileUrl: true, _count: { select: { answers: true } } },
             },
       },
     });
@@ -84,14 +107,13 @@ export async function GET(req: Request) {
       }
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const formatted = assignments.map((a: any) => {
+    const formatted = assignments.map((a) => {
       let mySubmission = null;
       let myProgress: { answeredCount: number; totalQuestions: number; status: string } | undefined;
 
       if (userRole === "STUDENT") {
-        const finalSub = a.submissions.find((s: { isDraft: boolean }) => !s.isDraft);
-        const draftSub = a.submissions.find((s: { isDraft: boolean }) => s.isDraft);
+        const finalSub = a.submissions.find((s) => !s.isDraft);
+        const draftSub = a.submissions.find((s) => s.isDraft);
         mySubmission = finalSub || null;
 
         if (finalSub) {
@@ -106,14 +128,14 @@ export async function GET(req: Request) {
           myProgress = { answeredCount: a._count.questions, totalQuestions: a._count.questions, status: finalSub ? "submitted" : "in-progress" };
         }
       } else {
-        mySubmission = (a.submissions as Array<{ userId?: string; totalScore: number | null }>).find((s) => s.userId === userId) || null;
+        mySubmission = a.submissions.find((s) => s.userId === userId) || null;
       }
 
       const ungradedCount = userRole !== "STUDENT"
-        ? a.submissions.filter((s: { gradedAt: Date | null }) => s.gradedAt === null).length
+        ? a.submissions.filter((s) => s.gradedAt === null).length
         : undefined;
       const gradedCount = userRole !== "STUDENT"
-        ? a.submissions.filter((s: { gradedAt: Date | null }) => s.gradedAt !== null).length
+        ? a.submissions.filter((s) => s.gradedAt !== null).length
         : undefined;
       return {
         ...a,
@@ -150,7 +172,15 @@ export async function POST(req: Request) {
     const auth = await requireApiRole(["TA", "PROFESSOR", "ADMIN"]);
     if (isErrorResponse(auth)) return auth;
     const userId = auth.user.id;
-    const { title, description, dueDate, type, totalPoints, questions, pdfUrl, lockAfterSubmit, scheduledPublishAt, notifyOnPublish } = await req.json();
+    const body = await req.json();
+    const parsed = CreateAssignmentSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid input", details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const { title, description, dueDate, type, totalPoints, questions, pdfUrl, lockAfterSubmit, scheduledPublishAt, notifyOnPublish } = parsed.data;
 
     // Validate scheduledPublishAt if provided
     if (scheduledPublishAt) {
@@ -169,21 +199,21 @@ export async function POST(req: Request) {
         description,
         dueDate: dueDate ? new Date(dueDate) : null,
         type,
-        totalPoints: totalPoints || 100,
+        totalPoints,
         pdfUrl: pdfUrl || null,
-        lockAfterSubmit: lockAfterSubmit || false,
+        lockAfterSubmit,
         scheduledPublishAt: scheduledPublishAt ? new Date(scheduledPublishAt) : null,
-        notifyOnPublish: notifyOnPublish || false,
+        notifyOnPublish,
         createdById: userId,
         questions: {
-          create: (questions || []).map((q: { questionText: string; questionType: string; options?: string[]; correctAnswer?: string; points?: number; diagram?: { type: string; content: string }; imageUrl?: string }, i: number) => ({
+          create: questions.map((q, i) => ({
             questionText: q.questionText,
             questionType: q.questionType,
-            options: q.options || null,
+            options: q.options?.length ? q.options : Prisma.JsonNull,
             correctAnswer: q.correctAnswer || null,
-            points: q.points || 10,
+            points: q.points ?? 10,
             order: i,
-            diagram: q.diagram || null,
+            diagram: q.diagram ?? Prisma.JsonNull,
             imageUrl: q.imageUrl || null,
           })),
         },

@@ -278,7 +278,7 @@ export default function AssignmentsPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 ml-4 shrink-0">
-                      {canManage && !assignment.published && (
+                      {canManage && !assignment.published && !assignment.scheduledPublishAt && (
                         <button
                           onClick={(e) => handleDeleteDraft(e, assignment.id)}
                           disabled={deletingId === assignment.id}

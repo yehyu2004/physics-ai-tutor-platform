@@ -1,508 +1,43 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, useRef } from "react";
-import { useUploadFile } from "@/hooks/useUploadFile";
-import { useEffectiveSession } from "@/lib/effective-session-context";
-import { useTrackTime } from "@/lib/use-track-time";
+import React from "react";
 import {
-  ArrowLeft,
-  Clock,
   Loader2,
   Send,
   CheckCircle,
-  Eye,
-  FileText,
-  Download,
-  Pencil,
-  Trash2,
   AlertTriangle,
-  MessageSquare,
-  ShieldAlert,
-  CheckCircle2,
-  XCircle,
-  Lock,
-  Unlock,
-  CalendarClock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { MarkdownContent } from "@/components/ui/markdown-content";
-import { NotifyUsersDialog } from "@/components/ui/notify-users-dialog";
-import { ImageUpload } from "@/components/ui/image-upload";
-import { formatShortDate } from "@/lib/utils";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { isStaff as isStaffRole } from "@/lib/constants";
-import { useAutoSave } from "@/hooks/useAutoSave";
 import { SaveStatusIndicator } from "@/components/ui/save-status";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 
-// Extracted subcomponents
 import { QuestionRenderer } from "@/components/assignments/QuestionRenderer";
 import { SubmissionView } from "@/components/assignments/SubmissionView";
 import { FileUploadSection } from "@/components/assignments/FileUploadSection";
-import type { AssignmentDetail } from "@/types/assignment";
-import type { ExistingSubmission, GradeAppealData } from "@/types/submission";
+import { AssignmentHeader } from "./components/AssignmentHeader";
+import { PublishDialogs } from "./components/PublishDialogs";
+import { StaffAppealsSection } from "./components/StaffAppealsSection";
+import { useAssignmentDetail } from "@/hooks/useAssignmentDetail";
 
 export default function AssignmentDetailPage({
   params,
 }: {
   params: { id: string };
 }) {
-  useTrackTime("ASSIGNMENT_VIEW");
-  const router = useRouter();
-  const effectiveSession = useEffectiveSession();
-  const [assignment, setAssignment] = useState<AssignmentDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [deletingSubmission, setDeletingSubmission] = useState(false);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [file, setFile] = useState<File | null>(null);
-  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
-  const [submitted, setSubmitted] = useState(false);
-  const [existingSubmission, setExistingSubmission] = useState<ExistingSubmission | null>(null);
-  const [appeals, setAppeals] = useState<GradeAppealData[]>([]);
-  const [appealReasons, setAppealReasons] = useState<Record<string, string>>({});
-  const [appealMessages, setAppealMessages] = useState<Record<string, string>>({});
-  const [appealNewScores, setAppealNewScores] = useState<Record<string, string>>({});
-  const [submittingAppeal, setSubmittingAppeal] = useState<string | null>(null);
-  const [expandedAppeals, setExpandedAppeals] = useState<Record<string, boolean>>({});
-  const [resolvingAppeal, setResolvingAppeal] = useState<string | null>(null);
-  const [appealFilter, setAppealFilter] = useState<"ALL" | "OPEN">("OPEN");
-  const [answerImages, setAnswerImages] = useState<Record<string, string[]>>({});
-  const [appealImages, setAppealImages] = useState<Record<string, string[]>>({});
-  const { upload: handleUploadImage, uploading: uploadingImage } = useUploadFile();
-  const [draftRestored, setDraftRestored] = useState(false);
-  const draftRestoredRef = useRef(false);
-  const [exportingLatex, setExportingLatex] = useState(false);
-  const [publishDialogOpen, setPublishDialogOpen] = useState(false);
-  const [publishDialogAction, setPublishDialogAction] = useState<"publish" | "unpublish">("publish");
-  const [publishing, setPublishing] = useState(false);
-  const [notifyDialogOpen, setNotifyDialogOpen] = useState(false);
-  const [notifySubject, setNotifySubject] = useState("");
-  const [notifyMessage, setNotifyMessage] = useState("");
-  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
-  const [cancelScheduleDialogOpen, setCancelScheduleDialogOpen] = useState(false);
-  const [cancellingSchedule, setCancellingSchedule] = useState(false);
+  const s = useAssignmentDetail(params.id);
 
-  const userRole = effectiveSession.role;
-
-  // Auto-save for quiz drafts
-  const isQuizInProgress = assignment?.type === "QUIZ" && (!existingSubmission || existingSubmission.isDraft === true) && !submitted && userRole === "STUDENT";
-
-  const saveDraft = useCallback(async (data: Record<string, string>) => {
-    if (!assignment) return;
-    const answerEntries = Object.entries(data).filter(([qId, v]) => v.trim() !== "" || (answerImages[qId]?.length ?? 0) > 0);
-    if (answerEntries.length === 0) return;
-    await fetch("/api/submissions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        assignmentId: assignment.id,
-        isDraft: true,
-        answers: answerEntries.map(([questionId, answer]) => ({
-          questionId,
-          answer,
-          answerImageUrls: answerImages[questionId]?.length ? answerImages[questionId] : undefined,
-        })),
-      }),
-    });
-  }, [assignment]);
-
-  const { status: autoSaveStatus, saveNow: flushAutoSave, markSaved } = useAutoSave({
-    data: answers,
-    saveFn: saveDraft,
-    delayMs: 2000,
-    enabled: isQuizInProgress,
-  });
-
-  // beforeunload warning when save is in progress
-  useEffect(() => {
-    if (autoSaveStatus !== "saving") return;
-    const handler = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-    };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
-  }, [autoSaveStatus]);
-
-
-  useEffect(() => {
-    fetch(`/api/assignments/${params.id}`)
-      .then((res) => res.json())
-      .then((data) => {
-        setAssignment(data.assignment);
-
-        // Submission data is now included in the same response
-        if (data.submission) {
-          setExistingSubmission(data.submission);
-          // Restore draft answers
-          if (data.submission.isDraft && data.submission.answers?.length > 0 && !draftRestoredRef.current) {
-            const restored: Record<string, string> = {};
-            const restoredImages: Record<string, string[]> = {};
-            for (const a of data.submission.answers) {
-              if (a.answer) restored[a.questionId] = a.answer;
-              if (a.answerImageUrls?.length) restoredImages[a.questionId] = a.answerImageUrls;
-            }
-            setAnswers(restored);
-            setAnswerImages(restoredImages);
-            markSaved(restored);
-            setDraftRestored(true);
-            draftRestoredRef.current = true;
-          }
-        }
-
-        // Appeals data is now included in the same response
-        const fetched = data.appeals || [];
-        setAppeals(fetched);
-        const expanded: Record<string, boolean> = {};
-        for (const a of fetched) {
-          if (a.status === "OPEN") expanded[a.id] = true;
-        }
-        setExpandedAppeals((prev) => ({ ...prev, ...expanded }));
-
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, [params.id]);
-
-  const handleEditSubmission = async () => {
-    if (!existingSubmission) return;
-    if (!window.confirm("This will reopen your submission for editing. You'll need to resubmit when done. Continue?")) return;
-    setDeletingSubmission(true);
-    try {
-      const res = await fetch(`/api/submissions/${existingSubmission.id}`, { method: "PATCH" });
-      if (res.ok) {
-        // Convert to draft -- restore answers for editing
-        const restored: Record<string, string> = {};
-        const restoredImages: Record<string, string[]> = {};
-        for (const a of existingSubmission.answers) {
-          if (a.answer) restored[a.questionId] = a.answer;
-          if (a.answerImageUrls?.length) restoredImages[a.questionId] = a.answerImageUrls;
-        }
-        setAnswers(restored);
-        setAnswerImages(restoredImages);
-        setExistingSubmission({ ...existingSubmission, isDraft: true });
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setDeletingSubmission(false);
-    }
-  };
-
-  const handleAnswerChange = (questionId: string, value: string) => {
-    setAnswers((prev) => ({ ...prev, [questionId]: value }));
-  };
-
-  const handleAnswerImagesChange = (questionId: string, images: string[]) => {
-    setAnswerImages((prev) => ({ ...prev, [questionId]: images }));
-  };
-
-  const handleSubmit = async () => {
-    if (!assignment) return;
-
-    // Warn if not all questions answered
-    if (assignment.type === "QUIZ" && assignment.questions.length > 0) {
-      const answered = assignment.questions.filter(q =>
-        (answers[q.id]?.trim()) || (answerImages[q.id]?.length > 0)
-      ).length;
-      const total = assignment.questions.length;
-      if (answered < total) {
-        const hasAttachment = !!attachmentFile || !!file;
-        const message = hasAttachment
-          ? `You answered ${answered} out of ${total} questions online. Are all remaining answers in the attached document? Confirm to submit.`
-          : `You have only answered ${answered} out of ${total} questions. Are you sure you want to submit?`;
-        const confirmed = window.confirm(message);
-        if (!confirmed) return;
-      }
-    }
-
-    // Warn student if assignment is locked after submission
-    if (assignment.lockAfterSubmit) {
-      const confirmed = window.confirm(
-        "Once you submit, you will NOT be able to change or resubmit your answers. Are you sure you want to submit?"
-      );
-      if (!confirmed) return;
-    }
-
-    setSubmitting(true);
-
-    try {
-      let fileUrl: string | undefined;
-
-      const fileToUpload =
-        assignment.type === "FILE_UPLOAD" ? file : attachmentFile;
-
-      if (fileToUpload) {
-        const formData = new FormData();
-        formData.append("file", fileToUpload);
-        const uploadRes = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
-        });
-        if (uploadRes.ok) {
-          const data = await uploadRes.json();
-          fileUrl = data.url;
-        }
-      }
-
-      // Flush any pending auto-save before final submit
-      if (isQuizInProgress) flushAutoSave();
-
-      const res = await fetch("/api/submissions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          assignmentId: assignment.id,
-          isDraft: false,
-          answers: (() => {
-            const allQuestionIds = new Set([
-              ...Object.keys(answers),
-              ...Object.keys(answerImages).filter(qId => answerImages[qId]?.length > 0),
-            ]);
-            return Array.from(allQuestionIds).map(questionId => ({
-              questionId,
-              answer: answers[questionId] || "",
-              answerImageUrls: answerImages[questionId]?.length ? answerImages[questionId] : undefined,
-            }));
-          })(),
-          fileUrl,
-        }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setExistingSubmission({
-          id: data.submission.id,
-          fileUrl: data.submission.fileUrl,
-          submittedAt: data.submission.submittedAt,
-          totalScore: data.submission.totalScore,
-          answers: data.submission.answers || [],
-        });
-        setSubmitted(true);
-      } else {
-        const data = await res.json();
-        toast.error(data.error || "Submission failed");
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleSubmitAppeal = async (answerId: string) => {
-    const reason = appealReasons[answerId];
-    if (!reason?.trim()) return;
-    setSubmittingAppeal(answerId);
-    try {
-      const res = await fetch("/api/appeals", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          submissionAnswerId: answerId,
-          reason: reason.trim(),
-          imageUrls: appealImages[answerId]?.length ? appealImages[answerId] : undefined,
-        }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setAppeals((prev) => [data.appeal, ...prev]);
-        setAppealReasons((prev) => ({ ...prev, [answerId]: "" }));
-        setAppealImages((prev) => ({ ...prev, [answerId]: [] }));
-        setExpandedAppeals((prev) => ({ ...prev, [data.appeal.id]: true }));
-      } else {
-        const data = await res.json();
-        toast.error(data.error || "Failed to submit appeal");
-      }
-    } catch {
-      toast.error("Failed to submit appeal");
-    } finally {
-      setSubmittingAppeal(null);
-    }
-  };
-
-  const handleAppealMessage = async (appealId: string) => {
-    const message = appealMessages[appealId];
-    if (!message?.trim()) return;
-    try {
-      const res = await fetch("/api/appeals", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          appealId,
-          message: message.trim(),
-          imageUrls: appealImages[appealId]?.length ? appealImages[appealId] : undefined,
-        }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setAppeals((prev) => prev.map((a) => (a.id === appealId ? data.appeal : a)));
-        setAppealMessages((prev) => ({ ...prev, [appealId]: "" }));
-        setAppealImages((prev) => ({ ...prev, [appealId]: [] }));
-      }
-    } catch {
-      toast.error("Failed to send message");
-    }
-  };
-
-  const handleResolveAppeal = async (appealId: string, status: "RESOLVED" | "REJECTED" | "OPEN") => {
-    const action = status === "RESOLVED" ? "resolve" : status === "REJECTED" ? "reject" : "reopen";
-    if (!window.confirm(`Are you sure you want to ${action} this appeal?`)) return;
-    const newScoreStr = appealNewScores[appealId];
-    const newScore = status === "RESOLVED" && newScoreStr ? parseFloat(newScoreStr) : undefined;
-    const message = appealMessages[appealId];
-    setResolvingAppeal(appealId);
-    try {
-      const res = await fetch("/api/appeals", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          appealId,
-          status,
-          newScore,
-          message: message?.trim() || undefined,
-        }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setAppeals((prev) => prev.map((a) => (a.id === appealId ? data.appeal : a)));
-        setAppealMessages((prev) => ({ ...prev, [appealId]: "" }));
-        setAppealNewScores((prev) => ({ ...prev, [appealId]: "" }));
-        // Refresh submission to get updated scores
-        if (status === "RESOLVED" && newScore !== undefined) {
-          fetch(`/api/submissions?assignmentId=${params.id}`)
-            .then((r) => r.json())
-            .then((d) => { if (d.submission) setExistingSubmission(d.submission); })
-            .catch((err) => console.error("[submission] Failed to refresh submission:", err));
-        }
-      }
-    } catch {
-      toast.error("Failed to update appeal");
-    } finally {
-      setResolvingAppeal(null);
-    }
-  };
-
-  const getAppealForAnswer = (answerId: string) =>
-    appeals.find((a) => a.submissionAnswerId === answerId);
-
-  const handlePublish = () => {
-    if (!assignment) return;
-    if (assignment.published) {
-      setPublishDialogAction("unpublish");
-      setPublishDialogOpen(true);
-    } else {
-      setPublishDialogAction("publish");
-      setPublishDialogOpen(true);
-    }
-  };
-
-  const confirmPublish = async () => {
-    if (!assignment) return;
-    setPublishing(true);
-    try {
-      const newPublished = !assignment.published;
-      await fetch(`/api/assignments/${assignment.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ published: newPublished }),
-      });
-      setAssignment({ ...assignment, published: newPublished });
-      setPublishDialogOpen(false);
-
-      // After publishing, open the Notify Users dialog
-      if (newPublished) {
-        const dueDateStr = assignment.dueDate
-          ? new Date(assignment.dueDate).toLocaleString("en-US", {
-              weekday: "long",
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-              hour: "numeric",
-              minute: "2-digit",
-            })
-          : "No due date set";
-        setNotifySubject(`New Assignment: ${assignment.title}`);
-        setNotifyMessage(
-          `A new assignment has been posted on PhysTutor.\n\nTitle: ${assignment.title}${assignment.description ? `\nDescription: ${assignment.description}` : ""}\nDue: ${dueDateStr}\nPoints: ${assignment.totalPoints}`
-        );
-        setNotifyDialogOpen(true);
-      }
-    } catch {
-      toast.error("Failed to update assignment");
-    } finally {
-      setPublishing(false);
-    }
-  };
-
-
-  const handleToggleLock = async () => {
-    if (!assignment) return;
-    await fetch(`/api/assignments/${assignment.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ lockAfterSubmit: !assignment.lockAfterSubmit }),
-    });
-    setAssignment({ ...assignment, lockAfterSubmit: !assignment.lockAfterSubmit });
-  };
-
-  const handleDelete = async () => {
-    if (!assignment) return;
-    if (!window.confirm("Are you sure you want to delete this assignment? This will also delete all submissions and cannot be undone.")) return;
-    setDeleting(true);
-    try {
-      const res = await fetch(`/api/assignments/${assignment.id}`, { method: "DELETE" });
-      if (res.ok) {
-        router.push("/assignments");
-      } else {
-        toast.error("Failed to delete assignment");
-      }
-    } catch {
-      toast.error("Failed to delete assignment");
-    } finally {
-      setDeleting(false);
-    }
-  };
-
-  const handleExportLatex = async () => {
-    if (!assignment) return;
-    setExportingLatex(true);
-    try {
-      const res = await fetch(`/api/assignments/${assignment.id}/export-latex`);
-      if (!res.ok) throw new Error("Export failed");
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${assignment.title.replace(/[^a-zA-Z0-9_\- ]/g, "").replace(/\s+/g, "_").slice(0, 60)}_latex.zip`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to export LaTeX");
-    } finally {
-      setExportingLatex(false);
-    }
-  };
-
-  if (loading) {
+  if (s.loading) {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="h-8 w-8 animate-spin text-neutral-400" />
@@ -510,7 +45,7 @@ export default function AssignmentDetailPage({
     );
   }
 
-  if (!assignment) {
+  if (!s.assignment) {
     return (
       <div className="text-center py-20">
         <p className="text-neutral-500">Assignment not found.</p>
@@ -518,14 +53,12 @@ export default function AssignmentDetailPage({
     );
   }
 
-  if (submitted) {
+  if (s.submitted) {
     return (
       <div className="max-w-2xl mx-auto text-center py-20">
         <CheckCircle className="h-16 w-16 text-emerald-500 mx-auto mb-4" />
         <h2 className="text-2xl font-bold mb-2">Submitted!</h2>
-        <p className="text-neutral-500 mb-6">
-          Your submission has been recorded successfully.
-        </p>
+        <p className="text-neutral-500 mb-6">Your submission has been recorded successfully.</p>
         <Link href="/assignments">
           <Button>Back to Assignments</Button>
         </Link>
@@ -533,172 +66,31 @@ export default function AssignmentDetailPage({
     );
   }
 
+  const { assignment } = s;
+  const isStudentDraft = (!s.existingSubmission || s.existingSubmission.isDraft) && s.userRole === "STUDENT";
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div className="space-y-3">
-        <div className="flex items-start gap-3">
-          <Link href="/assignments" className="shrink-0 mt-1">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          </Link>
-          <div className="flex-1 min-w-0 space-y-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{assignment.title}</h1>
-              {!assignment.published && !assignment.scheduledPublishAt && <Badge variant="warning">Draft</Badge>}
-              {!assignment.published && assignment.scheduledPublishAt && (
-                <Badge className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-400 dark:border-blue-800 gap-1">
-                  <CalendarClock className="h-3 w-3" />
-                  Scheduled: {new Date(assignment.scheduledPublishAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
-                </Badge>
-              )}
-              {assignment.lockAfterSubmit ? (
-                <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-800">
-                  <Lock className="h-3 w-3" />
-                  Locked after submit
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
-                  <Unlock className="h-3 w-3" />
-                  Resubmit allowed
-                </span>
-              )}
-            </div>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-neutral-500">
-              <span>By {assignment.createdBy.name || "Unknown"}</span>
-              {assignment.publishedBy && assignment.publishedBy.name !== assignment.createdBy.name && (
-                <span>Published by {assignment.publishedBy.name}</span>
-              )}
-              {assignment.dueDate && (
-                <span className="flex items-center gap-1">
-                  <Clock className="h-3.5 w-3.5" />
-                  Due {formatShortDate(assignment.dueDate)}
-                </span>
-              )}
-              <span>{assignment.totalPoints} points</span>
-            </div>
-            {assignment.description && (
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{assignment.description}</p>
-            )}
-          </div>
-        </div>
-        {isStaffRole(userRole) && (
-          <div className="grid grid-cols-3 sm:flex sm:flex-wrap gap-1.5 sm:gap-2">
-            <Link href={`/assignments/${assignment.id}/edit`} className="contents">
-              <Button variant="outline" size="sm" className="w-full sm:w-auto text-xs sm:text-sm">
-                <Pencil className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                Edit
-              </Button>
-            </Link>
-            <Button variant="outline" size="sm" className="w-full sm:w-auto text-xs sm:text-sm" onClick={handlePublish}>
-              <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-              {assignment.published ? "Unpublish" : "Publish"}
-            </Button>
-            {!assignment.published && !assignment.scheduledPublishAt && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full sm:w-auto text-xs sm:text-sm gap-1.5 text-blue-600 border-blue-200 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-950"
-                onClick={() => {
-                  const dueDateStr = assignment.dueDate
-                    ? new Date(assignment.dueDate).toLocaleString("en-US", {
-                        weekday: "long", year: "numeric", month: "long", day: "numeric",
-                        hour: "numeric", minute: "2-digit",
-                      })
-                    : "No due date set";
-                  setNotifySubject(`New Assignment: ${assignment.title}`);
-                  setNotifyMessage(
-                    `A new assignment has been posted on PhysTutor.\n\nTitle: ${assignment.title}${assignment.description ? `\nDescription: ${assignment.description}` : ""}\nDue: ${dueDateStr}\nPoints: ${assignment.totalPoints}`
-                  );
-                  setScheduleDialogOpen(true);
-                }}
-              >
-                <CalendarClock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                Schedule
-              </Button>
-            )}
-            {!assignment.published && assignment.scheduledPublishAt && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full sm:w-auto text-xs sm:text-sm text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-950"
-                onClick={() => setCancelScheduleDialogOpen(true)}
-              >
-                <XCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                Cancel Schedule
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              size="sm"
-              className={`w-full sm:w-auto text-xs sm:text-sm ${assignment.lockAfterSubmit ? "text-amber-600 border-amber-200 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-800 dark:hover:bg-amber-950" : ""}`}
-              onClick={handleToggleLock}
-            >
-              {assignment.lockAfterSubmit ? "🔒 Locked" : "🔓 Unlocked"}
-            </Button>
-            <Link href={`/grading?assignmentId=${assignment.id}`} className="contents">
-              <Button variant="outline" size="sm" className="w-full sm:w-auto text-xs sm:text-sm">
-                Grade ({assignment._count.submissions})
-              </Button>
-            </Link>
-            <Button variant="outline" size="sm" className="w-full sm:w-auto text-xs sm:text-sm" onClick={handleExportLatex} disabled={exportingLatex}>
-              {exportingLatex ? (
-                <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2 animate-spin" />
-              ) : (
-                <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-              )}
-              {exportingLatex ? "Exporting..." : "Export LaTeX"}
-            </Button>
-            <Button variant="outline" size="sm" className="w-full sm:w-auto text-xs sm:text-sm text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950" onClick={handleDelete} disabled={deleting}>
-              <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-              {deleting ? "Deleting..." : "Delete"}
-            </Button>
-          </div>
-        )}
-      </div>
-
-      {assignment.description && (
-        <Card>
-          <CardContent className="p-6">
-            <MarkdownContent content={assignment.description} className="text-sm" />
-          </CardContent>
-        </Card>
-      )}
-
-      {assignment.pdfUrl && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Quiz PDF
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <iframe
-              src={assignment.pdfUrl}
-              className="w-full h-[600px] rounded-lg border border-neutral-200"
-              title="Quiz PDF"
-            />
-            <a
-              href={assignment.pdfUrl}
-              download
-              className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800"
-            >
-              <Download className="h-4 w-4" />
-              Download PDF
-            </a>
-          </CardContent>
-        </Card>
-      )}
+      <AssignmentHeader
+        assignment={assignment}
+        userRole={s.userRole}
+        onPublish={s.handlePublish}
+        onSchedule={s.handleSchedule}
+        onCancelSchedule={() => s.setCancelScheduleDialogOpen(true)}
+        onToggleLock={s.handleToggleLock}
+        onDelete={s.handleDelete}
+        onExportLatex={s.handleExportLatex}
+        exportingLatex={s.exportingLatex}
+        deleting={s.deleting}
+      />
 
       {/* Quiz questions (student answering) */}
-      {assignment.type === "QUIZ" && (!existingSubmission || existingSubmission.isDraft) && userRole === "STUDENT" && (
+      {assignment.type === "QUIZ" && isStudentDraft && (
         <div className="space-y-4">
-          {/* Progress indicator */}
           {(() => {
             const total = assignment.questions.length;
             const answered = assignment.questions.filter(q =>
-              (answers[q.id]?.trim()) || (answerImages[q.id]?.length > 0)
+              (s.answers[q.id]?.trim()) || (s.answerImages[q.id]?.length > 0)
             ).length;
             return (
               <div className="flex items-center gap-3 px-4 py-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
@@ -726,83 +118,64 @@ export default function AssignmentDetailPage({
               key={q.id}
               question={q}
               index={index}
-              answer={answers[q.id] || ""}
-              onAnswerChange={handleAnswerChange}
-              answerImages={answerImages[q.id] || []}
-              onAnswerImagesChange={handleAnswerImagesChange}
-              onUploadImage={handleUploadImage}
-              uploadingImage={uploadingImage}
+              answer={s.answers[q.id] || ""}
+              onAnswerChange={s.handleAnswerChange}
+              answerImages={s.answerImages[q.id] || []}
+              onAnswerImagesChange={s.handleAnswerImagesChange}
+              onUploadImage={s.handleUploadImage}
+              uploadingImage={s.uploadingImage}
             />
           ))}
         </div>
       )}
 
-      {/* Quiz attachment upload */}
-      {assignment.type === "QUIZ" && (!existingSubmission || existingSubmission.isDraft) && userRole === "STUDENT" && (
-        <FileUploadSection
-          variant="attachment"
-          file={attachmentFile}
-          onFileChange={setAttachmentFile}
-        />
+      {assignment.type === "QUIZ" && isStudentDraft && (
+        <FileUploadSection variant="attachment" file={s.attachmentFile} onFileChange={s.setAttachmentFile} />
       )}
 
-      {/* Draft restored banner */}
-      {draftRestored && (!existingSubmission || existingSubmission.isDraft) && (
+      {s.draftRestored && isStudentDraft && (
         <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg px-4 py-3 flex items-center gap-2">
           <CheckCircle className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" />
           <p className="text-sm text-blue-700 dark:text-blue-300">Your previous answers were restored from an auto-saved draft.</p>
-          <button onClick={() => setDraftRestored(false)} className="ml-auto text-blue-400 hover:text-blue-600 dark:hover:text-blue-300">
-            <span className="sr-only">Dismiss</span>
-            &times;
+          <button onClick={() => s.setDraftRestored(false)} className="ml-auto text-blue-400 hover:text-blue-600 dark:hover:text-blue-300">
+            <span className="sr-only">Dismiss</span>&times;
           </button>
         </div>
       )}
 
-      {/* Existing submission display */}
-      {existingSubmission && !existingSubmission.isDraft && !submitted && (
+      {s.existingSubmission && !s.existingSubmission.isDraft && !s.submitted && (
         <SubmissionView
-          submission={existingSubmission}
-          assignment={{
-            totalPoints: assignment.totalPoints,
-            lockAfterSubmit: assignment.lockAfterSubmit,
-            dueDate: assignment.dueDate,
-            questions: assignment.questions,
-          }}
-          userRole={userRole}
-          getAppealForAnswer={getAppealForAnswer}
-          expandedAppeals={expandedAppeals}
-          onToggleAppealExpand={(key) => setExpandedAppeals((prev) => ({ ...prev, [key]: !prev[key] }))}
-          appealReasons={appealReasons}
-          onAppealReasonChange={(id, v) => setAppealReasons((prev) => ({ ...prev, [id]: v }))}
-          appealMessages={appealMessages}
-          onAppealMessageChange={(id, v) => setAppealMessages((prev) => ({ ...prev, [id]: v }))}
-          appealImages={appealImages}
-          onAppealImagesChange={(key, imgs) => setAppealImages((prev) => ({ ...prev, [key]: imgs }))}
-          appealNewScores={appealNewScores}
-          onAppealNewScoreChange={(id, v) => setAppealNewScores((prev) => ({ ...prev, [id]: v }))}
-          onUploadImage={handleUploadImage}
-          uploadingImage={uploadingImage}
-          submittingAppeal={submittingAppeal}
-          onSubmitAppeal={handleSubmitAppeal}
-          resolvingAppeal={resolvingAppeal}
-          onResolveAppeal={handleResolveAppeal}
-          onSendAppealMessage={handleAppealMessage}
-          onEditSubmission={handleEditSubmission}
-          deletingSubmission={deletingSubmission}
+          submission={s.existingSubmission}
+          assignment={{ totalPoints: assignment.totalPoints, lockAfterSubmit: assignment.lockAfterSubmit, dueDate: assignment.dueDate, questions: assignment.questions }}
+          userRole={s.userRole}
+          getAppealForAnswer={s.getAppealForAnswer}
+          expandedAppeals={s.expandedAppeals}
+          onToggleAppealExpand={(key) => s.setExpandedAppeals((prev) => ({ ...prev, [key]: !prev[key] }))}
+          appealReasons={s.appealReasons}
+          onAppealReasonChange={(id, v) => s.setAppealReasons((prev) => ({ ...prev, [id]: v }))}
+          appealMessages={s.appealMessages}
+          onAppealMessageChange={(id, v) => s.setAppealMessages((prev) => ({ ...prev, [id]: v }))}
+          appealImages={s.appealImages}
+          onAppealImagesChange={(key, imgs) => s.setAppealImages((prev) => ({ ...prev, [key]: imgs }))}
+          appealNewScores={s.appealNewScores}
+          onAppealNewScoreChange={(id, v) => s.setAppealNewScores((prev) => ({ ...prev, [id]: v }))}
+          onUploadImage={s.handleUploadImage}
+          uploadingImage={s.uploadingImage}
+          submittingAppeal={s.submittingAppeal}
+          onSubmitAppeal={s.handleSubmitAppeal}
+          resolvingAppeal={s.resolvingAppeal}
+          onResolveAppeal={s.handleResolveAppeal}
+          onSendAppealMessage={s.handleAppealMessage}
+          onEditSubmission={s.handleEditSubmission}
+          deletingSubmission={s.deletingSubmission}
         />
       )}
 
-      {/* File upload for FILE_UPLOAD type */}
-      {assignment.type === "FILE_UPLOAD" && (!existingSubmission || existingSubmission.isDraft) && userRole === "STUDENT" && (
-        <FileUploadSection
-          variant="main"
-          file={file}
-          onFileChange={setFile}
-        />
+      {assignment.type === "FILE_UPLOAD" && isStudentDraft && (
+        <FileUploadSection variant="main" file={s.file} onFileChange={s.setFile} />
       )}
 
-      {/* Submit button area */}
-      {(!existingSubmission || existingSubmission.isDraft) && userRole === "STUDENT" && (
+      {isStudentDraft && (
         <div className="space-y-3 pb-8">
           {assignment.lockAfterSubmit && (
             <div className="flex items-center gap-2 px-4 py-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg">
@@ -816,7 +189,7 @@ export default function AssignmentDetailPage({
             {assignment.type === "QUIZ" && (() => {
               const total = assignment.questions.length;
               const answered = assignment.questions.filter(q =>
-                (answers[q.id]?.trim()) || (answerImages[q.id]?.length > 0)
+                (s.answers[q.id]?.trim()) || (s.answerImages[q.id]?.length > 0)
               ).length;
               return (
                 <span className={`text-xs font-medium ${answered === total ? "text-emerald-600 dark:text-emerald-400" : "text-gray-500 dark:text-gray-400"}`}>
@@ -824,478 +197,66 @@ export default function AssignmentDetailPage({
                 </span>
               );
             })()}
-            <SaveStatusIndicator status={autoSaveStatus} />
-            <Button
-              onClick={handleSubmit}
-              disabled={submitting}
-              className="gap-2"
-            >
-              {submitting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
+            <SaveStatusIndicator status={s.autoSaveStatus} />
+            <Button onClick={s.handleSubmit} disabled={s.submitting} className="gap-2">
+              {s.submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               Submit
             </Button>
           </div>
         </div>
       )}
 
-      {/* TA/Admin: Grade Appeals Section */}
-      {isStaffRole(userRole) && appeals.length > 0 && (() => {
-        const openCount = appeals.filter((a) => a.status === "OPEN").length;
-        const filteredAppeals = appealFilter === "OPEN" ? appeals.filter((a) => a.status === "OPEN") : appeals;
-        return (
-          <Card className="border-orange-200 dark:border-orange-800">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-orange-700 dark:text-orange-400">
-                  <ShieldAlert className="h-5 w-5" />
-                  Grade Appeals
-                </CardTitle>
-                <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
-                  <button
-                    onClick={() => setAppealFilter("OPEN")}
-                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                      appealFilter === "OPEN"
-                        ? "bg-white dark:bg-gray-700 text-orange-700 dark:text-orange-400 shadow-sm"
-                        : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                    }`}
-                  >
-                    Open ({openCount})
-                  </button>
-                  <button
-                    onClick={() => setAppealFilter("ALL")}
-                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                      appealFilter === "ALL"
-                        ? "bg-white dark:bg-gray-700 text-orange-700 dark:text-orange-400 shadow-sm"
-                        : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                    }`}
-                  >
-                    All ({appeals.length})
-                  </button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {filteredAppeals.length === 0 && (
-                <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
-                  {appealFilter === "OPEN" ? "No open appeals -- all caught up!" : "No appeals found."}
-                </p>
-              )}
-              {filteredAppeals.map((appeal) => {
-                const question = assignment.questions.find(
-                  (q) => q.id === appeal.submissionAnswer.questionId
-                );
-                const studentName =
-                  appeal.student.name ||
-                  (appeal.submissionAnswer as unknown as { submission?: { user?: { name?: string } } }).submission?.user?.name ||
-                  "Student";
-                const isExpanded = expandedAppeals[appeal.id];
-                return (
-                  <div
-                    key={appeal.id}
-                    className={`rounded-lg border p-4 space-y-3 transition-colors overflow-hidden ${
-                      appeal.status === "OPEN"
-                        ? "border-amber-200 dark:border-amber-800 bg-amber-50/30 dark:bg-amber-950/20"
-                        : "border-gray-200 dark:border-gray-700 opacity-80"
-                    }`}
-                  >
-                    {/* Header row */}
-                    <button
-                      onClick={() => setExpandedAppeals((prev) => ({ ...prev, [appeal.id]: !prev[appeal.id] }))}
-                      className="w-full flex items-center justify-between cursor-pointer group"
-                    >
-                      <div className="flex items-center gap-2">
-                        <MessageSquare className="h-4 w-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors" />
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Q{(appeal.submissionAnswer.question.order ?? 0) + 1} — {studentName}
-                        </span>
-                        <Badge
-                          className={`text-xs gap-1 ${
-                            appeal.status === "OPEN"
-                              ? "bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900 dark:text-amber-400 dark:border-amber-700"
-                              : appeal.status === "RESOLVED"
-                                ? "bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-900 dark:text-emerald-400 dark:border-emerald-700"
-                                : "bg-red-100 text-red-700 border-red-300 dark:bg-red-900 dark:text-red-400 dark:border-red-700"
-                          }`}
-                        >
-                          {appeal.status === "OPEN" ? (
-                            <><ShieldAlert className="h-3 w-3" /> Pending</>
-                          ) : appeal.status === "RESOLVED" ? (
-                            <><CheckCircle2 className="h-3 w-3" /> Accepted</>
-                          ) : (
-                            <><XCircle className="h-3 w-3" /> Denied</>
-                          )}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">
-                          {appeal.submissionAnswer.score ?? "?"}/{question?.points ?? "?"}
-                        </span>
-                        <svg className={`h-4 w-4 text-gray-400 transition-transform ${isExpanded ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                      </div>
-                    </button>
+      {isStaffRole(s.userRole) && s.appeals.length > 0 && (
+        <StaffAppealsSection
+          appeals={s.appeals}
+          questions={assignment.questions}
+          appealFilter={s.appealFilter}
+          setAppealFilter={s.setAppealFilter}
+          expandedAppeals={s.expandedAppeals}
+          onToggleExpand={(id) => s.setExpandedAppeals((prev) => ({ ...prev, [id]: !prev[id] }))}
+          appealMessages={s.appealMessages}
+          onAppealMessageChange={(id, v) => s.setAppealMessages((prev) => ({ ...prev, [id]: v }))}
+          appealNewScores={s.appealNewScores}
+          onAppealNewScoreChange={(id, v) => s.setAppealNewScores((prev) => ({ ...prev, [id]: v }))}
+          appealImages={s.appealImages}
+          onAppealImagesChange={(key, imgs) => s.setAppealImages((prev) => ({ ...prev, [key]: imgs }))}
+          onUploadImage={s.handleUploadImage}
+          uploadingImage={s.uploadingImage}
+          resolvingAppeal={s.resolvingAppeal}
+          onResolveAppeal={s.handleResolveAppeal}
+          onSendAppealMessage={s.handleAppealMessage}
+        />
+      )}
 
-                    {isExpanded && (
-                      <div className="space-y-3 pt-1">
-                        {/* Context: Student answer + grader feedback */}
-                        <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-2 overflow-hidden">
-                          <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Grading Context</p>
-                          <div className="grid gap-1.5 text-sm min-w-0">
-                            <div className="flex gap-2 min-w-0">
-                              <span className="text-gray-500 dark:text-gray-400 shrink-0">Question:</span>
-                              <MarkdownContent content={appeal.submissionAnswer.question.questionText} className="text-gray-700 dark:text-gray-300 line-clamp-2" />
-                            </div>
-                            {appeal.submissionAnswer.feedback && (
-                              <div className="flex gap-2 min-w-0">
-                                <span className="text-gray-500 dark:text-gray-400 shrink-0">Feedback:</span>
-                                <MarkdownContent content={appeal.submissionAnswer.feedback} className="text-gray-700 dark:text-gray-300" />
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Original appeal reason */}
-                        <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg p-3 overflow-hidden">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">
-                              {studentName}
-                            </span>
-                            <span className="text-xs text-amber-500 dark:text-amber-600">
-                              {formatShortDate(appeal.createdAt)}
-                            </span>
-                          </div>
-                          <MarkdownContent content={appeal.reason} className="text-sm text-amber-800 dark:text-amber-300" />
-                          {appeal.imageUrls && (appeal.imageUrls as string[]).length > 0 && (
-                            <div className="flex gap-2 mt-2 flex-wrap">
-                              {(appeal.imageUrls as string[]).map((url, i) => (
-                                <a key={i} href={url} target="_blank" rel="noopener noreferrer">
-                                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                                  <img src={url} alt={`Attachment ${i + 1}`} className="h-20 w-20 object-cover rounded-lg border border-amber-200 dark:border-amber-700 hover:opacity-80 transition-opacity" />
-                                </a>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Messages */}
-                        {appeal.messages.map((msg) => {
-                          const isStaff = isStaffRole(msg.user.role);
-                          return (
-                            <div
-                              key={msg.id}
-                              className={`rounded-lg p-3 border overflow-hidden ${
-                                isStaff
-                                  ? "bg-indigo-50 dark:bg-indigo-950 border-indigo-200 dark:border-indigo-800"
-                                  : "bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700"
-                              }`}
-                            >
-                              <div className="flex items-center gap-2 mb-1">
-                                <span
-                                  className={`text-xs font-semibold ${
-                                    isStaff
-                                      ? "text-indigo-700 dark:text-indigo-400"
-                                      : "text-gray-700 dark:text-gray-300"
-                                  }`}
-                                >
-                                  {msg.user.name || "User"}
-                                </span>
-                                {isStaff && (
-                                  <Badge className="text-[10px] px-1.5 py-0 bg-indigo-100 text-indigo-600 border-indigo-200 dark:bg-indigo-900 dark:text-indigo-400 dark:border-indigo-700">
-                                    {msg.user.role}
-                                  </Badge>
-                                )}
-                                <span className="text-xs text-gray-400 dark:text-gray-500">
-                                  {formatShortDate(msg.createdAt)}
-                                </span>
-                              </div>
-                              <MarkdownContent content={msg.content} className="text-sm text-gray-800 dark:text-gray-200" />
-                              {msg.imageUrls && (msg.imageUrls as string[]).length > 0 && (
-                                <div className="flex gap-2 mt-2 flex-wrap">
-                                  {(msg.imageUrls as string[]).map((url, i) => (
-                                    <a key={i} href={url} target="_blank" rel="noopener noreferrer">
-                                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                                      <img src={url} alt={`Attachment ${i + 1}`} className="h-20 w-20 object-cover rounded-lg border border-gray-200 dark:border-gray-700 hover:opacity-80 transition-opacity" />
-                                    </a>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-
-                        {/* Reply + resolve/reject controls */}
-                        <div className="space-y-3 pt-1 border-t border-gray-200 dark:border-gray-700">
-                          <Textarea
-                            value={appealMessages[appeal.id] || ""}
-                            onChange={(e) =>
-                              setAppealMessages((prev) => ({
-                                ...prev,
-                                [appeal.id]: e.target.value,
-                              }))
-                            }
-                            placeholder={appeal.status === "OPEN" ? "Write a reply or leave a note before resolving..." : "Add a follow-up message..."}
-                            rows={2}
-                            className="text-sm"
-                          />
-                          <ImageUploadInline
-                            images={appealImages[appeal.id] || []}
-                            onImagesChange={(imgs) => setAppealImages((prev) => ({ ...prev, [appeal.id]: imgs }))}
-                            onUpload={handleUploadImage}
-                            uploading={uploadingImage}
-                          />
-                          {appeal.status === "OPEN" && (
-                            <div className="flex items-center gap-2">
-                              <Input
-                                type="number"
-                                step="0.5"
-                                min="0"
-                                max={question?.points ?? 100}
-                                value={appealNewScores[appeal.id] || ""}
-                                onChange={(e) =>
-                                  setAppealNewScores((prev) => ({
-                                    ...prev,
-                                    [appeal.id]: e.target.value,
-                                  }))
-                                }
-                                placeholder={`New score (max ${question?.points ?? "?"})`}
-                                className="w-44 text-sm"
-                              />
-                            </div>
-                          )}
-                          <div className="flex items-center gap-2">
-                            {appeal.status === "OPEN" ? (
-                              <>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleResolveAppeal(appeal.id, "RESOLVED")}
-                                  disabled={resolvingAppeal === appeal.id}
-                                  className="gap-1.5 text-emerald-600 border-emerald-200 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-950"
-                                >
-                                  {resolvingAppeal === appeal.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
-                                  Accept & Resolve
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleResolveAppeal(appeal.id, "REJECTED")}
-                                  disabled={resolvingAppeal === appeal.id}
-                                  className="gap-1.5 text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-950"
-                                >
-                                  {resolvingAppeal === appeal.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5" />}
-                                  Deny
-                                </Button>
-                              </>
-                            ) : (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleResolveAppeal(appeal.id, "OPEN")}
-                                disabled={resolvingAppeal === appeal.id}
-                                className="gap-1.5 text-amber-600 border-amber-200 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-800 dark:hover:bg-amber-950"
-                              >
-                                {resolvingAppeal === appeal.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldAlert className="h-3.5 w-3.5" />}
-                                Reopen
-                              </Button>
-                            )}
-                            <div className="flex-1" />
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleAppealMessage(appeal.id)}
-                              disabled={!appealMessages[appeal.id]?.trim()}
-                              className="gap-1.5"
-                            >
-                              <Send className="h-3.5 w-3.5" />
-                              Reply
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </CardContent>
-          </Card>
-        );
-      })()}
-
-      {/* Publish / Unpublish Confirmation Dialog */}
-      <Dialog open={publishDialogOpen} onOpenChange={(open) => { if (!publishing) setPublishDialogOpen(open); }}>
-        <DialogContent className="sm:max-w-[440px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              {publishDialogAction === "publish" ? (
-                <>
-                  <Eye className="h-5 w-5 text-indigo-500" />
-                  Publish Assignment
-                </>
-              ) : (
-                <>
-                  <AlertTriangle className="h-5 w-5 text-amber-500" />
-                  Unpublish Assignment
-                </>
-              )}
-            </DialogTitle>
-            <DialogDescription>
-              {publishDialogAction === "publish"
-                ? "This will make the assignment visible to students immediately."
-                : "Unpublishing will hide this assignment from students."}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPublishDialogOpen(false)} disabled={publishing}>
-              Cancel
-            </Button>
-            <Button
-              onClick={confirmPublish}
-              disabled={publishing}
-              variant={publishDialogAction === "unpublish" ? "destructive" : "default"}
-            >
-              {publishing && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              {publishDialogAction === "publish" ? "Publish Now" : "Unpublish"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Notify Users Dialog (after immediate publish) */}
-      <NotifyUsersDialog
-        open={notifyDialogOpen}
-        onOpenChange={setNotifyDialogOpen}
-        defaultSubject={notifySubject}
-        defaultMessage={notifyMessage}
-        dialogTitle="Notify Users"
-        dialogDescription="Select who to notify about this assignment. Optionally also send an email."
-        sendButtonLabel="Notify"
-        skipButtonLabel="Skip Notification"
-        onBeforeSend={async (subj, msg) => {
-          await fetch("/api/notifications", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ title: subj, message: msg }),
-          });
-        }}
+      <PublishDialogs
+        assignment={assignment}
+        setAssignment={s.setAssignment}
+        unpublishDialogOpen={s.unpublishDialogOpen}
+        setUnpublishDialogOpen={s.setUnpublishDialogOpen}
+        notifyDialogOpen={s.notifyDialogOpen}
+        setNotifyDialogOpen={s.setNotifyDialogOpen}
+        scheduleDialogOpen={s.scheduleDialogOpen}
+        setScheduleDialogOpen={s.setScheduleDialogOpen}
+        cancelScheduleDialogOpen={s.cancelScheduleDialogOpen}
+        setCancelScheduleDialogOpen={s.setCancelScheduleDialogOpen}
+        notifySubject={s.notifySubject}
+        notifyMessage={s.notifyMessage}
       />
 
-      {/* Schedule Publish Dialog — same flow as publish but with datetime picker */}
-      <NotifyUsersDialog
-        open={scheduleDialogOpen}
-        onOpenChange={setScheduleDialogOpen}
-        defaultSubject={notifySubject}
-        defaultMessage={notifyMessage}
-        schedulePublishMode
-        assignmentId={assignment.id}
-        dialogTitle="Schedule Publish"
-        dialogDescription="Set a publish time and select who to notify when it goes live."
-        sendButtonLabel="Schedule"
-        skipButtonLabel="Schedule without notification"
-        onBeforeSend={async (_subj, _msg, scheduledAt) => {
-          if (!scheduledAt) return;
-          const res = await fetch(`/api/assignments/${assignment.id}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ scheduledPublishAt: scheduledAt }),
-          });
-          if (!res.ok) {
-            const data = await res.json().catch(() => null);
-            throw new Error(data?.error || "Failed to schedule");
-          }
-          setAssignment({ ...assignment, scheduledPublishAt: scheduledAt });
-          return assignment.id;
-        }}
-        onSkip={async (scheduledAt) => {
-          if (!scheduledAt) return;
-          const res = await fetch(`/api/assignments/${assignment.id}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ scheduledPublishAt: scheduledAt }),
-          });
-          if (res.ok) {
-            setAssignment({ ...assignment, scheduledPublishAt: scheduledAt });
-            toast.success(`Assignment scheduled for ${new Date(scheduledAt).toLocaleString()}`);
-          } else {
-            toast.error("Failed to schedule");
-          }
-        }}
-        onSent={() => {
-          toast.success("Assignment scheduled with notification");
-        }}
-      />
-
-      {/* Cancel Schedule Confirmation Dialog */}
-      <Dialog open={cancelScheduleDialogOpen} onOpenChange={(open) => { if (!cancellingSchedule) setCancelScheduleDialogOpen(open); }}>
-        <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-amber-500" />
-              Cancel Scheduled Publish
-            </DialogTitle>
-            <DialogDescription>
-              This will cancel the scheduled publish and any pending notification/email associated with it.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCancelScheduleDialogOpen(false)} disabled={cancellingSchedule}>
-              Keep Schedule
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={cancellingSchedule}
-              onClick={async () => {
-                setCancellingSchedule(true);
-                try {
-                  const res = await fetch(`/api/assignments/${assignment.id}`, {
-                    method: "PATCH",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ scheduledPublishAt: null, notifyOnPublish: false }),
-                  });
-                  if (res.ok) {
-                    setAssignment({ ...assignment, scheduledPublishAt: null, notifyOnPublish: false });
-                    setCancelScheduleDialogOpen(false);
-                    toast.success("Schedule cancelled");
-                  } else {
-                    toast.error("Failed to cancel schedule");
-                  }
-                } catch {
-                  toast.error("Failed to cancel schedule");
-                } finally {
-                  setCancellingSchedule(false);
-                }
-              }}
-            >
-              {cancellingSchedule && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              Cancel Schedule
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AlertDialog open={s.confirmDialog.open} onOpenChange={(open) => { if (!open) s.setConfirmDialog((prev) => ({ ...prev, open: false })); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{s.confirmDialog.title}</AlertDialogTitle>
+            <AlertDialogDescription>{s.confirmDialog.description}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { s.setConfirmDialog((prev) => ({ ...prev, open: false })); s.confirmDialog.onConfirm(); }}>
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
-  );
-}
-
-/** Small wrapper for ImageUpload used in the TA appeals section */
-function ImageUploadInline({
-  images,
-  onImagesChange,
-  onUpload,
-  uploading,
-}: {
-  images: string[];
-  onImagesChange: (imgs: string[]) => void;
-  onUpload: (file: File) => Promise<string | null>;
-  uploading: boolean;
-}) {
-  return (
-    <ImageUpload
-      images={images}
-      onImagesChange={onImagesChange}
-      onUpload={onUpload}
-      uploading={uploading}
-      maxImages={3}
-    />
   );
 }

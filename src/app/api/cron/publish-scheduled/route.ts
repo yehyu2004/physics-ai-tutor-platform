@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyCronAuth, sendBulkEmails, publishAssignment } from "@/lib/services/email-service";
 import { assignmentPublishedEmail } from "@/lib/email-templates";
+import { formatDueDate } from "@/lib/utils";
 
 export async function GET(req: Request) {
   try {
@@ -61,12 +62,7 @@ export async function GET(req: Request) {
             });
 
             if (students.length > 0) {
-              const dueDateStr = assignment.dueDate
-                ? new Date(assignment.dueDate).toLocaleString("en-US", {
-                    weekday: "long", year: "numeric", month: "long",
-                    day: "numeric", hour: "numeric", minute: "2-digit",
-                  })
-                : "No due date set";
+              const dueDateStr = formatDueDate(assignment.dueDate);
 
               const senderName = assignment.createdBy.name || "Staff";
 

@@ -174,7 +174,12 @@ export default function Topbar({ userName, userEmail, userImage, userRole, onMob
       fetchNotifications();
       fetchExamMode();
     }, 60000);
-    return () => clearInterval(interval);
+    const handleRefetch = () => fetchNotifications();
+    window.addEventListener("refetch-notifications", handleRefetch);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("refetch-notifications", handleRefetch);
+    };
   }, [fetchNotifications, fetchExamMode]);
 
   const handleDropdownOpen = (open: boolean) => {

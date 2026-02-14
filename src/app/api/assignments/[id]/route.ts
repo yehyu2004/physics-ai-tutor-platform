@@ -3,6 +3,30 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { requireApiAuth, requireApiRole, isErrorResponse } from "@/lib/api-auth";
 import { isStaff as isStaffRole } from "@/lib/constants";
+import { z } from "zod";
+
+const PatchQuestionSchema = z.object({
+  questionText: z.string().min(1).max(10000),
+  questionType: z.enum(["MC", "NUMERIC", "FREE_RESPONSE"]),
+  options: z.array(z.string().max(2000)).optional(),
+  correctAnswer: z.string().max(2000).optional(),
+  points: z.number().min(0).max(1000).optional(),
+  diagram: z.object({ type: z.string(), content: z.string() }).nullable().optional(),
+  imageUrl: z.string().max(2000).nullable().optional(),
+});
+
+const PatchAssignmentSchema = z.object({
+  title: z.string().min(1).max(200).optional(),
+  description: z.string().max(5000).optional(),
+  dueDate: z.string().nullable().optional(),
+  published: z.boolean().optional(),
+  totalPoints: z.number().min(0).max(10000).optional(),
+  pdfUrl: z.string().max(2000).nullable().optional(),
+  lockAfterSubmit: z.boolean().optional(),
+  scheduledPublishAt: z.string().nullable().optional(),
+  notifyOnPublish: z.boolean().optional(),
+  questions: z.array(PatchQuestionSchema).optional(),
+});
 
 export async function GET(
   req: Request,
@@ -124,7 +148,15 @@ export async function PATCH(
     const userRole = auth.user.role;
     const userId = auth.user.id;
 
-    const data = await req.json();
+    const body = await req.json();
+    const parsed = PatchAssignmentSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid input", details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const data = parsed.data;
 
     // If questions are provided, delete existing and re-create
     if (data.questions) {
@@ -132,10 +164,10 @@ export async function PATCH(
         where: { assignmentId: params.id },
       });
       await prisma.assignmentQuestion.createMany({
-        data: (data.questions as Array<{ questionText: string; questionType: string; options?: string[]; correctAnswer?: string; points?: number; diagram?: { type: string; content: string }; imageUrl?: string }>).map((q, i) => ({
+        data: data.questions.map((q, i) => ({
           assignmentId: params.id,
           questionText: q.questionText,
-          questionType: q.questionType as "MC" | "NUMERIC" | "FREE_RESPONSE",
+          questionType: q.questionType,
           options: q.options ?? Prisma.JsonNull,
           correctAnswer: q.correctAnswer || null,
           points: q.points || 10,
@@ -225,6 +257,12 @@ export async function DELETE(
         return NextResponse.json({ error: "Forbidden: you can only delete your own assignments" }, { status: 403 });
       }
     }
+
+    // Cancel any pending scheduled emails linked to this assignment
+    await prisma.scheduledEmail.updateMany({
+      where: { assignmentId: params.id, status: "PENDING" },
+      data: { status: "CANCELLED", cancelledAt: new Date() },
+    });
 
     await prisma.assignment.update({
       where: { id: params.id },

@@ -111,7 +111,7 @@ export default function AnalyticsPage() {
     return <LoadingSpinner />;
   }
 
-  if (!data) {
+  if (!data || !data.overview) {
     return (
       <div className="flex items-center justify-center py-20">
         <p className="text-neutral-500 dark:text-neutral-400">Failed to load analytics data.</p>

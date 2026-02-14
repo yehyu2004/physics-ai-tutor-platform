@@ -33,21 +33,20 @@ export async function GET(req: Request) {
         const recipientIds = scheduled.recipientIds as string[];
         const senderName = scheduled.createdBy.name || "Staff";
 
-        // Send emails via shared service
-        const result = await sendBulkEmails({
-          recipientIds,
-          subject: scheduled.subject,
-          message: scheduled.message,
-          senderName,
-        });
-
-        if (result.recipients.length === 0) {
-          await prisma.scheduledEmail.update({
-            where: { id: scheduled.id },
-            data: { status: "FAILED", error: "No valid recipients found" },
+        // Send emails if there are recipients
+        let sentCount = 0;
+        let failedCount = 0;
+        let recipientCount = 0;
+        if (recipientIds.length > 0) {
+          const result = await sendBulkEmails({
+            recipientIds,
+            subject: scheduled.subject,
+            message: scheduled.message,
+            senderName,
           });
-          errors.push(`No recipients for "${scheduled.subject}"`);
-          continue;
+          sentCount = result.sentCount;
+          failedCount = result.failedCount;
+          recipientCount = result.recipients.length;
         }
 
         // Create in-app notification if flagged
@@ -68,8 +67,8 @@ export async function GET(req: Request) {
           data: {
             status: "SENT",
             sentAt: new Date(),
-            error: result.failedCount > 0
-              ? `${result.failedCount} of ${result.recipients.length} emails failed`
+            error: failedCount > 0
+              ? `${failedCount} of ${recipientCount} emails failed`
               : null,
           },
         });
@@ -82,9 +81,9 @@ export async function GET(req: Request) {
             details: {
               scheduledEmailId: scheduled.id,
               subject: scheduled.subject,
-              recipientCount: result.recipients.length,
-              sentCount: result.sentCount,
-              failedCount: result.failedCount,
+              recipientCount,
+              sentCount,
+              failedCount,
               createNotification: scheduled.createNotification,
             },
           },

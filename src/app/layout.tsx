@@ -33,7 +33,7 @@ export default function RootLayout({
       >
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           <SessionProvider>{children}</SessionProvider>
-          <Toaster richColors position="top-right" />
+          <Toaster richColors position="bottom-center" duration={3000} closeButton />
         </ThemeProvider>
       </body>
     </html>

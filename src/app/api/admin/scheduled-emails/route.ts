@@ -30,9 +30,17 @@ export async function POST(req: Request) {
 
     const { subject, message, scheduledAt, recipientIds, createNotification, assignmentId } = await req.json();
 
-    if (!subject?.trim() || !message?.trim() || !scheduledAt || !Array.isArray(recipientIds) || recipientIds.length === 0) {
+    if (!subject?.trim() || !message?.trim() || !scheduledAt || !Array.isArray(recipientIds)) {
       return NextResponse.json(
-        { error: "subject, message, scheduledAt, and recipientIds (non-empty array) are required" },
+        { error: "subject, message, scheduledAt, and recipientIds are required" },
+        { status: 400 }
+      );
+    }
+
+    // recipientIds can be empty when createNotification is true (notification-only, no email)
+    if (recipientIds.length === 0 && !createNotification) {
+      return NextResponse.json(
+        { error: "recipientIds must be non-empty, or createNotification must be true" },
         { status: 400 }
       );
     }

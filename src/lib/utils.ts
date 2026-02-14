@@ -53,6 +53,33 @@ export function formatDuration(ms: number): string {
   return `${seconds}s`;
 }
 
+/** Format a due date for display in notifications and emails */
+export function formatDueDate(date: Date | string | null): string {
+  if (!date) return "No due date set";
+  return new Date(date).toLocaleString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+/** Build the default notification subject + message for an assignment */
+export function buildAssignmentNotifyContent(assignment: {
+  title: string;
+  description?: string | null;
+  dueDate?: Date | string | null;
+  totalPoints: number;
+}): { subject: string; message: string } {
+  const dueDateStr = formatDueDate(assignment.dueDate ?? null);
+  return {
+    subject: `New Assignment: ${assignment.title}`,
+    message: `A new assignment has been posted on PhysTutor.\n\nTitle: ${assignment.title}${assignment.description ? `\nDescription: ${assignment.description}` : ""}\nDue: ${dueDateStr}\nPoints: ${assignment.totalPoints}`,
+  };
+}
+
 /** Format a date string as a relative "time ago" string */
 export function timeAgo(dateStr: string): string {
   const now = Date.now();

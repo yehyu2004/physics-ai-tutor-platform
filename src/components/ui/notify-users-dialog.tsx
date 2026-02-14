@@ -131,7 +131,7 @@ export function NotifyUsersDialog({
     setRoleFilter("ALL");
     setScheduleMode(!!defaultScheduledAt);
     setScheduledAt(defaultScheduledAt || "");
-    setAlsoEmail(!!defaultScheduledAt);
+    setAlsoEmail(!!defaultScheduledAt || schedulePublishMode);
     setSuccessMsg(successMessage);
     setLoading(true);
 
@@ -181,25 +181,22 @@ export function NotifyUsersDialog({
           const returnedId = await onBeforeSend(subject.trim(), message.trim(), scheduledAt);
           if (returnedId) effectiveAssignmentId = returnedId;
         }
-
-        // Create a scheduled email+notification only if "Also send as email" is checked
-        if (alsoEmail) {
-          const res = await fetch("/api/admin/scheduled-emails", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              subject: subject.trim(),
-              message: message.trim(),
-              scheduledAt: scheduledDate.toISOString(),
-              recipientIds: Array.from(selected),
-              createNotification: true,
-              ...(effectiveAssignmentId ? { assignmentId: effectiveAssignmentId } : {}),
-            }),
-          });
-          if (!res.ok) {
-            toast.error("Failed to schedule");
-            return;
-          }
+        // Always create a scheduled notification; include email recipients only if "Also send as email" is checked
+        const res = await fetch("/api/admin/scheduled-emails", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            subject: subject.trim(),
+            message: message.trim(),
+            scheduledAt: scheduledDate.toISOString(),
+            recipientIds: alsoEmail ? Array.from(selected) : [],
+            createNotification: true,
+            ...(effectiveAssignmentId ? { assignmentId: effectiveAssignmentId } : {}),
+          }),
+        });
+        if (!res.ok) {
+          toast.error("Failed to schedule");
+          return;
         }
 
         setSuccessMsg(`Scheduled for ${scheduledDate.toLocaleString()}`);
@@ -610,7 +607,7 @@ export function NotifyUsersDialog({
                 ) : (
                   <Send className="h-4 w-4 mr-2" />
                 )}
-                {schedulePublishMode ? "Schedule" : scheduleMode && alsoEmail ? "Schedule" : sendButtonLabel}
+                {scheduleMode && alsoEmail ? "Schedule" : sendButtonLabel}
               </Button>
             </DialogFooter>
           </>

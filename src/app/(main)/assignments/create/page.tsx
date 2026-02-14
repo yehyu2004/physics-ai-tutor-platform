@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { NotifyUsersDialog } from "@/components/ui/notify-users-dialog";
 import { AssignmentForm, type AssignmentFormData } from "@/components/assignments/AssignmentForm";
 import { toast } from "sonner";
+import { buildAssignmentNotifyContent } from "@/lib/utils";
 
 export default function CreateAssignmentPage() {
   const router = useRouter();
@@ -35,35 +36,48 @@ export default function CreateAssignmentPage() {
     schedule: boolean;
   } | null>(null);
 
-  const createAssignment = async (scheduledPublishAt?: string) => {
-    const pending = pendingPublishRef.current;
-    if (!pending) return null;
-    const { formData, questions } = pending;
+  /** Build the POST body for creating an assignment — single source of truth */
+  const buildCreateBody = (
+    formData: AssignmentFormData,
+    questions: Array<{ questionText: string; questionType: string; options: string[]; correctAnswer: string; points: number; diagram?: unknown; imageUrl?: string }>,
+    extra?: Record<string, unknown>,
+  ) => ({
+    title: formData.title,
+    description: formData.description,
+    dueDate: formData.dueDate || null,
+    type: formData.type,
+    totalPoints: formData.totalPoints,
+    pdfUrl: formData.pdfUrl || null,
+    lockAfterSubmit: formData.lockAfterSubmit,
+    questions: formData.type === "QUIZ" ? questions : [],
+    ...extra,
+  });
 
+  /** POST to /api/assignments and return the new id */
+  const postAssignment = async (body: Record<string, unknown>): Promise<string> => {
     const res = await fetch("/api/assignments", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: formData.title,
-        description: formData.description,
-        dueDate: formData.dueDate || null,
-        type: formData.type,
-        totalPoints: formData.totalPoints,
-        pdfUrl: formData.pdfUrl || null,
-        lockAfterSubmit: formData.lockAfterSubmit,
-        questions: formData.type === "QUIZ" ? questions : [],
-        ...(scheduledPublishAt && { scheduledPublishAt }),
-      }),
+      body: JSON.stringify(body),
     });
-
     if (!res.ok) {
       const errData = await res.json().catch(() => null);
       throw new Error(errData?.error || "Failed to create assignment");
     }
-
     const data = await res.json();
-    pendingPublishRef.current = null;
     return data.assignment.id as string;
+  };
+
+  const createAssignment = async (scheduledPublishAt?: string, notifyOnPublish?: boolean) => {
+    const pending = pendingPublishRef.current;
+    if (!pending) return null;
+    const extra: Record<string, unknown> = {};
+    if (scheduledPublishAt) extra.scheduledPublishAt = scheduledPublishAt;
+    if (notifyOnPublish) extra.notifyOnPublish = true;
+    const body = buildCreateBody(pending.formData, pending.questions, Object.keys(extra).length > 0 ? extra : undefined);
+    const id = await postAssignment(body);
+    pendingPublishRef.current = null;
+    return id;
   };
 
   const handleSubmit = async (
@@ -94,16 +108,14 @@ export default function CreateAssignmentPage() {
         // Store pending data — assignment will be created when user confirms in the dialog
         pendingPublishRef.current = { formData, questions: questionsWithUrls, schedule: !!schedule };
 
-        const dueDateStr = formData.dueDate
-          ? new Date(formData.dueDate).toLocaleString("en-US", {
-              weekday: "long", year: "numeric", month: "long", day: "numeric",
-              hour: "numeric", minute: "2-digit",
-            })
-          : "No due date set";
-        setReminderSubject(`New Assignment: ${formData.title}`);
-        setReminderMessage(
-          `A new assignment has been posted on PhysTutor.\n\nTitle: ${formData.title}${formData.description ? `\nDescription: ${formData.description}` : ""}\nDue: ${dueDateStr}\nPoints: ${formData.totalPoints}`
-        );
+        const { subject, message } = buildAssignmentNotifyContent({
+          title: formData.title,
+          description: formData.description,
+          dueDate: formData.dueDate || null,
+          totalPoints: formData.totalPoints,
+        });
+        setReminderSubject(subject);
+        setReminderMessage(message);
 
         if (schedule) {
           setIsScheduleMode(true);
@@ -114,29 +126,9 @@ export default function CreateAssignmentPage() {
         setReminderOpen(true);
       } else {
         // Save as Draft: create immediately and redirect
-        const res = await fetch("/api/assignments", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            title: formData.title,
-            description: formData.description,
-            dueDate: formData.dueDate || null,
-            type: formData.type,
-            totalPoints: formData.totalPoints,
-            pdfUrl: formData.pdfUrl || null,
-            lockAfterSubmit: formData.lockAfterSubmit,
-            questions: formData.type === "QUIZ" ? questionsWithUrls : [],
-          }),
-        });
-
-        if (!res.ok) {
-          const errData = await res.json().catch(() => null);
-          toast.error(errData?.error || "Failed to create assignment");
-          return;
-        }
-
-        const data = await res.json();
-        router.push(`/assignments/${data.assignment.id}`);
+        const body = buildCreateBody(formData, questionsWithUrls);
+        const id = await postAssignment(body);
+        router.push(`/assignments/${id}`);
         router.refresh();
       }
     } catch (err) {
@@ -169,25 +161,8 @@ export default function CreateAssignmentPage() {
       const questionsWithUrls = await getQuestionsWithUrls();
 
       // Create assignment as draft
-      const res = await fetch("/api/assignments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: formData.title,
-          description: formData.description,
-          dueDate: formData.dueDate || null,
-          type: formData.type,
-          totalPoints: formData.totalPoints,
-          pdfUrl: formData.pdfUrl || null,
-          lockAfterSubmit: formData.lockAfterSubmit,
-          questions: formData.type === "QUIZ" ? questionsWithUrls : [],
-        }),
-      });
-
-      if (!res.ok) throw new Error("Failed to create assignment");
-
-      const data = await res.json();
-      const newId = data.assignment.id;
+      const body = buildCreateBody(formData, questionsWithUrls);
+      const newId = await postAssignment(body);
 
       // Fetch LaTeX export
       const exportRes = await fetch(`/api/assignments/${newId}/export-latex`);
@@ -325,17 +300,17 @@ export default function CreateAssignmentPage() {
           schedulePublishMode
           dialogTitle="Schedule Publish"
           dialogDescription="Set a publish time and select who to notify when it goes live."
-          sendButtonLabel="Schedule"
-          skipButtonLabel="Schedule without notification"
+          sendButtonLabel="Notify & Schedule"
+          skipButtonLabel="Skip Notification & Schedule"
           onBeforeSend={async (_subj, _msg, scheduledAt) => {
-            const id = await createAssignment(scheduledAt);
+            const id = await createAssignment(scheduledAt, true);
             if (!id) return;
             createdIdRef.current = id;
             return id;
           }}
           onSkip={async (scheduledAt) => {
             try {
-              const id = await createAssignment(scheduledAt);
+              const id = await createAssignment(scheduledAt, true);
               if (!id) return;
               toast.success(`Assignment scheduled for ${new Date(scheduledAt!).toLocaleString()}`);
               router.push(`/assignments/${id}`);
