@@ -28,9 +28,9 @@ interface GradeEntry {
 
 function getScoreColor(score: number, total: number) {
   const pct = (score / total) * 100;
-  if (pct >= 80) return { text: "text-emerald-700", bg: "bg-emerald-500", light: "bg-emerald-50", border: "border-emerald-200" };
-  if (pct >= 60) return { text: "text-amber-700", bg: "bg-amber-500", light: "bg-amber-50", border: "border-amber-200" };
-  return { text: "text-red-700", bg: "bg-red-500", light: "bg-red-50", border: "border-red-200" };
+  if (pct >= 80) return { text: "text-emerald-700 dark:text-emerald-400", bg: "bg-emerald-500", light: "bg-emerald-50 dark:bg-emerald-950/50", border: "border-emerald-200 dark:border-emerald-800" };
+  if (pct >= 60) return { text: "text-amber-700 dark:text-amber-400", bg: "bg-amber-500", light: "bg-amber-50 dark:bg-amber-950/50", border: "border-amber-200 dark:border-amber-800" };
+  return { text: "text-red-700 dark:text-red-400", bg: "bg-red-500", light: "bg-red-50 dark:bg-red-950/50", border: "border-red-200 dark:border-red-800" };
 }
 
 function getLetterGrade(pct: number) {

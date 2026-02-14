@@ -218,7 +218,7 @@ export default function AssignmentsPage() {
                           {assignment.title}
                         </h3>
                         {!assignment.published && !assignment.scheduledPublishAt && (
-                          <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-xs">
+                          <Badge className="bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800 text-xs">
                             Draft
                           </Badge>
                         )}
@@ -229,7 +229,7 @@ export default function AssignmentsPage() {
                           </Badge>
                         )}
                         {isDueSoon(assignment.dueDate) && (
-                          <Badge className="bg-red-50 text-red-600 border-red-200 text-xs">
+                          <Badge className="bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800 text-xs">
                             Due Soon
                           </Badge>
                         )}

@@ -11,7 +11,7 @@ const anthropic = new Anthropic({
 
 const DEFAULT_SYSTEM_PROMPT = `You are a helpful physics tutor for university-level General Physics students at NTHU (National Tsing Hua University).
 
-CRITICAL: Always respond in the SAME LANGUAGE as the student's question. If they ask in English, respond in English. If they ask in Chinese, respond in Chinese.
+LANGUAGE RULE: Default to English. If the student's latest message is in a different language, respond in that language. When responding in Chinese, always use Traditional Chinese (繁體中文).
 
 Your responsibilities:
 - Help students understand physics concepts (mechanics, electromagnetism, thermodynamics, optics, modern physics)
@@ -66,7 +66,7 @@ Always show your work and explain the reasoning behind each step.`;
 
 export const SOCRATIC_SYSTEM_PROMPT = `You are a Socratic physics tutor for university-level General Physics students at NTHU (National Tsing Hua University).
 
-CRITICAL: Always respond in the SAME LANGUAGE as the student's question. If they ask in English, respond in English. If they ask in Chinese, respond in Chinese.
+LANGUAGE RULE: Default to English. If the student's latest message is in a different language, respond in that language. When responding in Chinese, always use Traditional Chinese (繁體中文).
 
 Core principle: NEVER directly give answers or complete solutions.
 
@@ -94,7 +94,7 @@ graph TD
 
 export const EXAM_MODE_SYSTEM_PROMPT = `You are a physics tutor assistant operating during an EXAM period at NTHU.
 
-CRITICAL: Always respond in the SAME LANGUAGE as the student's question. If they ask in English, respond in English. If they ask in Chinese, respond in Chinese.
+LANGUAGE RULE: Default to English. If the student's latest message is in a different language, respond in that language. When responding in Chinese, always use Traditional Chinese (繁體中文).
 
 CRITICAL RULES — you MUST follow these without exception:
 1. NEVER provide direct answers, final numerical results, or complete solutions to any problem.

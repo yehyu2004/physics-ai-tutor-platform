@@ -96,7 +96,7 @@ export function NotificationDropdown({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 text-xs text-gray-500 hover:text-gray-700"
+                className="h-7 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                 onClick={(e) => {
                   e.preventDefault();
                   onMarkAllRead();
@@ -270,7 +270,7 @@ export function NotificationDropdown({
                         <Pencil className="h-3.5 w-3.5" />
                       </button>
                       <button
-                        className="p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-600 transition-colors"
+                        className="p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
                         onClick={(e) => {
                           e.stopPropagation();
                           onDelete(n.id);

@@ -93,7 +93,7 @@ export function ChatSidebar({
               size="sm"
               disabled={conversations.length >= conversationLimit}
               title={conversations.length >= conversationLimit ? `Limit of ${conversationLimit} conversations reached. Delete old ones first.` : "New conversation"}
-              className="h-7 gap-1.5 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+              className="h-7 gap-1.5 bg-gray-900 dark:bg-gray-100 hover:bg-gray-800 dark:hover:bg-gray-200 text-white dark:text-gray-900 rounded-lg text-xs disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Plus className="h-3 w-3" />
               New

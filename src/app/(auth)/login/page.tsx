@@ -76,7 +76,7 @@ export default function LoginPage() {
           {/* Google OAuth Button */}
           <Button
             variant="outline"
-            className="w-full h-11 rounded-lg text-sm font-medium border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-colors"
+            className="w-full h-11 rounded-lg text-sm font-medium border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 transition-colors"
             onClick={handleGoogleSignIn}
           >
             <svg className="h-5 w-5 mr-3" viewBox="0 0 24 24">
@@ -102,7 +102,7 @@ export default function LoginPage() {
 
           {/* Divider */}
           <div className="relative my-6">
-            <Separator className="bg-gray-200" />
+            <Separator className="bg-gray-200 dark:bg-gray-700" />
             <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-900 px-3 text-xs text-gray-400 dark:text-gray-500 font-medium">
               or continue with email
             </span>
@@ -111,7 +111,7 @@ export default function LoginPage() {
           {/* Email/Password Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className={`rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-600 flex items-center gap-2 ${shakeError ? "animate-auth-shake" : ""}`}>
+              <div className={`rounded-lg bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 p-3 text-sm text-red-600 dark:text-red-400 flex items-center gap-2 ${shakeError ? "animate-auth-shake" : ""}`}>
                 <div className="h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />
                 {error}
               </div>
@@ -129,7 +129,7 @@ export default function LoginPage() {
                   placeholder="you@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className={`pl-10 h-11 rounded-lg border-gray-200 focus-visible:ring-1 focus-visible:ring-gray-300 focus-visible:border-gray-300 text-sm ${error ? "border-red-300 focus-visible:ring-red-300 focus-visible:border-red-300" : ""}`}
+                  className={`pl-10 h-11 rounded-lg border-gray-200 dark:border-gray-700 focus-visible:ring-1 focus-visible:ring-gray-300 dark:focus-visible:ring-gray-600 focus-visible:border-gray-300 dark:focus-visible:border-gray-600 text-sm ${error ? "border-red-300 dark:border-red-700 focus-visible:ring-red-300 dark:focus-visible:ring-red-700 focus-visible:border-red-300 dark:focus-visible:border-red-700" : ""}`}
                   required
                 />
               </div>
@@ -147,7 +147,7 @@ export default function LoginPage() {
                   placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className={`pl-10 h-11 rounded-lg border-gray-200 focus-visible:ring-1 focus-visible:ring-gray-300 focus-visible:border-gray-300 text-sm ${error ? "border-red-300 focus-visible:ring-red-300 focus-visible:border-red-300" : ""}`}
+                  className={`pl-10 h-11 rounded-lg border-gray-200 dark:border-gray-700 focus-visible:ring-1 focus-visible:ring-gray-300 dark:focus-visible:ring-gray-600 focus-visible:border-gray-300 dark:focus-visible:border-gray-600 text-sm ${error ? "border-red-300 dark:border-red-700 focus-visible:ring-red-300 dark:focus-visible:ring-red-700 focus-visible:border-red-300 dark:focus-visible:border-red-700" : ""}`}
                   required
                 />
               </div>
@@ -155,7 +155,7 @@ export default function LoginPage() {
 
             <Button
               type="submit"
-              className="w-full h-11 rounded-lg bg-gray-900 hover:bg-gray-800 text-white font-medium transition-colors text-sm"
+              className="w-full h-11 rounded-lg bg-gray-900 dark:bg-gray-100 hover:bg-gray-800 dark:hover:bg-gray-200 text-white dark:text-gray-900 font-medium transition-colors text-sm"
               disabled={loading}
             >
               {loading ? (

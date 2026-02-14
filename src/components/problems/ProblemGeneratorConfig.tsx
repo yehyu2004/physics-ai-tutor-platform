@@ -215,7 +215,7 @@ export function ProblemGeneratorConfig({
         <Button
           onClick={onGenerate}
           disabled={loading || !effectiveTopic}
-          className="gap-2 bg-gray-900 hover:bg-gray-800 text-white shadow-sm w-full sm:w-auto rounded-lg"
+          className="gap-2 bg-gray-900 dark:bg-gray-100 hover:bg-gray-800 dark:hover:bg-gray-200 text-white dark:text-gray-900 shadow-sm w-full sm:w-auto rounded-lg"
         >
           {loading ? (
             <Loader2 className="h-4 w-4 animate-spin" />

@@ -396,7 +396,7 @@ export default function ChatPageClient({
                 className={cn(
                   "h-8 gap-1.5 text-xs px-2 sm:px-3",
                   chatMode === "socratic"
-                    ? "bg-amber-100 text-amber-700 border-amber-300 hover:bg-amber-200 hover:text-amber-800"
+                    ? "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-700 hover:bg-amber-200 dark:hover:bg-amber-900/60 hover:text-amber-800 dark:hover:text-amber-300"
                     : ""
                 )}
                 title="Socratic guided mode"
@@ -456,18 +456,18 @@ export default function ChatPageClient({
         </div>
 
         {chatMode === "socratic" && !examModeActive && (
-          <div className="px-4 py-2 bg-amber-50 border-b border-amber-200 text-amber-800 text-xs text-center">
+          <div className="px-4 py-2 bg-amber-50 dark:bg-amber-950/50 border-b border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-400 text-xs text-center">
             Socratic guided mode: AI will guide your thinking through questions rather than giving direct answers
           </div>
         )}
 
         {examModeActive && !examBannerDismissed && (
-          <div className="px-4 py-2 bg-red-50 border-b border-red-200 text-red-700 text-xs flex items-center justify-center gap-1.5 relative">
+          <div className="px-4 py-2 bg-red-50 dark:bg-red-950/50 border-b border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-xs flex items-center justify-center gap-1.5 relative">
             <ShieldAlert className="h-3.5 w-3.5 shrink-0" />
             Exam Mode: AI will provide guidance and help you understand concepts, but will not give direct answers
             <button
               onClick={() => setExamBannerDismissed(true)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-red-100 text-red-400 hover:text-red-600 transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-red-100 dark:hover:bg-red-900/50 text-red-400 hover:text-red-600 dark:hover:text-red-300 transition-colors"
             >
               <X className="h-3.5 w-3.5" />
             </button>

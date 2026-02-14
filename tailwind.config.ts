@@ -3,7 +3,7 @@ import tailwindcssAnimate from "tailwindcss-animate";
 import colors from "tailwindcss/colors";
 
 const config: Config = {
-  darkMode: ["class", "class"],
+  darkMode: "class",
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -106,6 +106,6 @@ const config: Config = {
   		}
   	}
   },
-  plugins: [tailwindcssAnimate, require("tailwindcss-animate")],
+  plugins: [tailwindcssAnimate],
 };
 export default config;

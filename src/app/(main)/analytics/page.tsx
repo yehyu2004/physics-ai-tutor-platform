@@ -140,7 +140,7 @@ export default function AnalyticsPage() {
         <Card className="gradient-card-green border-0">
           <CardContent className="p-6">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-white/60 flex items-center justify-center">
+              <div className="h-10 w-10 rounded-full bg-white/60 dark:bg-white/20 flex items-center justify-center">
                 <Brain className="h-5 w-5 text-neutral-700 dark:text-neutral-300" />
               </div>
               <div>
@@ -154,7 +154,7 @@ export default function AnalyticsPage() {
         <Card className="gradient-card-blue border-0">
           <CardContent className="p-6">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-white/60 flex items-center justify-center">
+              <div className="h-10 w-10 rounded-full bg-white/60 dark:bg-white/20 flex items-center justify-center">
                 <MessageSquare className="h-5 w-5 text-neutral-700 dark:text-neutral-300" />
               </div>
               <div>
@@ -168,7 +168,7 @@ export default function AnalyticsPage() {
         <Card className="gradient-card-purple border-0">
           <CardContent className="p-6">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-white/60 flex items-center justify-center">
+              <div className="h-10 w-10 rounded-full bg-white/60 dark:bg-white/20 flex items-center justify-center">
                 <Clock className="h-5 w-5 text-neutral-700 dark:text-neutral-300" />
               </div>
               <div>
@@ -184,7 +184,7 @@ export default function AnalyticsPage() {
         <Card className="gradient-card-pink border-0">
           <CardContent className="p-6">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-white/60 flex items-center justify-center">
+              <div className="h-10 w-10 rounded-full bg-white/60 dark:bg-white/20 flex items-center justify-center">
                 <FileCheck className="h-5 w-5 text-neutral-700 dark:text-neutral-300" />
               </div>
               <div>

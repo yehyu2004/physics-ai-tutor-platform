@@ -17,16 +17,19 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import dynamic from "next/dynamic";
+import "katex/dist/katex.min.css";
+import DOMPurify from "dompurify";
 
 const SyntaxHighlighter = dynamic(
   () => import("react-syntax-highlighter").then((mod) => mod.Prism),
   { ssr: false, loading: () => <pre className="p-4 bg-gray-950 text-gray-100 text-sm font-mono rounded-xl overflow-auto"><code>Loading...</code></pre> }
 );
-import "katex/dist/katex.min.css";
-import DOMPurify from "dompurify";
 
 const MermaidDiagram = dynamic(() => import("@/components/chat/MermaidDiagram"), { ssr: false });
 const DesmosGraph = dynamic(() => import("@/components/chat/DesmosGraph"), { ssr: false });
+
+const RUNNABLE_LANGUAGES = ["python", "javascript", "js", "typescript", "ts"];
+const CODE_BLOCK_BG = "#0a0a0a";
 
 function normalizeLatex(content: string): string {
   // Convert \[...\] to $$...$$ and \(...\) to $...$
@@ -58,7 +61,7 @@ function CodeBlock({
   const [output, setOutput] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [code, setCode] = useState(initialCode);
-  const [style, setStyle] = useState<Record<string, React.CSSProperties> | undefined>(undefined);
+  const [style, setStyle] = useState<Record<string, React.CSSProperties> | null>(null);
   const [showRunConfirm, setShowRunConfirm] = useState(false);
 
   useEffect(() => {
@@ -71,8 +74,7 @@ function CodeBlock({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const runnableLanguages = ["python", "javascript", "js", "typescript", "ts"];
-  const isRunnable = runnableLanguages.includes(language.toLowerCase());
+  const isRunnable = RUNNABLE_LANGUAGES.includes(language.toLowerCase());
 
   const handleRun = async () => {
     if (!sessionStorage.getItem('code-run-acknowledged')) {
@@ -171,14 +173,14 @@ function CodeBlock({
           rows={Math.max(code.split('\n').length, 5)}
           spellCheck={false}
         />
-      ) : (
+      ) : style ? (
         <SyntaxHighlighter
           language={language}
-          style={style ?? {}}
+          style={style}
           customStyle={{
             margin: 0,
             padding: '1rem',
-            background: '#0a0a0a',
+            background: CODE_BLOCK_BG,
             fontSize: '0.875rem',
             lineHeight: '1.5',
           }}
@@ -187,6 +189,10 @@ function CodeBlock({
         >
           {code}
         </SyntaxHighlighter>
+      ) : (
+        <pre className="p-4 overflow-auto text-sm font-mono leading-relaxed" style={{ margin: 0, background: CODE_BLOCK_BG }}>
+          <code className="text-gray-100">{code}</code>
+        </pre>
       )}
 
       {/* Output */}

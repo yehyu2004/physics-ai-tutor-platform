@@ -48,12 +48,12 @@ export function ChatInput({
   return (
     <>
       {imageError && (
-        <div className="px-4 py-2 border-t border-red-100 bg-red-50">
+        <div className="px-4 py-2 border-t border-red-100 dark:border-red-800 bg-red-50 dark:bg-red-950/50">
           <div className="max-w-3xl mx-auto flex items-center justify-between">
-            <span className="text-sm text-red-600">{imageError}</span>
+            <span className="text-sm text-red-600 dark:text-red-400">{imageError}</span>
             <button
               onClick={onClearImageError}
-              className="text-red-400 hover:text-red-600 transition-colors"
+              className="text-red-400 hover:text-red-600 dark:hover:text-red-300 transition-colors"
             >
               <X className="h-4 w-4" />
             </button>
@@ -127,8 +127,8 @@ export function ChatInput({
               className={cn(
                 "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-all",
                 loading || (!input.trim() && !imageFiles.length)
-                  ? "bg-gray-50 dark:bg-gray-800 text-gray-300 cursor-not-allowed"
-                  : "bg-gray-900 hover:bg-gray-800 text-white"
+                  ? "bg-gray-50 dark:bg-gray-800 text-gray-300 dark:text-gray-600 cursor-not-allowed"
+                  : "bg-gray-900 dark:bg-gray-100 hover:bg-gray-800 dark:hover:bg-gray-200 text-white dark:text-gray-900"
               )}
             >
               <Send className="h-4 w-4" />

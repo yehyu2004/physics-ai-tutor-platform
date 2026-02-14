@@ -542,14 +542,14 @@ export default function ProblemGeneratorPage() {
               </span>
             </h2>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-emerald-600 font-medium bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+              <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">
                 Auto-saved
               </span>
               <Button
                 onClick={createAssignmentFromProblems}
                 disabled={creatingAssignment}
                 size="sm"
-                className="gap-1.5 bg-gray-900 hover:bg-gray-800 text-white rounded-lg"
+                className="gap-1.5 bg-gray-900 dark:bg-gray-100 hover:bg-gray-800 dark:hover:bg-gray-200 text-white dark:text-gray-900 rounded-lg"
               >
                 {creatingAssignment ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
