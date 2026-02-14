@@ -101,39 +101,39 @@ export default function EmailRecordsPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5 shadow-sm">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="p-2 rounded-lg bg-gray-50 dark:bg-gray-800">
-              <Mail className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-3 sm:p-5 shadow-sm">
+          <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3">
+            <div className="p-1.5 sm:p-2 rounded-lg bg-gray-50 dark:bg-gray-800">
+              <Mail className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-600 dark:text-gray-400" />
             </div>
-            <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            <span className="text-[10px] sm:text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Total
             </span>
           </div>
-          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{sentCount + scheduledCount}</p>
+          <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">{sentCount + scheduledCount}</p>
         </div>
-        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5 shadow-sm">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950">
-              <Send className="h-4 w-4 text-emerald-500" />
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-3 sm:p-5 shadow-sm">
+          <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3">
+            <div className="p-1.5 sm:p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950">
+              <Send className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-500" />
             </div>
-            <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            <span className="text-[10px] sm:text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Sent
             </span>
           </div>
-          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{sentCount}</p>
+          <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">{sentCount}</p>
         </div>
-        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5 shadow-sm">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-950">
-              <CalendarClock className="h-4 w-4 text-blue-500" />
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-3 sm:p-5 shadow-sm">
+          <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3">
+            <div className="p-1.5 sm:p-2 rounded-lg bg-blue-50 dark:bg-blue-950">
+              <CalendarClock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-500" />
             </div>
-            <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            <span className="text-[10px] sm:text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Scheduled
             </span>
           </div>
-          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{scheduledCount}</p>
+          <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">{scheduledCount}</p>
         </div>
       </div>
 
@@ -208,7 +208,7 @@ export default function EmailRecordsPage() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 pl-11 sm:pl-0 shrink-0">
+                    <div className="flex items-center gap-2 sm:gap-3 pl-11 sm:pl-0 shrink-0">
                       <div className="text-right">
                         <div className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
                           <Clock className="h-3 w-3" />
@@ -272,7 +272,7 @@ export default function EmailRecordsPage() {
 
       {/* Pagination */}
       {totalCount > 0 && (
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
             <span>Rows per page:</span>
             <Select value={String(pageSize)} onValueChange={handlePageSizeChange}>
