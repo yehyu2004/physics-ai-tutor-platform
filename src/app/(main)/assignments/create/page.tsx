@@ -223,20 +223,20 @@ export default function CreateAssignmentPage() {
             )}
             <Button
               variant="outline"
-              onClick={() => handleSubmit(formData, getQuestionsWithUrls, true)}
-              disabled={loading || exportingLatex || !titleValid}
-            >
-              {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              Publish
-            </Button>
-            <Button
-              variant="outline"
               onClick={() => handleSubmit(formData, getQuestionsWithUrls, false, true)}
               disabled={loading || exportingLatex || !titleValid}
               className="gap-2 text-blue-600 border-blue-200 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-950"
             >
               <CalendarClock className="h-4 w-4" />
               Schedule Publish
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => handleSubmit(formData, getQuestionsWithUrls, true)}
+              disabled={loading || exportingLatex || !titleValid}
+            >
+              {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Publish
             </Button>
           </div>
         )}
