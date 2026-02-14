@@ -967,6 +967,205 @@ The production build command in `package.json` must be:
 
 ---
 
+### 11. AI Code Cleanup & Clean Code
+
+#### ⚠️ Mandatory Skill Invocation
+
+Before writing or modifying code, **you must invoke the relevant skills** using the `skill` tool. Do not rely on memory — always call the skill to get the latest instructions.
+
+| When | Invoke skill |
+|---|---|
+| **Starting any coding task** | `clean-code` — to review function size, naming, SRP rules |
+| **Before committing / finishing a task** | `deslop` — to check the branch diff for AI artifacts |
+| **After AI-assisted coding** | `ai-code-cleanup` — to remove comments, defensive bloat, type casts |
+| **Refactoring existing code** | `code-refactoring` — for extract method, guard clauses, parameter objects |
+| **Designing new services or splitting components** | `architecture-patterns` — for service layer, clean architecture |
+| **Reviewing any AI-generated content** | `anti-slop` — to detect generic AI patterns in code, text, or design |
+
+**Example — at the start of a task:**
+```
+I'll invoke the clean-code and architecture-patterns skills before starting.
+[calls skill tool with SkillName: "clean-code"]
+[calls skill tool with SkillName: "architecture-patterns"]
+```
+
+**Example — before committing:**
+```
+Let me run deslop and ai-code-cleanup on the changes.
+[calls skill tool with SkillName: "deslop"]
+[calls skill tool with SkillName: "ai-code-cleanup"]
+```
+
+These rules below are derived from those skills. They apply to all code written by AI agents and must be enforced on every commit.
+
+#### 11.1 Remove AI-Generated Comments
+
+Comments that restate obvious code, are inconsistent with the file's documentation style, or over-document simple operations must be removed. Only keep comments that explain **why**, not **what**.
+
+**❌ Bad — AI slop comments:**
+```ts
+// Set the user's name
+user.name = name;
+
+// Create a new assignment
+const assignment = await prisma.assignment.create({ ... });
+
+// Return the response
+return NextResponse.json({ data: result });
+```
+
+**✅ Good — self-documenting code, no redundant comments:**
+```ts
+user.name = name;
+const assignment = await prisma.assignment.create({ ... });
+return NextResponse.json({ data: result });
+```
+
+#### 11.2 Remove Defensive Bloat
+
+Do not add unnecessary try/catch blocks, redundant null checks on trusted/validated paths, or error handling that can never trigger. Trust validated inputs.
+
+**❌ Bad — unnecessary defensive code on a validated path:**
+```ts
+function processUser(user: SessionUser) {
+  try {
+    if (user && user.name && typeof user.name === "string") {
+      return user.name.toUpperCase();
+    }
+    return null;
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
+}
+```
+
+**✅ Good — trust the typed input:**
+```ts
+function processUser(user: SessionUser) {
+  return user.name.toUpperCase();
+}
+```
+
+#### 11.3 No Type Workarounds
+
+Do not cast to `any` to bypass type issues. Do not add `@ts-ignore` / `@ts-expect-error` without a legitimate reason and comment. Do not use unnecessary type assertions (`as X`) when the type system already knows the type.
+
+**❌ Bad:**
+```ts
+const data = response.data as any;
+const result = processData(data as ProcessedData);
+```
+
+**✅ Good:**
+```ts
+const data: ResponseData = response.data;
+const result = processData(data);
+```
+
+#### 11.4 Clean Code Principles
+
+All functions must follow Uncle Bob's Clean Code standards:
+
+- **Small functions**: Functions should be < 20 lines. If longer, extract sub-functions.
+- **Do one thing**: Each function has a single responsibility.
+- **One level of abstraction**: Don't mix high-level business logic with low-level details.
+- **Descriptive names**: `isPasswordValid` not `check`. `calculateTotalScore` not `process`.
+- **Few arguments**: 0-2 is ideal. 3+ requires a parameter object.
+- **No side effects**: Functions shouldn't secretly mutate global state.
+- **No magic numbers**: Extract constants with descriptive names.
+
+```ts
+// ❌ Bad
+if (user.age >= 18 && order.total >= 50) {
+  applyDiscount(order, 0.1);
+}
+
+// ✅ Good
+const MINIMUM_AGE = 18;
+const DISCOUNT_THRESHOLD = 50;
+const STANDARD_DISCOUNT = 0.1;
+
+if (user.age >= MINIMUM_AGE && order.total >= DISCOUNT_THRESHOLD) {
+  applyDiscount(order, STANDARD_DISCOUNT);
+}
+```
+
+#### 11.5 Naming Conventions
+
+Use intention-revealing, searchable, pronounceable names. Avoid generic AI-generated names.
+
+| ❌ Generic (AI slop) | ✅ Specific |
+|---|---|
+| `data` | `assignmentList`, `gradingResult` |
+| `result` | `validatedSubmission`, `savedGrade` |
+| `item` | `question`, `submission`, `student` |
+| `handleData()` | `submitGradeForQuestion()` |
+| `processItems()` | `calculateAssignmentScores()` |
+| `temp` | `pendingGrade`, `draftFeedback` |
+
+- **Classes/Components**: Nouns (`GradingPanel`, `SubmissionList`). Avoid `Manager`, `Data`, `Info`.
+- **Functions/Methods**: Verbs (`submitGrade`, `fetchAssignment`, `validateScore`).
+- **Booleans**: Prefix with `is`, `has`, `can`, `should` (`isPublished`, `hasSubmission`).
+
+#### 11.6 Refactoring Patterns
+
+When touching code, apply these refactoring patterns on contact:
+
+- **Extract method**: If a code block does one thing, move it to a named function.
+- **Guard clauses**: Replace nested conditionals with early returns.
+- **Parameter objects**: Replace 3+ function parameters with a typed object.
+- **Replace conditionals with polymorphism**: When `switch`/`if-else` chains grow beyond 3 cases on the same discriminator.
+
+**❌ Bad — deeply nested:**
+```ts
+function getDiscount(user: User, order: Order) {
+  if (user) {
+    if (user.isPremium) {
+      if (order.total > 100) {
+        return 0.2;
+      }
+    }
+  }
+  return 0;
+}
+```
+
+**✅ Good — guard clauses:**
+```ts
+function getDiscount(user: User, order: Order) {
+  if (!user) return 0;
+  if (!user.isPremium) return 0;
+  if (order.total <= 100) return 0;
+  return 0.2;
+}
+```
+
+#### 11.7 Style Consistency
+
+All code must match the existing project style within each file. AI agents must not introduce:
+- Naming conventions different from the rest of the file (camelCase vs PascalCase etc.)
+- Formatting inconsistent with surrounding code
+- Import organization inconsistent with existing patterns
+- Unnecessary emoji in code or comments
+- Overly verbose variable names or redundant intermediate variables
+
+#### 11.8 Deslop Checklist (Run Before Every Commit)
+
+Before committing AI-generated code, verify:
+- [ ] No comments restating obvious code
+- [ ] No unnecessary try/catch on trusted paths
+- [ ] No `as any` or `@ts-ignore` without justification
+- [ ] No redundant null checks on validated inputs
+- [ ] No generic variable names (`data`, `result`, `item`, `temp`)
+- [ ] No magic numbers — all constants named
+- [ ] Functions are < 20 lines
+- [ ] Functions do one thing
+- [ ] Style matches surrounding code
+- [ ] No unnecessary emoji
+
+---
+
 ## Project Overview
 
 Next.js 14 app with Prisma (PostgreSQL), NextAuth credentials + Google OAuth, OpenAI/Anthropic AI grading, and LaTeX rendering via `react-markdown` + `remark-math` + `rehype-katex`.
@@ -1292,3 +1491,17 @@ When working with images or screenshots, keep dimensions under 2000px to avoid A
 
 ## Build & Deploy
 After Vercel deployment, always verify the build succeeded by checking the deployment URL. Common issues: prisma generate not running (add to build command), .next cache stale on localhost (delete it), and CJS/ESM incompatibilities with packages like react-katex.
+
+## Recommended Agent Skills
+
+Use the following skills when working on relevant areas of the codebase. Install with `npx skills add <source> -g -y`.
+
+| Skill | Install | Purpose |
+|-------|---------|---------|
+| `vercel-react-best-practices` | `npx skills add vercel-labs/agent-skills@vercel-react-best-practices -g -y` | React & Next.js best practices from Vercel Engineering |
+| `nextjs-app-router-patterns` | `npx skills add wshobson/agents@nextjs-app-router-patterns -g -y` | Next.js App Router architecture patterns |
+| `tailwind-v4-shadcn` | `npx skills add jezweb/claude-skills@tailwind-v4-shadcn -g -y` | Tailwind CSS + shadcn/ui component patterns |
+| `typescript-advanced-types` | `npx skills add wshobson/agents@typescript-advanced-types -g -y` | Advanced TypeScript type patterns |
+| `prisma-expert` | `npx skills add sickn33/antigravity-awesome-skills@prisma-expert -g -y` | Prisma ORM best practices |
+| `prisma-client-api` | `npx skills add prisma/skills@prisma-client-api -g -y` | Official Prisma Client API reference |
+| `playwright-skill` | `npx skills add sickn33/antigravity-awesome-skills@playwright-skill -g -y` | Playwright E2E testing patterns |

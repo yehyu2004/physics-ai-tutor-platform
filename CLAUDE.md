@@ -188,3 +188,60 @@ When working with images or screenshots, keep dimensions under 2000px to avoid A
 
 ## Build & Deploy
 After Vercel deployment, always verify the build succeeded by checking the deployment URL. Common issues: prisma generate not running (add to build command), .next cache stale on localhost (delete it), and CJS/ESM incompatibilities with packages like react-katex.
+
+## Recommended Agent Skills
+
+Use the following skills when working on relevant areas of the codebase. Install with `npx skills add <source> -g -y`.
+
+| Skill | Install | Purpose |
+|-------|---------|---------|
+| `vercel-react-best-practices` | `npx skills add vercel-labs/agent-skills@vercel-react-best-practices -g -y` | React & Next.js best practices from Vercel Engineering |
+| `nextjs-app-router-patterns` | `npx skills add wshobson/agents@nextjs-app-router-patterns -g -y` | Next.js App Router architecture patterns |
+| `tailwind-v4-shadcn` | `npx skills add jezweb/claude-skills@tailwind-v4-shadcn -g -y` | Tailwind CSS + shadcn/ui component patterns |
+| `typescript-advanced-types` | `npx skills add wshobson/agents@typescript-advanced-types -g -y` | Advanced TypeScript type patterns |
+| `prisma-expert` | `npx skills add sickn33/antigravity-awesome-skills@prisma-expert -g -y` | Prisma ORM best practices |
+| `prisma-client-api` | `npx skills add prisma/skills@prisma-client-api -g -y` | Official Prisma Client API reference |
+| `playwright-skill` | `npx skills add sickn33/antigravity-awesome-skills@playwright-skill -g -y` | Playwright E2E testing patterns |
+| `clean-code` | Pre-installed | Uncle Bob's Clean Code: small functions, meaningful names, no side effects, SRP |
+| `ai-code-cleanup` | Pre-installed | Remove AI slop: obvious comments, defensive bloat, type workarounds, style drift |
+| `anti-slop` | Pre-installed | Detect/eliminate generic AI patterns in text, code, and design |
+| `deslop` | Pre-installed | Quick branch cleanup: diff against main, remove all AI artifacts |
+| `code-refactoring` | Pre-installed | Extract methods, guard clauses, parameter objects, polymorphism |
+| `architecture-patterns` | Pre-installed | Clean Architecture, service layer, DDD patterns |
+
+### Code Quality Skills — Mandatory Invocation
+
+**You MUST call the `skill` tool to invoke these skills at the appropriate times. Do not skip this step.**
+
+#### When starting a coding task:
+```
+[invoke skill: "clean-code"]
+[invoke skill: "architecture-patterns"]
+```
+
+#### Before finishing / committing:
+```
+[invoke skill: "deslop"]
+[invoke skill: "ai-code-cleanup"]
+```
+
+#### When refactoring:
+```
+[invoke skill: "code-refactoring"]
+```
+
+#### When reviewing AI-generated content:
+```
+[invoke skill: "anti-slop"]
+```
+
+| Skill | When to invoke | What it does |
+|-------|---------------|--------------|
+| `clean-code` | Start of every task | Reviews function size, naming, SRP, no side effects |
+| `deslop` | Before every commit | Diffs branch against main, removes AI artifacts |
+| `ai-code-cleanup` | Before code reviews | Removes obvious comments, defensive bloat, type casts |
+| `code-refactoring` | When touching legacy code | Extract methods, guard clauses, flatten nesting |
+| `architecture-patterns` | When designing services/components | Service layer, clean architecture, DDD |
+| `anti-slop` | When reviewing AI output | Detects generic AI patterns in code, text, design |
+
+See **AGENTS.md Section 11** for the full rules derived from these skills.
