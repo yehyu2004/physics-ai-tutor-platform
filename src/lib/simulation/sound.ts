@@ -5,7 +5,7 @@
 
 let audioCtx: AudioContext | null = null;
 let masterGain: GainNode | null = null;
-let muted = false;
+const muted = false;
 
 function getCtx(): AudioContext | null {
   if (typeof window === "undefined") return null;
