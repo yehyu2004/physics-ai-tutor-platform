@@ -6,6 +6,16 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import rehypeRaw from "rehype-raw";
 import { Check, Copy, Play, Edit3, Save } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import dynamic from "next/dynamic";
 
 const SyntaxHighlighter = dynamic(
@@ -49,6 +59,7 @@ function CodeBlock({
   const [isEditing, setIsEditing] = useState(false);
   const [code, setCode] = useState(initialCode);
   const [style, setStyle] = useState<Record<string, React.CSSProperties> | undefined>(undefined);
+  const [showRunConfirm, setShowRunConfirm] = useState(false);
 
   useEffect(() => {
     import("react-syntax-highlighter/dist/esm/styles/prism").then((mod) => setStyle(mod.vscDarkPlus));
@@ -64,17 +75,14 @@ function CodeBlock({
   const isRunnable = runnableLanguages.includes(language.toLowerCase());
 
   const handleRun = async () => {
-    // Add confirmation for first-time use
     if (!sessionStorage.getItem('code-run-acknowledged')) {
-      const confirmed = confirm(
-        'Code will be executed in a secure sandbox environment (Piston API).\n\n' +
-        '⚠️ Note: Code is sent to a third-party service for execution.\n\n' +
-        'Continue?'
-      );
-      if (!confirmed) return;
-      sessionStorage.setItem('code-run-acknowledged', 'true');
+      setShowRunConfirm(true);
+      return;
     }
+    await executeCode();
+  };
 
+  const executeCode = async () => {
     setRunning(true);
     setOutput(null);
 
@@ -194,6 +202,22 @@ function CodeBlock({
           </pre>
         </div>
       )}
+      <AlertDialog open={showRunConfirm} onOpenChange={setShowRunConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Run Code in Sandbox</AlertDialogTitle>
+            <AlertDialogDescription>
+              Code will be executed in a secure sandbox environment (Piston API). Note: Code is sent to a third-party service for execution.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { sessionStorage.setItem('code-run-acknowledged', 'true'); executeCode(); }}>
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

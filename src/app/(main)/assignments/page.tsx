@@ -31,6 +31,16 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Pagination } from "@/components/ui/pagination";
 import { isStaff } from "@/lib/constants";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import type { AssignmentListItem } from "@/types";
 
 export default function AssignmentsPage() {
@@ -40,6 +50,7 @@ export default function AssignmentsPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"ALL" | "PUBLISHED" | "DRAFTS" | "SCHEDULED">("ALL");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
@@ -90,10 +101,16 @@ export default function AssignmentsPage() {
 
   const canManage = isStaff(userRole);
 
-  const handleDeleteDraft = async (e: React.MouseEvent, assignmentId: string) => {
+  const handleDeleteDraft = (e: React.MouseEvent, assignmentId: string) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!window.confirm("Are you sure you want to delete this draft assignment? This cannot be undone.")) return;
+    setPendingDeleteId(assignmentId);
+  };
+
+  const confirmDeleteDraft = async () => {
+    if (!pendingDeleteId) return;
+    const assignmentId = pendingDeleteId;
+    setPendingDeleteId(null);
     setDeletingId(assignmentId);
     try {
       const res = await fetch(`/api/assignments/${assignmentId}`, { method: "DELETE" });
@@ -349,6 +366,22 @@ export default function AssignmentsPage() {
           )}
         </>
       )}
+      <AlertDialog open={!!pendingDeleteId} onOpenChange={(open) => { if (!open) setPendingDeleteId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Draft Assignment</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this draft assignment? This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteDraft} className="bg-red-600 hover:bg-red-700 text-white">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

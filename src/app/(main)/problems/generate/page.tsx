@@ -6,30 +6,12 @@ import { useTrackTime } from "@/lib/use-track-time";
 import {
   Sparkles,
   Loader2,
-  Copy,
-  CheckCircle2,
-  Atom,
-  Zap,
-  Waves,
-  FlaskConical,
-  Magnet,
-  Sun,
-  Lightbulb,
-  ChevronDown,
   FilePlus,
-  Trash2,
   GripVertical,
   Layers,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { MarkdownContent } from "@/components/ui/markdown-content";
-import dynamic from "next/dynamic";
-
-const MermaidDiagram = dynamic(() => import("@/components/chat/MermaidDiagram"), { ssr: false });
 import {
   DndContext,
   closestCenter,
@@ -48,14 +30,20 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { toast } from "sonner";
+import { GeneratedProblemCard } from "@/components/problems/GeneratedProblemCard";
+import { ProblemBank } from "@/components/problems/ProblemBank";
+import { ProblemGeneratorConfig } from "@/components/problems/ProblemGeneratorConfig";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface GeneratedProblem {
   id?: string;
@@ -69,22 +57,6 @@ interface GeneratedProblem {
   diagram?: { type: "svg" | "mermaid"; content: string } | any;
 }
 
-function getDiagramContent(diagram: unknown): { type: string; content: string } | null {
-  if (!diagram) return null;
-  if (typeof diagram === "object" && diagram !== null) {
-    const d = diagram as Record<string, unknown>;
-    if (d.content && typeof d.content === "string") {
-      return { type: String(d.type || "svg").toLowerCase(), content: d.content };
-    }
-    if (d.svg && typeof d.svg === "string") return { type: "svg", content: d.svg };
-    if (d.mermaid && typeof d.mermaid === "string") return { type: "mermaid", content: d.mermaid };
-    if (d.code && typeof d.code === "string") return { type: String(d.type || "svg").toLowerCase(), content: d.code };
-  }
-  if (typeof diagram === "string" && diagram.trim().startsWith("<svg")) {
-    return { type: "svg", content: diagram.trim() };
-  }
-  return null;
-}
 
 interface ProblemSet {
   id: string;
@@ -97,31 +69,6 @@ interface ProblemSet {
   problems: GeneratedProblem[];
 }
 
-const topicIcons: Record<string, React.ReactNode> = {
-  Kinematics: <Zap className="h-4 w-4" />,
-  "Newton's Laws": <Zap className="h-4 w-4" />,
-  "Work & Energy": <Zap className="h-4 w-4" />,
-  "Momentum & Collisions": <Zap className="h-4 w-4" />,
-  "Rotational Motion": <Atom className="h-4 w-4" />,
-  "Oscillations & Waves": <Waves className="h-4 w-4" />,
-  Electrostatics: <Magnet className="h-4 w-4" />,
-  "Electric Circuits": <Lightbulb className="h-4 w-4" />,
-  Magnetism: <Magnet className="h-4 w-4" />,
-  "Electromagnetic Induction": <Magnet className="h-4 w-4" />,
-  Thermodynamics: <FlaskConical className="h-4 w-4" />,
-  Optics: <Sun className="h-4 w-4" />,
-  "Modern Physics": <Atom className="h-4 w-4" />,
-  "Fluid Mechanics": <Waves className="h-4 w-4" />,
-  Gravitation: <Atom className="h-4 w-4" />,
-};
-
-const difficultyConfig = [
-  { value: "1", label: "Easy", color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-  { value: "2", label: "Medium", color: "bg-sky-50 text-sky-700 border-sky-200" },
-  { value: "3", label: "Average", color: "bg-gray-100 text-gray-700 border-gray-300" },
-  { value: "4", label: "Hard", color: "bg-amber-50 text-amber-700 border-amber-200" },
-  { value: "5", label: "Expert", color: "bg-red-50 text-red-700 border-red-200" },
-];
 
 function formatQuestionType(type: string): string {
   const typeMap: Record<string, string> = {
@@ -222,6 +169,7 @@ export default function ProblemGeneratorPage() {
   const [loadingPast, setLoadingPast] = useState(false);
   const [currentUser, setCurrentUser] = useState<{ id: string; role: string } | null>(null);
   const [deletingSetId, setDeletingSetId] = useState<string | null>(null);
+  const [pendingDeleteSetId, setPendingDeleteSetId] = useState<string | null>(null);
 
   // Merge problem sets state
   const [selectedSetIds, setSelectedSetIds] = useState<Set<string>>(new Set());
@@ -261,9 +209,15 @@ export default function ProblemGeneratorPage() {
     }
   };
 
-  const deleteProblemSet = async (e: React.MouseEvent, psId: string) => {
+  const requestDeleteProblemSet = (e: React.MouseEvent, psId: string) => {
     e.stopPropagation();
-    if (!confirm("Delete this problem set? This cannot be undone.")) return;
+    setPendingDeleteSetId(psId);
+  };
+
+  const confirmDeleteProblemSet = async () => {
+    if (!pendingDeleteSetId) return;
+    const psId = pendingDeleteSetId;
+    setPendingDeleteSetId(null);
     setDeletingSetId(psId);
     try {
       const res = await fetch("/api/problems/generate", {
@@ -539,133 +493,23 @@ export default function ProblemGeneratorPage() {
         </p>
       </div>
 
-      {/* Configuration */}
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden shadow-sm">
-        <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
-          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Configuration</h2>
-        </div>
-        <div className="p-6 space-y-6">
-          {/* Topic Selection */}
-          <div className="space-y-3">
-            <Label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Physics Topic</Label>
-            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-              {topics.map((t) => (
-                <button
-                  key={t}
-                  onClick={() => { setTopic(t); setCustomTopic(""); }}
-                  className={`flex items-center gap-2 px-3 py-2.5 text-xs font-medium rounded-lg border transition-colors ${
-                    topic === t
-                      ? "bg-gray-900 dark:bg-gray-100 border-gray-900 dark:border-gray-100 text-white dark:text-gray-900 shadow-sm"
-                      : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600"
-                  }`}
-                >
-                  <span className={topic === t ? "text-gray-300 dark:text-gray-600" : "text-gray-400 dark:text-gray-500"}>
-                    {topicIcons[t] || <Atom className="h-4 w-4" />}
-                  </span>
-                  <span className="truncate">{t}</span>
-                </button>
-              ))}
-              <button
-                onClick={() => setTopic("__custom__")}
-                className={`flex items-center gap-2 px-3 py-2.5 text-xs font-medium rounded-lg border transition-colors ${
-                  topic === "__custom__"
-                    ? "bg-gray-900 dark:bg-gray-100 border-gray-900 dark:border-gray-100 text-white dark:text-gray-900 shadow-sm"
-                    : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 border-dashed"
-                }`}
-              >
-                <span className={topic === "__custom__" ? "text-gray-300 dark:text-gray-600" : "text-gray-400 dark:text-gray-500"}>
-                  <Sparkles className="h-4 w-4" />
-                </span>
-                <span className="truncate">Custom Topic</span>
-              </button>
-            </div>
-            {topic === "__custom__" && (
-              <Input
-                value={customTopic}
-                onChange={(e) => setCustomTopic(e.target.value)}
-                placeholder="e.g., Projectile motion with air resistance, RC circuits, Doppler effect..."
-                className="border-gray-200 dark:border-gray-700 rounded-lg focus-visible:ring-1 focus-visible:ring-gray-300 dark:focus-visible:ring-gray-600"
-              />
-            )}
-          </div>
-
-          {/* Additional Instructions (Optional) */}
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-              Additional Instructions <span className="font-normal text-gray-400 dark:text-gray-500">(optional)</span>
-            </Label>
-            <Textarea
-              value={customInstructions}
-              onChange={(e) => setCustomInstructions(e.target.value)}
-              placeholder="e.g., Focus on conservation of energy with springs, include problems with inclined planes, use SI units only..."
-              rows={2}
-              className="border-gray-200 dark:border-gray-700 rounded-lg focus-visible:ring-1 focus-visible:ring-gray-300 dark:focus-visible:ring-gray-600 resize-none text-sm"
-            />
-          </div>
-
-          {/* Difficulty Selection */}
-          <div className="space-y-3">
-            <Label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Difficulty Level</Label>
-            <div className="flex gap-2">
-              {difficultyConfig.map((d) => (
-                <button
-                  key={d.value}
-                  onClick={() => setDifficulty(d.value)}
-                  className={`flex-1 py-2.5 text-xs font-semibold rounded-lg border transition-colors ${
-                    difficulty === d.value
-                      ? d.color + " shadow-sm"
-                      : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
-                  }`}
-                >
-                  {d.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Type + Count Row */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Question Type</Label>
-              <Select value={questionType} onValueChange={setQuestionType}>
-                <SelectTrigger className="border-gray-200 dark:border-gray-700 rounded-lg focus:ring-1 focus:ring-gray-300 dark:focus:ring-gray-600">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="MC">Multiple Choice</SelectItem>
-                  <SelectItem value="NUMERIC">Numeric Answer</SelectItem>
-                  <SelectItem value="FREE_RESPONSE">Free Response</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Number of Questions</Label>
-              <Input
-                type="number"
-                min={1}
-                max={10}
-                value={count}
-                onChange={(e) => setCount(Number(e.target.value))}
-                className="border-gray-200 dark:border-gray-700 rounded-lg focus-visible:ring-1 focus-visible:ring-gray-300 dark:focus-visible:ring-gray-600"
-              />
-            </div>
-          </div>
-
-          <Button
-            onClick={handleGenerate}
-            disabled={loading || !effectiveTopic}
-            className="gap-2 bg-gray-900 hover:bg-gray-800 text-white shadow-sm w-full sm:w-auto rounded-lg"
-          >
-            {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Sparkles className="h-4 w-4" />
-            )}
-            Generate Problems
-          </Button>
-        </div>
-      </div>
+      <ProblemGeneratorConfig
+        topic={topic}
+        onTopicChange={setTopic}
+        customTopic={customTopic}
+        onCustomTopicChange={setCustomTopic}
+        customInstructions={customInstructions}
+        onCustomInstructionsChange={setCustomInstructions}
+        difficulty={difficulty}
+        onDifficultyChange={setDifficulty}
+        questionType={questionType}
+        onQuestionTypeChange={setQuestionType}
+        count={count}
+        onCountChange={setCount}
+        loading={loading}
+        effectiveTopic={effectiveTopic}
+        onGenerate={handleGenerate}
+      />
 
       {/* Loading State with streaming preview */}
       {loading && (
@@ -718,98 +562,13 @@ export default function ProblemGeneratorPage() {
           </div>
 
           {problems.map((problem, index) => (
-            <div
+            <GeneratedProblemCard
               key={problem.id || index}
-              className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden shadow-sm"
-              style={{ animationDelay: `${index * 100}ms` }}
-            >
-              {/* Problem Header */}
-              <div className="flex items-center justify-between px-6 py-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-800">
-                <div className="flex items-center gap-2.5">
-                  <span className="flex items-center justify-center w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-bold">
-                    {index + 1}
-                  </span>
-                  <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                    Problem {index + 1}
-                  </span>
-                  <span className="text-xs text-gray-400 dark:text-gray-500">
-                    {problem.points} pts
-                  </span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => copyProblem(index)}
-                  className={`gap-1.5 text-xs ${
-                    copied === index
-                      ? "text-emerald-600"
-                      : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-                  }`}
-                >
-                  {copied === index ? (
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                  ) : (
-                    <Copy className="h-3.5 w-3.5" />
-                  )}
-                  {copied === index ? "Copied!" : "Copy"}
-                </Button>
-              </div>
-
-              {/* Problem Body */}
-              <div className="p-6 space-y-4">
-                <MarkdownContent
-                  content={problem.questionText}
-                  className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed"
-                />
-
-                {(() => {
-                  const diag = getDiagramContent(problem.diagram);
-                  if (!diag) return null;
-                  return (
-                    <div className="my-3 flex justify-center">
-                      {diag.type === "svg" ? (
-                        <div
-                          className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 overflow-auto max-w-full [&_svg]:w-full [&_svg]:h-auto"
-                          dangerouslySetInnerHTML={{ __html: diag.content }}
-                        />
-                      ) : (
-                        <MermaidDiagram content={diag.content} />
-                      )}
-                    </div>
-                  );
-                })()}
-
-                {problem.options && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {problem.options.map((opt, i) => (
-                      <div
-                        key={i}
-                        className="flex items-start gap-2.5 px-4 py-2.5 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-800"
-                      >
-                        <span className="flex items-center justify-center w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-bold shrink-0 mt-0.5">
-                          {String.fromCharCode(65 + i)}
-                        </span>
-                        <MarkdownContent content={opt} className="text-sm text-gray-700 dark:text-gray-300" />
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <div className="rounded-lg p-4 bg-emerald-50 border border-emerald-200">
-                  <p className="text-xs font-semibold text-emerald-700 mb-1.5 uppercase tracking-wider">
-                    Correct Answer
-                  </p>
-                  <MarkdownContent content={problem.correctAnswer} className="text-sm text-emerald-800 font-medium" />
-                </div>
-
-                <div className="rounded-lg p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                  <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 uppercase tracking-wider">
-                    Solution
-                  </p>
-                  <MarkdownContent content={problem.solution} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed" />
-                </div>
-              </div>
-            </div>
+              problem={problem}
+              index={index}
+              isCopied={copied === index}
+              onCopy={copyProblem}
+            />
           ))}
         </div>
       )}
@@ -877,117 +636,36 @@ export default function ProblemGeneratorPage() {
         </div>
       )}
 
-      {/* Problem Bank */}
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden shadow-sm">
-        <button
-          onClick={loadPastSets}
-          className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-        >
-          <div className="flex items-center gap-2.5">
-            <Sparkles className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Problem Bank</h2>
-            {pastSets.length > 0 && (
-              <span className="text-xs text-gray-400 dark:text-gray-500">({pastSets.length} sets)</span>
-            )}
-          </div>
-          <ChevronDown className={`h-4 w-4 text-gray-400 dark:text-gray-500 transition-transform duration-200 ${showPast ? "rotate-180" : ""}`} />
-        </button>
-
-        {/* Merge toolbar */}
-        {showPast && selectedSetIds.size >= 2 && (
-          <div className="px-6 py-3 bg-indigo-50 dark:bg-indigo-950 border-t border-b border-indigo-200 dark:border-indigo-800 flex items-center justify-between flex-wrap gap-2">
-            <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
-              {selectedSetIds.size} sets selected
-            </span>
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={() => setSelectedSetIds(new Set())}
-                size="sm"
-                variant="outline"
-                className="text-xs rounded-lg"
-              >
-                Clear
-              </Button>
-              <Button
-                onClick={handleMergeSelected}
-                size="sm"
-                className="gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs"
-              >
-                <Layers className="h-3.5 w-3.5" />
-                Merge Selected
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {loadingPast && (
-          <div className="px-6 py-8 text-center">
-            <Loader2 className="h-5 w-5 animate-spin text-gray-400 dark:text-gray-500 mx-auto" />
-          </div>
-        )}
-
-        {showPast && pastSets.length === 0 && !loadingPast && (
-          <div className="px-6 py-8 text-center">
-            <p className="text-sm text-gray-400 dark:text-gray-500">No saved problem sets yet. Generate some problems above!</p>
-          </div>
-        )}
-
-        {showPast && pastSets.length > 0 && (
-          <div className="border-t border-gray-100 dark:border-gray-800">
-            {pastSets.map((ps) => (
-              <div
-                key={ps.id}
-                className={`flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-b border-gray-50 dark:border-gray-800 last:border-b-0 ${
-                  selectedSetIds.has(ps.id) ? "bg-indigo-50/50 dark:bg-indigo-950/30" : ""
-                }`}
-              >
-                <div className="flex items-center flex-1 min-w-0">
-                  <label
-                    className="flex items-center pl-4 sm:pl-6 py-3 cursor-pointer shrink-0"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedSetIds.has(ps.id)}
-                      onChange={() => toggleSetSelection(ps.id)}
-                      className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
-                    />
-                  </label>
-                  <button
-                    onClick={() => loadProblemSet(ps)}
-                    className="flex-1 px-3 py-3 text-left min-w-0"
-                  >
-                    <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{ps.topic}</p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                      {ps.problems.length} problems &middot; {ps.questionType} &middot; Difficulty {ps.difficulty}/5
-                      {ps.createdBy && ` \u00B7 by ${ps.createdBy}`}
-                    </p>
-                  </button>
-                </div>
-                <div className="flex items-center gap-2 pr-4">
-                  <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0">
-                    {new Date(ps.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                  </span>
-                  {canDeleteSet(ps) && (
-                    <button
-                      onClick={(e) => deleteProblemSet(e, ps.id)}
-                      disabled={deletingSetId === ps.id}
-                      className="p-1.5 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950 transition-colors disabled:opacity-50"
-                      title="Delete problem set"
-                    >
-                      {deletingSetId === ps.id ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-3.5 w-3.5" />
-                      )}
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      <ProblemBank
+        pastSets={pastSets}
+        showPast={showPast}
+        loadingPast={loadingPast}
+        selectedSetIds={selectedSetIds}
+        deletingSetId={deletingSetId}
+        onToggleShow={loadPastSets}
+        onToggleSetSelection={toggleSetSelection}
+        onLoadProblemSet={loadProblemSet}
+        onRequestDelete={requestDeleteProblemSet}
+        onMergeSelected={handleMergeSelected}
+        onClearSelection={() => setSelectedSetIds(new Set())}
+        canDeleteSet={canDeleteSet}
+      />
+      <AlertDialog open={!!pendingDeleteSetId} onOpenChange={(open) => { if (!open) setPendingDeleteSetId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Problem Set</AlertDialogTitle>
+            <AlertDialogDescription>
+              Delete this problem set? This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteProblemSet} className="bg-red-600 hover:bg-red-700 text-white">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
