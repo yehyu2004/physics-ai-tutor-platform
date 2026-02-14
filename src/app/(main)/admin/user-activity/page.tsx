@@ -19,18 +19,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
 import { useTheme } from "next-themes";
-import { CATEGORY_COLORS, CATEGORY_LABELS, ROLE_BADGE_COLORS } from "@/lib/constants";
+import { CATEGORY_LABELS, ROLE_BADGE_COLORS } from "@/lib/constants";
 import { formatDuration, timeAgo } from "@/lib/utils";
+import { ActivityChart } from "@/components/admin/ActivityChart";
+import { UsageBreakdown } from "@/components/admin/UsageBreakdown";
 
 interface RecentActivityItem {
   id: string;
@@ -232,12 +225,6 @@ export default function AdminUserActivityPage() {
     { key: "all", label: "All Time" },
   ];
 
-  // Chart theme colors
-  const gridColor = isDark ? "#374151" : "#e5e7eb";
-  const tickColor = isDark ? "#9ca3af" : "#6b7280";
-  const tooltipBg = isDark ? "#1f2937" : "#ffffff";
-  const tooltipBorder = isDark ? "#374151" : "#e5e7eb";
-
   return (
     <div className="space-y-6">
       <div>
@@ -392,94 +379,11 @@ export default function AdminUserActivityPage() {
             </Card>
           </div>
 
-          {/* Daily Activity Trend - Bar Chart */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Daily Activity Trend</CardTitle>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                Activity count by category over time
-              </p>
-            </CardHeader>
-            <CardContent>
-              {data.dailyTrend.every((d) => d.total === 0) ? (
-                <div className="flex items-center justify-center h-[300px]">
-                  <p className="text-sm text-neutral-400 dark:text-neutral-500">
-                    No activity in this period
-                  </p>
-                </div>
-              ) : (
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={data.dailyTrend}>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke={gridColor}
-                      vertical={false}
-                    />
-                    <XAxis
-                      dataKey="label"
-                      fontSize={11}
-                      tickLine={false}
-                      axisLine={false}
-                      interval="preserveStartEnd"
-                      tick={{ fill: tickColor }}
-                    />
-                    <YAxis
-                      fontSize={12}
-                      tickLine={false}
-                      axisLine={false}
-                      allowDecimals={false}
-                      tick={{ fill: tickColor }}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        borderRadius: "8px",
-                        border: `1px solid ${tooltipBorder}`,
-                        fontSize: "13px",
-                        backgroundColor: tooltipBg,
-                        color: isDark ? "#e5e7eb" : "#1f2937",
-                      }}
-                      formatter={(
-                        value: number | undefined,
-                        name: string | undefined
-                      ) => [
-                        value ?? 0,
-                        CATEGORY_LABELS[name || ""] || name || "",
-                      ]}
-                      cursor={{ fill: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" }}
-                    />
-                    {data.trendCategories.map((cat) => (
-                      <Bar
-                        key={cat}
-                        dataKey={cat}
-                        stackId="1"
-                        fill={CATEGORY_COLORS[cat] || "#94a3b8"}
-                        radius={[0, 0, 0, 0]}
-                      />
-                    ))}
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-
-              {/* Legend */}
-              {data.trendCategories.length > 1 && (
-                <div className="flex flex-wrap gap-3 mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
-                  {data.trendCategories.map((cat) => (
-                    <div key={cat} className="flex items-center gap-1.5">
-                      <div
-                        className="w-3 h-3 rounded-sm"
-                        style={{
-                          backgroundColor: CATEGORY_COLORS[cat] || "#94a3b8",
-                        }}
-                      />
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        {CATEGORY_LABELS[cat] || cat}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <ActivityChart
+            dailyTrend={data.dailyTrend}
+            trendCategories={data.trendCategories}
+            isDark={isDark}
+          />
 
           {/* Two-column: Top Users + Recent Activity */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -595,109 +499,12 @@ export default function AdminUserActivityPage() {
             </Card>
           </div>
 
-          {/* Time Usage Breakdown */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-base">
-                    Usage Breakdown
-                  </CardTitle>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-                    Activity count and time grouped by different dimensions
-                  </p>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  {(
-                    [
-                      { key: "activity" as const, label: "Activity" },
-                      { key: "identity" as const, label: "Identity" },
-                    ] as const
-                  ).map((f) => (
-                    <button
-                      key={f.key}
-                      onClick={() => setBreakdownView(f.key)}
-                      className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
-                        breakdownView === f.key
-                          ? "bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900"
-                          : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
-                      }`}
-                    >
-                      {f.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {(() => {
-                const items =
-                  breakdownView === "activity"
-                    ? data.timeByCategory.map((d) => ({
-                        label: d.label,
-                        count: d.count,
-                        totalMs: d.totalMs,
-                        color: d.color,
-                      }))
-                    : data.timeByRole.map((d) => ({
-                        ...d,
-                        color: "#6366f1",
-                      }));
-
-                if (items.length === 0) {
-                  return (
-                    <div className="flex items-center justify-center py-12">
-                      <p className="text-sm text-neutral-400 dark:text-neutral-500">
-                        No data available
-                      </p>
-                    </div>
-                  );
-                }
-
-                const maxCount = Math.max(
-                  ...items.map((d) => d.count),
-                  1
-                );
-
-                return (
-                  <div className="space-y-3">
-                    {items.map((item, i) => (
-                      <div key={i} className="flex items-center gap-4">
-                        <div className="w-[140px] shrink-0">
-                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                            {item.label}
-                          </span>
-                        </div>
-                        <div className="flex-1 flex items-center gap-3">
-                          <div className="flex-1 h-6 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                            <div
-                              className="h-full rounded-full transition-all"
-                              style={{
-                                width: `${Math.max((item.count / maxCount) * 100, item.count > 0 ? 2 : 0)}%`,
-                                backgroundColor: item.color,
-                              }}
-                            />
-                          </div>
-                          <div className="w-[60px] text-right shrink-0">
-                            <span className="text-sm font-bold text-gray-900 dark:text-gray-100 tabular-nums">
-                              {item.count}
-                            </span>
-                          </div>
-                          <div className="w-[50px] text-right shrink-0">
-                            <span className="text-xs text-gray-400 dark:text-gray-500">
-                              {item.totalMs > 0
-                                ? formatDuration(item.totalMs)
-                                : "--"}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                );
-              })()}
-            </CardContent>
-          </Card>
+          <UsageBreakdown
+            timeByCategory={data.timeByCategory}
+            timeByRole={data.timeByRole}
+            breakdownView={breakdownView}
+            onBreakdownViewChange={setBreakdownView}
+          />
         </>
       )}
     </div>

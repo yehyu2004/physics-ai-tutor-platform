@@ -35,6 +35,16 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Pagination } from "@/components/ui/pagination";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // Extracted subcomponents
 import { SubmissionList } from "@/components/grading/SubmissionList";
@@ -152,6 +162,9 @@ export default function GradingPage() {
   const [appealMessages, setAppealMessages] = useState<Record<string, string>>({});
   const [appealNewScores, setAppealNewScores] = useState<Record<string, string>>({});
   const [resolvingAppeal, setResolvingAppeal] = useState<string | null>(null);
+  const [showFinalizeConfirm, setShowFinalizeConfirm] = useState(false);
+  const [pendingAppealAction, setPendingAppealAction] = useState<{ appealId: string; status: "RESOLVED" | "REJECTED" | "OPEN" } | null>(null);
+  const [showUnfinalizeConfirm, setShowUnfinalizeConfirm] = useState(false);
   const [expandedAppeals, setExpandedAppeals] = useState<Record<string, boolean>>({});
   const [appealImages, setAppealImages] = useState<Record<string, string[]>>({});
   const { upload: handleUploadImage, uploading: uploadingImage } = useUploadFile();
@@ -409,12 +422,15 @@ export default function GradingPage() {
     if (gradingMode === "per-question") {
       const manualAnswers = selectedSubmission.answers.filter(a => !a.autoGraded);
       if (confirmedAnswers.size < manualAnswers.length) {
-        const confirmed = window.confirm(
-          `You have only confirmed ${confirmedAnswers.size} out of ${manualAnswers.length} scores. Finalize anyway?`
-        );
-        if (!confirmed) return;
+        setShowFinalizeConfirm(true);
+        return;
       }
     }
+    await executeSaveGrades();
+  };
+
+  const executeSaveGrades = async () => {
+    if (!selectedSubmission) return;
 
     setSaving(true);
     try {
@@ -503,9 +519,14 @@ export default function GradingPage() {
     }
   };
 
-  const handleResolveAppeal = async (appealId: string, status: "RESOLVED" | "REJECTED" | "OPEN") => {
-    const action = status === "RESOLVED" ? "resolve" : status === "REJECTED" ? "reject" : "reopen";
-    if (!window.confirm(`Are you sure you want to ${action} this appeal?`)) return;
+  const handleResolveAppeal = (appealId: string, status: "RESOLVED" | "REJECTED" | "OPEN") => {
+    setPendingAppealAction({ appealId, status });
+  };
+
+  const executeResolveAppeal = async () => {
+    if (!pendingAppealAction) return;
+    const { appealId, status } = pendingAppealAction;
+    setPendingAppealAction(null);
     const newScoreStr = appealNewScores[appealId];
     const newScore = status === "RESOLVED" && newScoreStr ? parseFloat(newScoreStr) : undefined;
     const message = appealMessages[appealId];
@@ -814,22 +835,7 @@ export default function GradingPage() {
                     <SaveStatusIndicator status={gradingAutoSaveStatus} />
                     {selectedSubmission.gradedAt ? (
                       <Button
-                        onClick={async () => {
-                          if (!window.confirm("This will mark this submission as ungraded. Continue?")) return;
-                          setSaving(true);
-                          try {
-                            const res = await fetch("/api/grading", {
-                              method: "POST",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ submissionId: selectedSubmission.id, ungrade: true }),
-                            });
-                            if (res.ok) {
-                              setSubmissions((prev) => prev.map((s) => s.id !== selectedSubmission.id ? s : { ...s, totalScore: null, gradedAt: null, gradedByName: null }));
-                              setSelectedSubmission((prev) => prev ? { ...prev, totalScore: null, gradedAt: null, gradedByName: null } : prev);
-                              fetchAssignmentList(assignmentPage, assignmentPageSize, undefined, true);
-                            }
-                          } finally { setSaving(false); }
-                        }}
+                        onClick={() => setShowUnfinalizeConfirm(true)}
                         disabled={saving}
                         variant="outline"
                         size="sm"
@@ -847,8 +853,7 @@ export default function GradingPage() {
                         className="gap-1.5 bg-gray-900 dark:bg-gray-100 hover:bg-gray-800 dark:hover:bg-gray-200 text-white dark:text-gray-900 rounded-lg"
                       >
                         {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                        <span className="hidden sm:inline">Finalize Grading</span>
-                        <span className="sm:hidden">Finalize</span>
+                        Finalize
                       </Button>
                     )}
                   </div>
@@ -979,6 +984,77 @@ export default function GradingPage() {
           </div>
         </div>
       )}
+      <AlertDialog open={showFinalizeConfirm} onOpenChange={setShowFinalizeConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Finalize with Unconfirmed Scores</AlertDialogTitle>
+            <AlertDialogDescription>
+              {selectedSubmission && (() => {
+                const manualAnswers = selectedSubmission.answers.filter(a => !a.autoGraded);
+                return `You have only confirmed ${confirmedAnswers.size} out of ${manualAnswers.length} scores. Finalize anyway?`;
+              })()}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { setShowFinalizeConfirm(false); executeSaveGrades(); }}>
+              Finalize
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!pendingAppealAction} onOpenChange={(open) => { if (!open) setPendingAppealAction(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pendingAppealAction?.status === "RESOLVED" ? "Resolve" : pendingAppealAction?.status === "REJECTED" ? "Reject" : "Reopen"} Appeal
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to {pendingAppealAction?.status === "RESOLVED" ? "resolve" : pendingAppealAction?.status === "REJECTED" ? "reject" : "reopen"} this appeal?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={executeResolveAppeal}>
+              Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showUnfinalizeConfirm} onOpenChange={setShowUnfinalizeConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unfinalize Submission</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will mark this submission as ungraded. Continue?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={async () => {
+              setShowUnfinalizeConfirm(false);
+              if (!selectedSubmission) return;
+              setSaving(true);
+              try {
+                const res = await fetch("/api/grading", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ submissionId: selectedSubmission.id, ungrade: true }),
+                });
+                if (res.ok) {
+                  setSubmissions((prev) => prev.map((s) => s.id !== selectedSubmission.id ? s : { ...s, totalScore: null, gradedAt: null, gradedByName: null }));
+                  setSelectedSubmission((prev) => prev ? { ...prev, totalScore: null, gradedAt: null, gradedByName: null } : prev);
+                  fetchAssignmentList(assignmentPage, assignmentPageSize, undefined, true);
+                }
+              } finally { setSaving(false); }
+            }} className="bg-amber-600 hover:bg-amber-700 text-white">
+              Unfinalize
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
