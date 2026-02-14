@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useEffectiveSession } from "@/lib/effective-session-context";
 import { useTrackTime } from "@/lib/use-track-time";
@@ -57,6 +57,7 @@ export default function AssignmentsPage() {
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const [searchInput, setSearchInput] = useState("");
   const [activeSearch, setActiveSearch] = useState("");
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const userRole = effectiveSession.role;
 
@@ -156,10 +157,24 @@ export default function AssignmentsPage() {
         <div className="relative w-full sm:w-64">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
-            placeholder="Search and press Enter..."
+            placeholder="Search assignments..."
             value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") { setActiveSearch(searchInput); setPage(1); } }}
+            onChange={(e) => {
+              const val = e.target.value;
+              setSearchInput(val);
+              if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+              searchTimerRef.current = setTimeout(() => {
+                setActiveSearch(val);
+                setPage(1);
+              }, 300);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+                setActiveSearch(searchInput);
+                setPage(1);
+              }
+            }}
             className="pl-9 h-9"
           />
         </div>

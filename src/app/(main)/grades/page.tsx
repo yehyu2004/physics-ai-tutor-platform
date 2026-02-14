@@ -14,9 +14,11 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { formatShortDate } from "@/lib/utils";
 import { api } from "@/lib/api-client";
+import Link from "next/link";
 
 interface GradeEntry {
   id: string;
+  assignmentId: string;
   assignmentTitle: string;
   assignmentType: string;
   totalPoints: number;
@@ -49,18 +51,47 @@ function getLetterGrade(pct: number) {
 export default function GradesPage() {
   const [grades, setGrades] = useState<GradeEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchGrades = () => {
+    setLoading(true);
+    setError(null);
     api.get<{ grades: GradeEntry[] }>("/api/grades")
       .then((data) => {
         setGrades(data.grades || []);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch((err) => {
+        console.error("[GradesPage] Failed to load grades:", err);
+        setError("Failed to load grades. Please try again.");
+        setLoading(false);
+      });
+  };
+
+  useEffect(() => {
+    fetchGrades();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (loading) {
     return <LoadingSpinner message="Loading grades..." />;
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-4">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
+          <GraduationCap className="h-6 w-6 text-red-600 dark:text-red-400" />
+        </div>
+        <p className="text-sm text-gray-500 dark:text-gray-400">{error}</p>
+        <button
+          onClick={fetchGrades}
+          className="rounded-lg bg-gray-900 dark:bg-gray-100 px-4 py-2 text-sm font-medium text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
+        >
+          Try again
+        </button>
+      </div>
+    );
   }
 
   const gradedEntries = grades.filter((g) => g.score !== null);
@@ -154,13 +185,14 @@ export default function GradesPage() {
               const colors = scored ? getScoreColor(grade.score as number, grade.totalPoints) : null;
 
               return (
-                <div
+                <Link
+                  href={`/assignments/${grade.assignmentId}`}
                   key={grade.id}
                   role="listitem"
                   className="flex items-center gap-4 px-6 py-4 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors"
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                    <p className="font-medium text-gray-900 dark:text-gray-100 truncate hover:underline">
                       {grade.assignmentTitle}
                     </p>
                     <div className="flex items-center gap-3 mt-1.5">
@@ -205,7 +237,7 @@ export default function GradesPage() {
                       <span className="text-sm font-medium">Pending</span>
                     </div>
                   )}
-                </div>
+                </Link>
               );
             })}
           </div>

@@ -6,5 +6,11 @@ export default async function SettingsPage() {
   const session = await getEffectiveSession();
   if (!session?.user) redirect("/login");
 
-  return <SettingsClient />;
+  return (
+    <SettingsClient
+      userName={session.user.name || "User"}
+      userEmail={session.user.email || ""}
+      userRole={(session.user as { role?: string }).role || "STUDENT"}
+    />
+  );
 }

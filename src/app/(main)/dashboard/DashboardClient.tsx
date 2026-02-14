@@ -125,8 +125,8 @@ export default function DashboardClient({
     },
     {
       icon: ClipboardList,
-      label: "Grade Work",
-      description: "Review and grade student submissions",
+      label: "Grading",
+      description: "Review and grade submissions",
       href: "/grading",
       roles: ["TA", "PROFESSOR", "ADMIN"],
     },
@@ -144,18 +144,21 @@ export default function DashboardClient({
           label: "Total Users",
           sublabel: "Platform-wide",
           icon: Users,
+          href: "/admin/users",
         },
         {
           value: adminStats.totalConversations,
           label: "Total Conversations",
           sublabel: "All users combined",
           icon: MessageSquare,
+          href: "/admin/qa-history",
         },
         {
           value: adminStats.totalSubmissions,
           label: "Total Submissions",
           sublabel: "All assignments",
           icon: GraduationCap,
+          href: "/assignments",
         },
       ];
     }
@@ -166,18 +169,21 @@ export default function DashboardClient({
           label: "My Chats",
           sublabel: "AI conversations",
           icon: MessageSquare,
+          href: "/chat",
         },
         {
           value: taStats.pendingGrading,
           label: "Pending Grading",
           sublabel: "Submissions to review",
           icon: ClipboardList,
+          href: "/grading",
         },
         {
           value: taStats.openAppealCount,
           label: "Open Appeals",
           sublabel: "Awaiting response",
           icon: AlertCircle,
+          href: "/grading",
         },
       ];
     }
@@ -187,18 +193,21 @@ export default function DashboardClient({
         label: "Questions Asked",
         sublabel: "AI conversations",
         icon: MessageSquare,
+        href: "/chat",
       },
       {
         value: stats.assignmentCount,
         label: "Assignments",
         sublabel: "Available assignments",
         icon: FileText,
+        href: "/assignments",
       },
       {
         value: stats.submissionCount,
         label: "Submissions",
         sublabel: "Completed work",
         icon: GraduationCap,
+        href: "/grades",
       },
     ];
   })();
@@ -218,14 +227,15 @@ export default function DashboardClient({
         <SectionHeading title="Overview" subtitle="Your activity at a glance" />
         <div className="grid grid-cols-3 gap-2 sm:gap-4">
           {statCards.map((stat, index) => (
-            <div
+            <Link
               key={stat.label}
+              href={stat.href}
               className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl sm:rounded-2xl p-3 sm:p-5 hover:border-gray-200 dark:hover:border-gray-700 transition-colors animate-fade-in group"
               style={{ animationDelay: `${index * 100}ms` }}
             >
-              <div className="hidden sm:flex items-center justify-between mb-3">
-                <div className="h-9 w-9 rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center group-hover:bg-gray-100 dark:group-hover:bg-gray-750 transition-colors">
-                  <stat.icon className="h-4.5 w-4.5 text-gray-500 dark:text-gray-400" />
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <div className="h-7 w-7 sm:h-9 sm:w-9 rounded-lg sm:rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center group-hover:bg-gray-100 dark:group-hover:bg-gray-750 transition-colors">
+                  <stat.icon className="h-3.5 w-3.5 sm:h-4.5 sm:w-4.5 text-gray-500 dark:text-gray-400" />
                 </div>
               </div>
               <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 tabular-nums">
@@ -233,7 +243,7 @@ export default function DashboardClient({
               </p>
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mt-0.5 sm:mt-1 leading-tight">{stat.label}</p>
               <p className="text-[10px] sm:text-xs text-gray-400 dark:text-gray-500 mt-0.5 hidden sm:block">{stat.sublabel}</p>
-            </div>
+            </Link>
           ))}
         </div>
       </div>
@@ -255,7 +265,7 @@ export default function DashboardClient({
                 <p className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
                   {item.label}
                 </p>
-                <p className="text-[10px] sm:text-xs text-gray-400 dark:text-gray-500 mt-0.5 sm:mt-1 leading-relaxed hidden sm:block">
+                <p className="text-[10px] sm:text-xs text-gray-400 dark:text-gray-500 mt-0.5 sm:mt-1 leading-relaxed line-clamp-1 sm:line-clamp-none">
                   {item.description}
                 </p>
               </div>

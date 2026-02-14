@@ -240,12 +240,14 @@ export default function AnalyticsPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" />
                   <XAxis
                     dataKey="title"
-                    fontSize={12}
+                    fontSize={11}
                     tickLine={false}
-                    interval={0}
-                    angle={-20}
+                    angle={-35}
                     textAnchor="end"
-                    height={60}
+                    height={70}
+                    tickFormatter={(title: string) =>
+                      title.length > 18 ? `${title.slice(0, 18)}…` : title
+                    }
                   />
                   <YAxis
                     fontSize={12}

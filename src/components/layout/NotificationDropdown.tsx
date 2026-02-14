@@ -233,7 +233,7 @@ export function NotificationDropdown({
                       <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-blue-500" />
                     )}
                   </div>
-                  <span className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed block">
+                  <span className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1 leading-relaxed block">
                     {n.message}
                   </span>
                   <span className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5 block">

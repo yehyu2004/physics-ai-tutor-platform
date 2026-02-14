@@ -23,6 +23,7 @@ export async function GET() {
 
     const grades = submissions.map((s) => ({
       id: s.id,
+      assignmentId: s.assignmentId,
       assignmentTitle: s.assignment.title,
       assignmentType: s.assignment.type,
       totalPoints: s.assignment.totalPoints,

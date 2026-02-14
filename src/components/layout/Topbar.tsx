@@ -31,6 +31,16 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -108,11 +118,12 @@ export default function Topbar({ userName, userEmail, userImage, userRole, onMob
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [notifyDialogOpen, setNotifyDialogOpen] = useState(false);
-
+  const [dynamicLabel, setDynamicLabel] = useState<string | null>(null);
   const [examModeActive, setExamModeActive] = useState(false);
   const [examModeMessage, setExamModeMessage] = useState<string | null>(null);
   const [examTooltipOpen, setExamTooltipOpen] = useState(false);
   const [examToggling, setExamToggling] = useState(false);
+  const [examConfirmOpen, setExamConfirmOpen] = useState(false);
 
   const isStaff = isStaffRole(userRole);
 
@@ -253,6 +264,22 @@ export default function Topbar({ userName, userEmail, userImage, userRole, onMob
     }
   };
 
+  // Fetch dynamic breadcrumb label for detail pages (e.g., assignment title)
+  useEffect(() => {
+    const match = pathname.match(/^\/assignments\/([a-z0-9]{20,})$/i);
+    if (match) {
+      fetch(`/api/assignments/${match[1]}`)
+        .then((r) => r.ok ? r.json() : null)
+        .then((data) => {
+          if (data?.assignment?.title) setDynamicLabel(data.assignment.title);
+          else setDynamicLabel(null);
+        })
+        .catch((err) => { console.error("[Topbar] Failed to fetch breadcrumb label:", err); setDynamicLabel(null); });
+    } else {
+      setDynamicLabel(null);
+    }
+  }, [pathname]);
+
   const getBreadcrumbs = () => {
     const segments = pathname.split("/").filter(Boolean);
     const crumbs: { label: string; href: string }[] = [];
@@ -260,8 +287,13 @@ export default function Topbar({ userName, userEmail, userImage, userRole, onMob
     let currentPath = "";
     for (const segment of segments) {
       currentPath += `/${segment}`;
-      // Skip segments that look like database IDs (cuid, uuid, etc.)
-      if (/^[a-z0-9]{20,}$/i.test(segment) || /^[0-9a-f]{8}-/.test(segment)) continue;
+      // For database IDs, show the dynamic label if available
+      if (/^[a-z0-9]{20,}$/i.test(segment) || /^[0-9a-f]{8}-/.test(segment)) {
+        if (dynamicLabel) {
+          crumbs.push({ label: dynamicLabel, href: currentPath });
+        }
+        continue;
+      }
       const label = routeLabels[currentPath] || segment.charAt(0).toUpperCase() + segment.slice(1);
       crumbs.push({ label, href: currentPath });
     }
@@ -350,7 +382,7 @@ export default function Topbar({ userName, userEmail, userImage, userRole, onMob
           {/* Exam Mode Toggle for Staff (when not active) */}
           {!examModeActive && isStaff && (
             <button
-              onClick={toggleExamMode}
+              onClick={() => setExamConfirmOpen(true)}
               disabled={examToggling}
               className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-md bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 text-xs font-medium hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 transition-colors disabled:opacity-50"
               title="Enable Exam Mode"
@@ -504,6 +536,38 @@ export default function Topbar({ userName, userEmail, userImage, userRole, onMob
         sendButtonLabel="Send Announcement"
         successMessage="Announcement sent successfully"
       />
+
+      <AlertDialog open={examConfirmOpen} onOpenChange={setExamConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Enable Exam Mode?</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <span className="block">
+                Exam Mode restricts the AI tutor for all students. While active:
+              </span>
+              <span className="block pl-4">
+                • The AI will only provide guided hints, not direct answers
+              </span>
+              <span className="block pl-4">
+                • Students will see an &quot;Exam Mode Active&quot; indicator
+              </span>
+              <span className="block pl-4">
+                • You can turn it off at any time from the top bar
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => toggleExamMode()}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              <ShieldAlert className="h-4 w-4 mr-1.5" />
+              Enable Exam Mode
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
