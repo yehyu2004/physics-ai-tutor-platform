@@ -2,7 +2,7 @@
  * Shared scoring and challenge system for physics simulations.
  */
 
-export type ScoreTier = "perfect" | "great" | "good" | "close" | "miss";
+type ScoreTier = "perfect" | "great" | "good" | "close" | "miss";
 
 export interface Score {
   points: number;
@@ -53,17 +53,6 @@ export function calculateAccuracy(
     return { points: 1, tier: "close", label: "Close!" };
   }
   return { points: 0, tier: "miss", label: "Try Again" };
-}
-
-/** Get color for score tier */
-export function tierColor(tier: ScoreTier): string {
-  switch (tier) {
-    case "perfect": return "#22c55e";
-    case "great": return "#3b82f6";
-    case "good": return "#60a5fa";
-    case "close": return "#f59e0b";
-    case "miss": return "#ef4444";
-  }
 }
 
 /** Render animated score popup on canvas */

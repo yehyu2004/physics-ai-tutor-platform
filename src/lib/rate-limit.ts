@@ -33,14 +33,3 @@ export function checkRateLimit(userId: string, isRestricted: boolean): { allowed
   return { allowed: true, remaining: limit - entry.count, resetAt: entry.resetAt };
 }
 
-export function getRateLimitInfo(userId: string, isRestricted: boolean): { count: number; limit: number; resetAt: number } {
-  const limit = isRestricted ? MAX_REQUESTS_RESTRICTED : MAX_REQUESTS_NORMAL;
-  const entry = rateLimitMap.get(userId);
-  const now = Date.now();
-
-  if (!entry || now > entry.resetAt) {
-    return { count: 0, limit, resetAt: now + WINDOW_MS };
-  }
-
-  return { count: entry.count, limit, resetAt: entry.resetAt };
-}

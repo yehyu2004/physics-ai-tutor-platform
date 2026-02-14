@@ -281,39 +281,6 @@ ${questionType === "MC" ? '- options: string[] (array of 4 options, each with La
 }
 
 
-export async function generateProblems(
-  topic: string,
-  difficulty: number,
-  count: number,
-  questionType: string,
-  provider: AIProvider = "openai",
-  customInstructions?: string
-) {
-  const prompt = buildProblemPrompt(topic, difficulty, count, questionType, "array", customInstructions);
-
-  if (provider === "openai") {
-    const response = await openai.responses.create({
-      model: "gpt-5.2",
-      input: [
-        { role: "developer", content: PROBLEM_GEN_SYSTEM },
-        { role: "user", content: prompt },
-      ],
-      reasoning: { effort: "low" },
-      text: { format: { type: "json_object" } },
-    });
-    return response.output_text;
-  } else {
-    const response = await anthropic.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 4096,
-      system: PROBLEM_GEN_SYSTEM,
-      messages: [{ role: "user", content: prompt }],
-    });
-    const block = response.content[0];
-    return block.type === "text" ? block.text : null;
-  }
-}
-
 export async function streamGenerateProblems(
   topic: string,
   difficulty: number,

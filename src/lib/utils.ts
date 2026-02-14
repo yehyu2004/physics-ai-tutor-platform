@@ -32,15 +32,6 @@ export function formatDateOnly(date: Date | string) {
   }).format(new Date(date));
 }
 
-export function getInitials(name: string) {
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-}
-
 /** Format milliseconds into a human-readable duration string */
 export function formatDuration(ms: number): string {
   if (ms < 1000) return "<1s";

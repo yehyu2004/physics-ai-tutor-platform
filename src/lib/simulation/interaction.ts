@@ -2,28 +2,6 @@
  * Mouse/touch interaction helpers for canvas-based simulations.
  */
 
-export interface DragState {
-  isDragging: boolean;
-  startX: number;
-  startY: number;
-  currentX: number;
-  currentY: number;
-  deltaX: number;
-  deltaY: number;
-}
-
-export interface CanvasButton {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  label: string;
-  onClick: () => void;
-  isHovered?: boolean;
-  color?: string;
-  activeColor?: string;
-}
-
 /** Get mouse position relative to canvas in logical (CSS) coordinates.
  *  Works correctly with HiDPI canvases where canvas.width includes the
  *  devicePixelRatio multiplier but the drawing context is scaled to match. */
@@ -174,54 +152,3 @@ export function createDragHandler(
   };
 }
 
-/** Draw canvas buttons and handle hover states */
-export function drawCanvasButton(
-  ctx: CanvasRenderingContext2D,
-  btn: CanvasButton,
-) {
-  const color = btn.color ?? "#3b82f6";
-  const isHov = btn.isHovered ?? false;
-
-  ctx.fillStyle = isHov ? (btn.activeColor ?? color) : "rgba(255,255,255,0.05)";
-  ctx.beginPath();
-  (ctx as CanvasRenderingContext2D).roundRect(btn.x, btn.y, btn.w, btn.h, 6);
-  ctx.fill();
-
-  ctx.strokeStyle = isHov ? color : "rgba(255,255,255,0.2)";
-  ctx.lineWidth = 1;
-  ctx.stroke();
-
-  ctx.fillStyle = isHov ? "#ffffff" : "rgba(255,255,255,0.7)";
-  ctx.font = "bold 12px ui-monospace, monospace";
-  ctx.textAlign = "center";
-  ctx.fillText(btn.label, btn.x + btn.w / 2, btn.y + btn.h / 2 + 4);
-}
-
-/** Handle hover detection for canvas buttons */
-export function updateButtonHover(
-  buttons: CanvasButton[],
-  mx: number,
-  my: number,
-): boolean {
-  let anyHovered = false;
-  for (const btn of buttons) {
-    btn.isHovered = isPointInRect(mx, my, btn.x, btn.y, btn.w, btn.h);
-    if (btn.isHovered) anyHovered = true;
-  }
-  return anyHovered;
-}
-
-/** Handle click for canvas buttons */
-export function handleButtonClick(
-  buttons: CanvasButton[],
-  x: number,
-  y: number,
-): boolean {
-  for (const btn of buttons) {
-    if (isPointInRect(x, y, btn.x, btn.y, btn.w, btn.h)) {
-      btn.onClick();
-      return true;
-    }
-  }
-  return false;
-}

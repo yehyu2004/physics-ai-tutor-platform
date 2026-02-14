@@ -1,0 +1,25 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "src/app/**/*.{ts,tsx}",
+    "e2e/**/*.ts",
+    "prisma/seed-email-templates.ts",
+    "scripts/**/*.{sh,ts}"
+  ],
+  "ignoreDependencies": [
+    "postcss-load-config",
+    "vercel",
+    "@google/generative-ai"
+  ],
+  "ignoreExportsUsedInFile": {
+    "interface": true,
+    "type": true
+  },
+  "paths": {
+    "@/*": ["src/*"]
+  },
+  "rules": {
+    "exports": "warn",
+    "types": "warn"
+  }
+}

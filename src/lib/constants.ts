@@ -50,6 +50,3 @@ export const isStaff = (role: string): boolean =>
 /** Check if a role is ADMIN */
 export const isAdmin = (role: string): boolean => role === "ADMIN";
 
-/** Check if a role can manage students (same as isStaff) */
-export const canManageStudents = (role: string): boolean =>
-  STAFF_ROLES.includes(role as (typeof STAFF_ROLES)[number]);

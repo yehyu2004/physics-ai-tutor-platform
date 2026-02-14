@@ -30,22 +30,6 @@ function getGain(): GainNode | null {
   return masterGain;
 }
 
-export function setVolume(v: number) {
-  const g = getGain();
-  if (g) g.gain.value = Math.max(0, Math.min(1, v));
-}
-
-export function isMuted(): boolean {
-  return muted;
-}
-
-export function toggleMute(): boolean {
-  muted = !muted;
-  const g = getGain();
-  if (g) g.gain.value = muted ? 0 : 0.3;
-  return muted;
-}
-
 function playTone(
   freq: number,
   duration: number,
@@ -92,7 +76,7 @@ function playNoise(duration: number, volume = 0.1) {
   source.start();
 }
 
-export type SFXName =
+type SFXName =
   | "click"
   | "success"
   | "fail"

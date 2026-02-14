@@ -62,31 +62,6 @@ export function drawArrow(
   ctx.restore();
 }
 
-/** Draw a glowing circle */
-export function drawGlowCircle(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  r: number,
-  color: string,
-  glowRadius?: number,
-) {
-  const gr = glowRadius ?? r * 2;
-  const gradient = ctx.createRadialGradient(x, y, r * 0.3, x, y, gr);
-  gradient.addColorStop(0, color);
-  gradient.addColorStop(0.5, color.replace(")", ", 0.3)").replace("rgb(", "rgba("));
-  gradient.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = gradient;
-  ctx.beginPath();
-  ctx.arc(x, y, gr, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.arc(x, y, r, 0, Math.PI * 2);
-  ctx.fill();
-}
-
 /** Draw a rounded info panel */
 export function drawInfoPanel(
   ctx: CanvasRenderingContext2D,
@@ -210,28 +185,3 @@ export function drawTarget(
   ctx.fill();
 }
 
-/** Draw a challenge mode badge */
-export function drawChallengeBadge(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  text: string,
-  active: boolean,
-) {
-  const w = ctx.measureText(text).width + 20;
-  const h = 24;
-
-  ctx.fillStyle = active ? "rgba(245,158,11,0.2)" : "rgba(255,255,255,0.05)";
-  ctx.beginPath();
-  (ctx as CanvasRenderingContext2D).roundRect(x - w / 2, y - h / 2, w, h, 12);
-  ctx.fill();
-
-  ctx.strokeStyle = active ? "#f59e0b" : "rgba(255,255,255,0.2)";
-  ctx.lineWidth = 1;
-  ctx.stroke();
-
-  ctx.fillStyle = active ? "#f59e0b" : "rgba(255,255,255,0.5)";
-  ctx.font = "bold 11px ui-monospace, monospace";
-  ctx.textAlign = "center";
-  ctx.fillText(text, x, y + 4);
-}

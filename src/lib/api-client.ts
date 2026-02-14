@@ -1,11 +1,11 @@
-export class ApiError extends Error {
+class ApiError extends Error {
   constructor(public status: number, message: string) {
     super(message);
     this.name = "ApiError";
   }
 }
 
-export async function apiFetch<T>(
+async function apiFetch<T>(
   url: string,
   options?: RequestInit
 ): Promise<T> {
