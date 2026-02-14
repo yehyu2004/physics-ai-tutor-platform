@@ -57,7 +57,6 @@ export async function GET(req: Request) {
               message: scheduled.message,
               createdById: scheduled.createdById,
               isGlobal: true,
-              ...(scheduled.assignmentId && { assignmentId: scheduled.assignmentId }),
             },
           });
         }

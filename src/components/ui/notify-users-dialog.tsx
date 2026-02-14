@@ -181,7 +181,7 @@ export function NotifyUsersDialog({
           const returnedId = await onBeforeSend(subject.trim(), message.trim(), scheduledAt);
           if (returnedId) effectiveAssignmentId = returnedId;
         }
-        // Create scheduled email for delivery; notification is created immediately below
+        // Always create a scheduled notification; include email recipients only if "Also send as email" is checked
         const res = await fetch("/api/admin/scheduled-emails", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -190,7 +190,7 @@ export function NotifyUsersDialog({
             message: message.trim(),
             scheduledAt: scheduledDate.toISOString(),
             recipientIds: alsoEmail ? Array.from(selected) : [],
-            createNotification: false,
+            createNotification: true,
             ...(effectiveAssignmentId ? { assignmentId: effectiveAssignmentId } : {}),
           }),
         });
@@ -198,13 +198,6 @@ export function NotifyUsersDialog({
           toast.error("Failed to schedule");
           return;
         }
-
-        // Create immediate in-app notification (don't defer to cron)
-        await fetch("/api/notifications", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title: subject.trim(), message: message.trim() }),
-        });
 
         setSuccessMsg(`Scheduled for ${scheduledDate.toLocaleString()}`);
         setSuccess(true);

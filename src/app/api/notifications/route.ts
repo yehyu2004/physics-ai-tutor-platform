@@ -136,14 +136,14 @@ export async function POST(req: Request) {
     const auth = await requireApiRole(["TA", "PROFESSOR", "ADMIN"]);
     if (isErrorResponse(auth)) return auth;
     const createdById = auth.user.id;
-    const { title, message, assignmentId } = await req.json();
+    const { title, message } = await req.json();
 
     if (!title || !message) {
       return NextResponse.json({ error: "Title and message are required" }, { status: 400 });
     }
 
     const notification = await prisma.notification.create({
-      data: { title, message, createdById, ...(assignmentId && { assignmentId }) },
+      data: { title, message, createdById },
     });
 
     return NextResponse.json({ notification }, { status: 201 });
