@@ -222,6 +222,7 @@ export default function CreateAssignmentPage() {
               </Button>
             )}
             <Button
+              variant="outline"
               onClick={() => handleSubmit(formData, getQuestionsWithUrls, true)}
               disabled={loading || exportingLatex || !titleValid}
             >
