@@ -89,6 +89,7 @@ export async function GET(req: Request) {
                   title: `New Assignment: ${assignment.title}`,
                   message: `A new assignment "${assignment.title}" has been published.${assignment.dueDate ? ` Due: ${dueDateStr}` : ""}`,
                   createdById: assignment.createdById,
+                  assignmentId: assignment.id,
                   isGlobal: true,
                 },
               });

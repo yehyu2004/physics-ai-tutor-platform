@@ -141,7 +141,7 @@ export function PublishDialogs({
           await fetch("/api/notifications", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ title: subj, message: msg }),
+            body: JSON.stringify({ title: subj, message: msg, assignmentId: assignment.id }),
           });
         }}
         onSent={() => {

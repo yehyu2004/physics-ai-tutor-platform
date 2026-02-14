@@ -205,6 +205,13 @@ export async function PATCH(
       });
     }
 
+    // Delete notifications linked to this assignment when unpublishing
+    if (data.published === false) {
+      await prisma.notification.deleteMany({
+        where: { assignmentId: params.id },
+      });
+    }
+
     const assignment = await prisma.assignment.update({
       where: { id: params.id },
       data: {

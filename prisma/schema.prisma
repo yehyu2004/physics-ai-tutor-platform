@@ -161,6 +161,7 @@ model Assignment {
   questions       AssignmentQuestion[]
   submissions     Submission[]
   scheduledEmails ScheduledEmail[]
+  notifications   Notification[]
 }
 
 model AssignmentQuestion {
@@ -280,15 +281,19 @@ model AuditLog {
 }
 
 model Notification {
-  id          String   @id @default(cuid())
-  title       String
-  message     String   @db.Text
-  createdById String
-  isGlobal    Boolean  @default(true)
-  createdAt   DateTime @default(now())
+  id           String   @id @default(cuid())
+  title        String
+  message      String   @db.Text
+  createdById  String
+  isGlobal     Boolean  @default(true)
+  assignmentId String?
+  createdAt    DateTime @default(now())
 
-  createdBy User               @relation("NotificationCreatedBy", fields: [createdById], references: [id])
-  reads     NotificationRead[]
+  createdBy  User               @relation("NotificationCreatedBy", fields: [createdById], references: [id])
+  assignment Assignment?        @relation(fields: [assignmentId], references: [id], onDelete: SetNull)
+  reads      NotificationRead[]
+
+  @@index([assignmentId])
 }
 
 model NotificationRead {
