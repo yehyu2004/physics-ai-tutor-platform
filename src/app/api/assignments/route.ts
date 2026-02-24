@@ -8,11 +8,11 @@ import { z } from "zod";
 const QuestionSchema = z.object({
   questionText: z.string().min(1).max(10000),
   questionType: z.enum(["MC", "NUMERIC", "FREE_RESPONSE"]),
-  options: z.array(z.string().max(2000)).optional().default([]),
-  correctAnswer: z.string().max(2000).optional().default(""),
+  options: z.array(z.string().max(2000)).nullable().optional().default([]),
+  correctAnswer: z.string().max(2000).nullable().optional().default(""),
   points: z.number().min(0).max(1000).optional().default(10),
-  diagram: z.object({ type: z.string(), content: z.string() }).optional(),
-  imageUrl: z.string().max(2000).optional(),
+  diagram: z.object({ type: z.string(), content: z.string() }).nullable().optional(),
+  imageUrl: z.string().max(2000).nullable().optional(),
 });
 
 const CreateAssignmentSchema = z.object({

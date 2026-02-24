@@ -317,9 +317,13 @@ export default function ProblemGeneratorPage() {
       if (res.ok) {
         const data = await res.json();
         router.push(`/assignments/${data.assignment.id}/edit`);
+      } else {
+        const data = await res.json().catch(() => null);
+        toast.error(data?.error || "Failed to create assignment");
       }
     } catch (err) {
       console.error(err);
+      toast.error("Failed to create assignment");
     } finally {
       setCreatingFromMerged(false);
     }
@@ -440,9 +444,13 @@ export default function ProblemGeneratorPage() {
       if (res.ok) {
         const data = await res.json();
         router.push(`/assignments/${data.assignment.id}/edit`);
+      } else {
+        const data = await res.json().catch(() => null);
+        toast.error(data?.error || "Failed to create assignment");
       }
     } catch (err) {
       console.error(err);
+      toast.error("Failed to create assignment");
     } finally {
       setCreatingAssignment(false);
     }
